@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: questioncloud
+  datasource:
+    url: jdbc:mysql://localhost:3306/questioncloud_demo_db?serverTimezone=Asia/Shanghai
+    username: root
+    password: 861007889
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  ai:
+    dashscope:
+      api-key: sk-b3c6fffb6266416abbc611c80ba79e3b
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+server:
+  port: 8080
+
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true
+
+file:
+  upload:
+    base-path: /Users/evmb/question-cloud-storage
+    avatar:
+      path: ${file.upload.base-path}/avatars
+      max-size: 20MB
+      allowed-types:
+        - image/jpeg
+        - image/png
+        - image/gif
+    question:
+      path: ${file.upload.base-path}/questions
+      max-size: 10MB
+      allowed-types:
+        - image/jpeg
+        - image/png
