@@ -23,7 +23,7 @@ public class UserAccountEntity implements Serializable {
     private String username;
 
     @NotNull
-    @TableField("password_hash")
+    @TableField("password")
     private String password;
 
     private String email;
