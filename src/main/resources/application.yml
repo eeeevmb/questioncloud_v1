@@ -28,18 +28,15 @@ sa-token:
   is-log: true
 
 file:
-  upload:
-    base-path: /Users/evmb/question-cloud-storage
-    avatar:
-      path: ${file.upload.base-path}/avatars
-      max-size: 20MB
-      allowed-types:
-        - image/jpeg
-        - image/png
-        - image/gif
-    question:
-      path: ${file.upload.base-path}/questions
-      max-size: 10MB
-      allowed-types:
-        - image/jpeg
-        - image/png
+  storage:
+    # 本地存储配置
+    local:
+      # 文件存储的基础路径。可以是绝对路径 (e.g., /var/files) 或相对路径 (e.g., uploads)。
+      # 相对路径将以项目运行目录为基准。
+      base-path: "/Users/evmb/question-cloud-storage"
+    # 配额配置
+    quota:
+      # 是否启用配额检查
+      enabled: true
+      # 每个用户每周允许上传的文件数量
+      files-per-week: 50
