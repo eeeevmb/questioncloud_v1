@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "infrastructure.file")
+@ConfigurationProperties(prefix = "file.storage")
 public class FileStorageProperties {
 
     /**

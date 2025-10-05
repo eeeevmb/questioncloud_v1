@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.user.UserAccountEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.user.UserAccountMapper;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -60,5 +61,15 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
             userAccount.setId(HutoolSnowflakeIdGenerator.generateLongId());
         }
         userAccountMapper.save(userAccount);
+    }
+
+    @Override
+    public void updateAvatar(Long userId, String url) {
+        UserAccountEntity user = QueryChain.of(userAccountMapper)
+                .eq(UserAccountEntity::getId, userId)
+                .limit(1)
+                .get();
+        user.setAvatarUrl(url);
+        userAccountMapper.update(user);
     }
 }

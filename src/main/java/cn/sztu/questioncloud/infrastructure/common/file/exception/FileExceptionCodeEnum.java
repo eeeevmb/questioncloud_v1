@@ -24,8 +24,14 @@ public enum FileExceptionCodeEnum implements InfraExceptionCode {
     OWNER_MISMATCH("INFRA_FILE_OWNER_MISMATCH", "文件所有者不匹配"),
     INVALID_FILE_NAME("INFRA_FILE_INVALID_NAME", "无效的文件名，文件名不存在拓展名"),
     AMBIGUOUS_TEMPLATE_FILE("INFRA_FILE_AMBIGUOUS_TEMPLATE", "找到多个同名但不同后缀的模板文件"),
-    INVALID_TIME_RANGE("INFRA_FILE_INVALID_TIME_RANGE", "无效的时间范围");
-
+    INVALID_TIME_RANGE("INFRA_FILE_INVALID_TIME_RANGE", "无效的时间范围"),
+    FILE_EMPTY("INFRA_FILE_EMPTY", "文件为空"),
+    FILE_READ_ERROR("INFRA_FILE_READ_ERROR", "文件读取异常"),
+    FILE_CONTENT_DAMAGED("INFRA_FILE_CONTENT_DAMAGED", "文件内容为空"),
+    FILE_VALIDATOR_NOT_FOUND("INFRA_FILE_VALIDATOR_NOT_FOUND", "格式校验器未找到"),
+    FILE_TYPE_INVALID("INFRA_FILE_TYPE_INVALID", "文件格式不合法"),
+    FILE_TYPE_MISMATCH("INFRA_FILE_TYPE_MISMATCH", "文件格式不匹配"),
+    FILE_EXTENSION_NOT_ALLOWED("INFRA_FILE_EXTENSION_NOT_ALLOWED", "不允许的文件格式");
 
     private final String code;
     private final String message;
