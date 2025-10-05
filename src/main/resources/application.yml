@@ -33,10 +33,19 @@ file:
     local:
       # 文件存储的基础路径。可以是绝对路径 (e.g., /var/files) 或相对路径 (e.g., uploads)。
       # 相对路径将以项目运行目录为基准。
-      base-path: "/Users/evmb/question-cloud-storage"
+      base-path: /Users/evmb/questioncloud-storage
     # 配额配置
     quota:
       # 是否启用配额检查
       enabled: true
       # 每个用户每周允许上传的文件数量
       files-per-week: 50
+  upload:
+    allowed-image-extensions:
+      - jpg
+      - jpeg
+      - png
+    allowed-doc-extensions:
+      - doc
+      - docx
+      - pdf

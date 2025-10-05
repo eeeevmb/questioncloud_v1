@@ -1,8 +1,11 @@
 package cn.sztu.questioncloud.application.user.service;
 
+import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.application.user.vo.LoginVO;
+import cn.sztu.questioncloud.application.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
 import cn.sztu.questioncloud.web.rest.v1.user.req.RegisterReq;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserAccountService {
     /**
@@ -21,4 +24,22 @@ public interface UserAccountService {
      * 登出用户
      */
     void logout();
+
+    /**
+     * 上传头像
+     * @return 头像存储路径
+     */
+    String uploadAvatar(MultipartFile file);
+
+    /**
+     * 获取用户头像
+     * @return 头像数据传输对象
+     */
+    AvatarDTO getAvatar(Long id);
+
+    /**
+     * 获取用户基本信息
+     * @return 用户基础信息
+     */
+    UserBasicInfoVO getUserBasicInfo();
 }

@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.user.port;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.user.UserAccountEntity;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.Optional;
 
@@ -43,4 +44,12 @@ public interface UserAccountRepository {
      * @param userAccount 用户实体
      */
     void save(UserAccountEntity userAccount);
+
+    /**
+     * 更新头像url
+     *
+     * @param userId 用户id
+     * @param url    头像url
+     */
+    void updateAvatar(Long userId, String url);
 }

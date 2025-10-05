@@ -9,43 +9,52 @@ import java.sql.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * 用于 PostgreSQL 的 TEXT[] 和 Java 的 List<String> 之间的类型转换
+ * 用于 MySQL 的 VARCHAR/TEXT 和 Java 的 List<String> 之间的类型转换
+ * 使用逗号分隔存储
  */
-@MappedJdbcTypes(JdbcType.ARRAY)
+@MappedJdbcTypes(JdbcType.VARCHAR)
 @MappedTypes(List.class)
 public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
 
+    private static final String DELIMITER = ",";
+
     @Override
     public void setNonNullParameter(PreparedStatement ps, int i, List<String> parameter, JdbcType jdbcType) throws SQLException {
-        Array sqlArray = ps.getConnection().createArrayOf("text", parameter.toArray());
-        ps.setArray(i, sqlArray);
+        // 将 List<String> 转换为逗号分隔的字符串
+        String value = parameter == null || parameter.isEmpty()
+                ? null
+                : String.join(DELIMITER, parameter);
+        ps.setString(i, value);
     }
 
     @Override
     public List<String> getNullableResult(ResultSet rs, String columnName) throws SQLException {
-        return getListFromSqlArray(rs.getArray(columnName));
+        return convertToList(rs.getString(columnName));
     }
 
     @Override
     public List<String> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
-        return getListFromSqlArray(rs.getArray(columnIndex));
+        return convertToList(rs.getString(columnIndex));
     }
 
     @Override
     public List<String> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
-        return getListFromSqlArray(cs.getArray(columnIndex));
+        return convertToList(cs.getString(columnIndex));
     }
 
-    private List<String> getListFromSqlArray(Array sqlArray) throws SQLException {
-        if (sqlArray == null) {
+    /**
+     * 将逗号分隔的字符串转换为 List<String>
+     */
+    private List<String> convertToList(String value) {
+        if (value == null || value.trim().isEmpty()) {
             return Collections.emptyList();
         }
-        try {
-            return Arrays.asList((String[]) sqlArray.getArray());
-        } finally {
-            sqlArray.free();
-        }
+        return Arrays.stream(value.split(DELIMITER))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
     }
 }
