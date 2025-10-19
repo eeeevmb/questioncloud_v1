@@ -1,6 +1,6 @@
 CREATE TABLE `user`
 (
-    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+    `id` bigint NOT NULL COMMENT '用户ID',
     `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户名',
     `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '密码（加密后）',
     `email` varchar(255) DEFAULT NULL COMMENT '邮箱',

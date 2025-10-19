@@ -1,8 +1,8 @@
 package cn.sztu.questioncloud.application.user.service;
 
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
-import cn.sztu.questioncloud.application.user.vo.LoginVO;
-import cn.sztu.questioncloud.application.user.vo.UserBasicInfoVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
 import cn.sztu.questioncloud.web.rest.v1.user.req.RegisterReq;
 import org.springframework.web.multipart.MultipartFile;

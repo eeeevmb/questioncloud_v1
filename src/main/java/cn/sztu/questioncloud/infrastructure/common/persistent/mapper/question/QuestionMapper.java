@@ -5,5 +5,4 @@ import cn.xbatis.core.mybatis.mapper.MybatisMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface QuestionMapper extends MybatisMapper<QuestionEntity> {
-}
+public interface QuestionMapper extends MybatisMapper<QuestionEntity> {}
