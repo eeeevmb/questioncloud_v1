@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.application.user.vo;
+package cn.sztu.questioncloud.web.rest.v1.user.vo;
 
 import lombok.Builder;
 

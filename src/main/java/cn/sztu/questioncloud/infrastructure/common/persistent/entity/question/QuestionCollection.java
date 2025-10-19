@@ -11,29 +11,33 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 题目表实体，存储题目元信息
+ * 题集，用于分类题目
  */
-
 @Data
-@Table("question")
+@Table("question_collection")
 @NoArgsConstructor
 @AllArgsConstructor
-public class QuestionEntity implements Serializable {
+public class QuestionCollection implements Serializable {
     /**
-     * 题目主键，使用雪花算法生成
+     * 题集主键，使用雪花算法生成
      */
     @TableId(value = IdAutoType.NONE)
     private Long id;
 
     /**
-     * 题目状态（0=draft,1=active,2=archived）
+     * 题集名
      */
-    private Integer status;
+    private String name;
 
     /**
-     * 最新题目版本id
+     * 题集简介
      */
-    private Long currentVersionId;
+    private String description;
+
+    /**
+     * 所有者id
+     */
+    private Long owner_id;
 
     /**
      * 创建时间

@@ -3,8 +3,8 @@ package cn.sztu.questioncloud.web.rest.v1.user;
 
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
-import cn.sztu.questioncloud.application.user.vo.LoginVO;
-import cn.sztu.questioncloud.application.user.vo.UserBasicInfoVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
 import cn.sztu.questioncloud.web.rest.v1.user.req.RegisterReq;
