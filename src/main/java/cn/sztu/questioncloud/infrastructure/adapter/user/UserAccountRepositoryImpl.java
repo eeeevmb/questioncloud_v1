@@ -6,11 +6,12 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.user.UserAc
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.user.UserAccountMapper;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-@Service
+@Repository
 public class UserAccountRepositoryImpl implements UserAccountRepository {
     private final UserAccountMapper userAccountMapper;
 
@@ -18,6 +19,12 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
         this.userAccountMapper = userAccountMapper;
     }
 
+    /**
+     * 根据用户名查找用户实体
+     *
+     * @param username 用户名
+     * @return 用户实体的Optional封装
+     */
     @Override
     public Optional<UserAccountEntity> findByUsername(String username) {
         UserAccountEntity user = QueryChain.of(userAccountMapper)

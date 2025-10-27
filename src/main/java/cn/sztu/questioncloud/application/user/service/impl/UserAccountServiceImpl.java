@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.user.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.sztu.questioncloud.application.user.messaging.UserEventPublisher;
 import cn.sztu.questioncloud.application.user.port.UserAccountRepository;
 import cn.sztu.questioncloud.application.user.port.UserPresenceCheckerPort;
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
@@ -25,6 +26,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.MalformedURLException;
@@ -40,13 +42,15 @@ public class UserAccountServiceImpl implements UserAccountService {
     private final FileStorageService fileStorageService;
     private final FileValidatorRegistry fileValidatorRegistry;
     private final MediaTypeResolver mediaTypeResolver;
+    private final UserEventPublisher userEventPublisher;
 
-    public UserAccountServiceImpl(UserAccountRepository userAccountRepository, UserPresenceCheckerPort userPresenceCheckerPort, FileStorageService fileStorageService, FileValidatorRegistry fileValidatorRegistry, MediaTypeResolver mediaTypeResolver) {
+    public UserAccountServiceImpl(UserAccountRepository userAccountRepository, UserPresenceCheckerPort userPresenceCheckerPort, FileStorageService fileStorageService, FileValidatorRegistry fileValidatorRegistry, MediaTypeResolver mediaTypeResolver, UserEventPublisher userEventPublisher) {
         this.userAccountRepository = userAccountRepository;
         this.userPresenceCheckerPort = userPresenceCheckerPort;
         this.fileValidatorRegistry = fileValidatorRegistry;
         this.fileStorageService = fileStorageService;
         this.mediaTypeResolver = mediaTypeResolver;
+        this.userEventPublisher = userEventPublisher;
     }
 
     /**
@@ -56,6 +60,7 @@ public class UserAccountServiceImpl implements UserAccountService {
      * @return 用户id
      */
     @Override
+    @Transactional
     public Long register(RegisterReq request) {
         if (userPresenceCheckerPort.existsByUsername(request.username())) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该用户名已被使用");
@@ -70,6 +75,8 @@ public class UserAccountServiceImpl implements UserAccountService {
         newUser.setPassword(PasswordEncryptionUtil.encrypt(request.password()));
 
         userAccountRepository.save(newUser);
+
+        userEventPublisher.publishUserRegistered(newUser.getId());
 
         return newUser.getId();
     }

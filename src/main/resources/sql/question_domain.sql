@@ -57,6 +57,7 @@ CREATE TABLE question_collection (
      name         VARCHAR(128)    NOT NULL,
      description  VARCHAR(255)    NULL,
      owner_id     BIGINT UNSIGNED NULL,
+     source       TINYINT         NOT NULL COMMENT '0=用户自建，1=系统默认',
      created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      PRIMARY KEY (id),

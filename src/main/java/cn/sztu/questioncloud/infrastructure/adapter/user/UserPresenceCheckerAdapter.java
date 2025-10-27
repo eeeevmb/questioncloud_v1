@@ -5,10 +5,11 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.user.UserAc
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.user.UserAccountMapper;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 @Slf4j
-@Service
+@Component
 public class UserPresenceCheckerAdapter implements UserPresenceCheckerPort {
 
     private final UserAccountMapper userAccountMapper;
