@@ -4,6 +4,7 @@ import cn.xbatis.db.IdAutoType;
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableId;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,11 +14,12 @@ import java.time.LocalDateTime;
 /**
  * 题集，用于分类题目
  */
+@Builder
 @Data
 @Table("question_collection")
 @NoArgsConstructor
 @AllArgsConstructor
-public class QuestionCollection implements Serializable {
+public class QuestionCollectionEntity implements Serializable {
     /**
      * 题集主键，使用雪花算法生成
      */
@@ -37,7 +39,13 @@ public class QuestionCollection implements Serializable {
     /**
      * 所有者id
      */
-    private Long owner_id;
+    private Long ownerId;
+
+    /**
+     * 来源
+     * 1=系统创建，0=用户创建
+     */
+    private Integer source;
 
     /**
      * 创建时间
