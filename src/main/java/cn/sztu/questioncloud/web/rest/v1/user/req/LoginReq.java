@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 
 public record LoginReq (
         @NotBlank(message = "用户名/邮箱不能为空")
-        @Pattern(regexp = "^[a-zA-Z0-9_-]{3,16}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+        @Pattern(regexp = "^[\\p{IsHan}a-zA-Z0-9_-]{3,16}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
                 message = "请输入有效的用户名或邮箱")
         String account,
 

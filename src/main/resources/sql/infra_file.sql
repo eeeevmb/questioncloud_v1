@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS infra_file_metadata;
 CREATE TABLE infra_file_metadata
 (
     fm_id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件唯一ID (自增生成)',

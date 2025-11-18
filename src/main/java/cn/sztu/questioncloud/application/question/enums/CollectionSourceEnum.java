@@ -11,6 +11,7 @@ import lombok.Getter;
 public enum CollectionSourceEnum {
     USER(0, "用户创建"),
     SYSTEM(1, "系统创建");
+
     private final int code;
     private final String description;
 

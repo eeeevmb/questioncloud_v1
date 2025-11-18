@@ -4,6 +4,7 @@ import cn.xbatis.db.IdAutoType;
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableId;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
  * 题目表实体，存储题目元信息
  */
 
+@Builder
 @Data
 @Table("question")
 @NoArgsConstructor

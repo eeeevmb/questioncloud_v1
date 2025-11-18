@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.infrastructure.common.file.Validator;
+package cn.sztu.questioncloud.infrastructure.common.file.validator;
 
 import cn.sztu.questioncloud.infrastructure.common.exception.InfrastructureException;
 import cn.sztu.questioncloud.infrastructure.common.file.config.FileUploadProperties;
@@ -23,8 +23,9 @@ public class ImageValidator implements FileValidator {
         this.detector = detector;
     }
 
+    // TODO 修改
     @Override
-    public void validate(MultipartFile file) {
+    public boolean validate(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new InfrastructureException(FileExceptionCodeEnum.FILE_EMPTY);
         }
@@ -64,6 +65,8 @@ public class ImageValidator implements FileValidator {
         }
 
         log.debug("图片文件校验通过: {} ({})", file.getOriginalFilename(), detectedType);
+
+        return true;
     }
 
     @Override

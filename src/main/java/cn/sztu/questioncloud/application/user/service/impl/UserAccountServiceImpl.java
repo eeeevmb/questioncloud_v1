@@ -6,13 +6,14 @@ import cn.sztu.questioncloud.application.user.port.UserAccountRepository;
 import cn.sztu.questioncloud.application.user.port.UserPresenceCheckerPort;
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
+import cn.sztu.questioncloud.application.user.enums.UserStatusEnum;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.util.PasswordEncryptionUtil;
 import cn.sztu.questioncloud.infrastructure.common.exception.InfrastructureException;
-import cn.sztu.questioncloud.infrastructure.common.file.Validator.FileValidatorRegistry;
+import cn.sztu.questioncloud.infrastructure.common.file.validator.FileValidatorRegistry;
 import cn.sztu.questioncloud.infrastructure.common.file.enums.AccessLevel;
 import cn.sztu.questioncloud.infrastructure.common.file.model.InfraFileMetadata;
 import cn.sztu.questioncloud.infrastructure.common.file.service.FileStorageService;
@@ -73,6 +74,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         newUser.setUsername(request.username());
         newUser.setEmail(request.email());
         newUser.setPassword(PasswordEncryptionUtil.encrypt(request.password()));
+        newUser.setStatus(UserStatusEnum.ACTIVE.getCode());
 
         userAccountRepository.save(newUser);
 
@@ -198,7 +200,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         UserAccountEntity user = userOptional.orElseThrow(() ->
                 new ApplicationException(CommonResultCodeEnum.NOT_FOUND, "用户不存在"));
 
-        return UserBasicInfoVO.from(user);
+        return UserBasicInfoVO.fromEntity(user);
     }
 
 

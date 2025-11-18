@@ -1,0 +1,8 @@
+spring:
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      # 如果你给 redis 配了密码则加上
+      # password: yourpass
+      timeout: 3s

@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS user;
 CREATE TABLE `user`
 (
     `id` bigint NOT NULL COMMENT '用户ID',

@@ -1,50 +1,106 @@
 package cn.sztu.questioncloud.application.question.service.impl;
 
-import cn.sztu.questioncloud.application.question.enums.CollectionSourceEnum;
-import cn.sztu.questioncloud.application.question.port.CollectionPresenceCheckerPort;
-import cn.sztu.questioncloud.application.question.port.QuestionCollectionRepository;
+import cn.dev33.satoken.stp.StpUtil;
+import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
+import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
+import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
+import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 题目模块应用服务实现
- *
- * @author eeeevmb
- */
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 public class QuestionAppServiceImpl implements QuestionAppService {
-    private final CollectionPresenceCheckerPort collectionPresenceCheckerPort;
+    private final QuestionRepository questionRepository;
+    private final QuestionVersionRepository questionVersionRepository;
     private final QuestionCollectionRepository questionCollectionRepository;
+    private final QuestionQueryRepository queryRepository;
+    private final CollectionItemRepository collectionItemRepository;
+    public static final int INITIAL_VERSION = 1;
+    public static final int INITIAL_ORDINAL = 1;
 
-    public QuestionAppServiceImpl(CollectionPresenceCheckerPort collectionPresenceCheckerPort, QuestionCollectionRepository questionCollectionRepository) {
-        this.collectionPresenceCheckerPort = collectionPresenceCheckerPort;
+    public QuestionAppServiceImpl(QuestionRepository questionRepository, QuestionVersionRepository questionVersionRepository, QuestionCollectionRepository questionCollectionRepository, QuestionQueryRepository queryRepository, CollectionItemRepository collectionItemRepository) {
+        this.questionRepository = questionRepository;
+        this.questionVersionRepository = questionVersionRepository;
         this.questionCollectionRepository = questionCollectionRepository;
+        this.queryRepository = queryRepository;
+        this.collectionItemRepository = collectionItemRepository;
     }
 
     /**
-     * 创建默认题集
-     * 用户注册后调用一次
+     * 创建题目（Latex文本）
      *
-     * @param userId 用户id
+     * @param req 创建题目请求
+     * @return 题目视图对象
      */
     @Override
-    public void createDefaultCollection(Long userId) {
-        // 1. 检查是否有默认题集
-        if (collectionPresenceCheckerPort.existsDefaultByUserId(userId)) {
-            log.info("存在默认题集，不进行创建操作。");
-            return;
+    @Transactional(rollbackFor = Exception.class)
+    public QuestionVO createQuestion(CreateQuestionReq req) {
+        // 1. 获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+
+        // 2. 权限检验
+        QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(req.collectionId())
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在，debug:数据库中没有"));
+
+        if (!collectionEntity.getOwnerId().equals(userId)) {
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在，debug：题集主不匹配");
         }
-        // 2. 创建默认题集
-        log.info("开始创建默认题集");
-        QuestionCollectionEntity defaultCollection = QuestionCollectionEntity.builder()
-                .name("默认题集")
-                .description("系统自动创建")
-                .ownerId(userId)
-                .source(CollectionSourceEnum.SYSTEM.getCode())
+
+        // 3. 创建题目实体和题目版本实体
+        QuestionEntity entity = QuestionEntity.builder()
+                .id(HutoolSnowflakeIdGenerator.generateLongId())
+                .status(QuestionStatusEnum.ACTIVE.getCode())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
-        questionCollectionRepository.save(defaultCollection);
+
+        // TODO：typeCode入库前验证
+        QuestionVersionEntity versionEntity = QuestionVersionEntity.builder()
+                .questionId(entity.getId())
+                .versionNo(INITIAL_VERSION)
+                .typeCode(req.typeCode())
+                .title(req.title())
+                .stem(req.stem())
+                .answer(req.answer())
+                .solution(req.solution())
+                .createdBy(userId)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        // 4. 获取落库的题目版本ID后回填题目实体
+        Long versionId = questionVersionRepository.save(versionEntity)
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "新建题目失败"));
+
+        entity.setCurrentVersionId(versionId);
+        questionRepository.save(entity);
+
+        // 5. 将题目添加进题集
+        // TODO：统计题目数有并发问题，但是现在还没有协作修改题集接口，暂时忽略
+        int currentCount = queryRepository.CountCollectionItemsById(req.collectionId());
+
+        CollectionItem item = CollectionItem.builder()
+                .collectionId(req.collectionId())
+                .ordinal(currentCount == 0 ? INITIAL_ORDINAL : currentCount + 1)
+                .questionId(entity.getId())
+                .questionVersionId(versionEntity.getId())
+                .build();
+        collectionItemRepository.save(item);
+
+        // 6. 返回题目视图
+        return QuestionVO.fromEntity(entity, versionEntity);
     }
+
+
 }

@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.infrastructure.common.file.Validator;
+package cn.sztu.questioncloud.infrastructure.common.file.validator;
 
 import cn.sztu.questioncloud.infrastructure.common.exception.InfrastructureException;
 import cn.sztu.questioncloud.infrastructure.common.file.exception.FileExceptionCodeEnum;
