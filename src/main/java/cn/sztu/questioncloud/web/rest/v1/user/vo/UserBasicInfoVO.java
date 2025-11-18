@@ -9,7 +9,7 @@ public record UserBasicInfoVO(
         String phone,
         Integer status
 ) {
-    public static UserBasicInfoVO from(UserAccountEntity entity) {
+    public static UserBasicInfoVO fromEntity(UserAccountEntity entity) {
         if (entity == null) {
             return null;
         }

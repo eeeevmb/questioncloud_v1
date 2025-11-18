@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.web.rest.v1.user;
 
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.AvatarVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
@@ -20,6 +21,8 @@ import java.time.Duration;
 
 /**
  * 用户相关接口
+ *
+ * @author eeeevmb
  */
 
 @Slf4j
@@ -34,6 +37,9 @@ public class UserController {
 
     /**
      * 用户注册
+     *
+     * @param request 注册请求
+     * @return 用户id
      */
     @PostMapping("/register")
     public ResultVO<Long> registerUser(@Valid @RequestBody RegisterReq request) {
@@ -42,6 +48,8 @@ public class UserController {
 
     /**
      * 用户登陆
+     * @param request 登陆请求
+     * @return 登陆响应
      */
     @PostMapping("/login")
     public ResultVO<LoginVO> login(@Valid @RequestBody LoginReq request) {
@@ -50,6 +58,8 @@ public class UserController {
 
     /**
      * 用户登出
+     *
+     * @return 退出登陆响应
      */
     @PostMapping("/logout")
     public ResultVO<Void> logout() {
@@ -59,16 +69,22 @@ public class UserController {
 
     /**
      * 头像上传
+     *
+     * @param file 头像文件
+     * @return 头像存储相对路径
      */
     @PostMapping(value = "/upload-avatar", consumes = {"multipart/form-data"})
-    public ResultVO<String> uploadAvatar(@RequestPart("file") MultipartFile file) {
+    public ResultVO<AvatarVO> uploadAvatar(@RequestParam("file") MultipartFile file) {
         String url = userAccountService.uploadAvatar(file);
-
-        return ResultVO.success(url);
+        AvatarVO vo = new AvatarVO(url);
+        return ResultVO.success(vo);
     }
 
     /**
      * 查看头像
+     *
+     * @param userId 用户Id
+     * @return 头像数据传输对象
      */
     @GetMapping("/avatar/{userId}")
     public ResponseEntity<Resource> getAvatar(@PathVariable Long userId) {
@@ -82,6 +98,8 @@ public class UserController {
 
     /**
      * 获取用户基本信息
+     *
+     * @return 用户基本信息
      */
     @GetMapping("/query/basic")
     public ResultVO<UserBasicInfoVO> getBasicInfo() {

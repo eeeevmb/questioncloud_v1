@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 /**
  * 用于 MySQL 的 VARCHAR/TEXT 和 Java 的 List<String> 之间的类型转换
  * 使用逗号分隔存储
+ *
+ * @author LinSanQi
  */
 @MappedJdbcTypes(JdbcType.VARCHAR)
 @MappedTypes(List.class)

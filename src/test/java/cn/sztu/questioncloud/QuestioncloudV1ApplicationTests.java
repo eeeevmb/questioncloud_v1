@@ -9,5 +9,4 @@ class QuestioncloudV1ApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }

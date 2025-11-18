@@ -4,6 +4,7 @@ import cn.xbatis.db.IdAutoType;
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableId;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -12,13 +13,14 @@ import java.io.Serializable;
 /**
  * 题集内题目，绑定版本
  */
+@Builder
 @Data
 @Table("collection_item")
 @NoArgsConstructor
 @AllArgsConstructor
 public class CollectionItem implements Serializable {
     /**
-     * 题集id主键
+     * 题集ID
      */
     @TableId(IdAutoType.NONE)
     private Long collectionId;

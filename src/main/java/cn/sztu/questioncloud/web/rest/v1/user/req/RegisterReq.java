@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Pattern;
 public record RegisterReq (
 
         @NotBlank(message = "用户名不能为空")
-        @Pattern(regexp = "^[a-zA-Z0-9_-\u4e00-\u9fa5]{3,16}$",
+        @Pattern(regexp = "^[\\p{IsHan}a-zA-Z0-9_-]{3,16}$",
                 message = "用户名必须是3-16个字符，可以包含中文、字母、数字、下划线和连字符")
         String username,
 

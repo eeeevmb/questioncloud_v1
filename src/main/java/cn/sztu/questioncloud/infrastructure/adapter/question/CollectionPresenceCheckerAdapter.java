@@ -28,4 +28,17 @@ public class CollectionPresenceCheckerAdapter implements CollectionPresenceCheck
                 .eq(QuestionCollectionEntity::getSource, 1)
                 .exists();
     }
+
+    /**
+     * 检查题集是否已存在
+     *
+     * @param collectionId 题集ID
+     * @return 存在返回true
+     */
+    @Override
+    public boolean existsById(Long collectionId) {
+        return QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getId, collectionId)
+                .exists();
+    }
 }

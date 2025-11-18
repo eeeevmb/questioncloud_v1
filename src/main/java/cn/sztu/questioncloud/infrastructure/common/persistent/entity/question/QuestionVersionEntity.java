@@ -1,18 +1,25 @@
 package cn.sztu.questioncloud.infrastructure.common.persistent.entity.question;
 
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.AssetSnapshot;
+import cn.sztu.questioncloud.infrastructure.common.persistent.handler.AssetSnapshotListTypeHandler;
 import cn.xbatis.db.IdAutoType;
 import cn.xbatis.db.annotations.Table;
+import cn.xbatis.db.annotations.TableField;
 import cn.xbatis.db.annotations.TableId;
+import cn.xbatis.db.annotations.TypeHandler;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 题目版本，同题目不同版本的正文快照
  */
+@Builder
 @Data
 @Table("question_version")
 @AllArgsConstructor
@@ -32,7 +39,7 @@ public class QuestionVersionEntity implements Serializable {
     /**
      * 题目版本号，从1递增
      */
-    private Integer versionNO;
+    private Integer versionNo;
 
     /**
      * 题目类型代码
@@ -45,29 +52,25 @@ public class QuestionVersionEntity implements Serializable {
     private String title;
 
     /**
-     * 题干LaTex
+     * 题干原文（LaTex格式）
      */
     private String stem;
 
     /**
-     * 选择题选项（JSON格式）
-     */
-    private String options;
-
-    /**
-     * 大题答案（JSON格式）
+     * 答案原文（LaTex格式）
      */
     private String answer;
 
     /**
-     * 解析LaTex
+     * 题目解析（LaTex格式）
      */
     private String solution;
 
     /**
      * 图片/附件
      */
-    private String assets;
+    @TableField(typeHandler = AssetSnapshotListTypeHandler.class)
+    private List<AssetSnapshot> assets;
 
     /**
      * 创建者id

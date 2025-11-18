@@ -1,18 +1,19 @@
 package cn.sztu.questioncloud.application.question.service;
 
+import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionVO;
+
 /**
- * 题目模块应用服务
+ * 题目相关服务
  *
  * @author eeeevmb
  */
 public interface QuestionAppService {
-
-    // ===== 写入操作 =====
     /**
-     * 创建默认题集
-     * 用户注册后调用一次
+     * 创建题目（Latex文本）
      *
-     * @param userId 用户id
+     * @param req 创建题目请求
+     * @return 题目视图对象
      */
-    void createDefaultCollection(Long userId);
+    QuestionVO createQuestion(CreateQuestionReq req);
 }
