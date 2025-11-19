@@ -1,17 +1,3 @@
--- updated_at更新时由应用层写值
--- 应用层用雪花算法写入主键id
-
-DROP TABLE IF EXISTS question_type;
-CREATE TABLE question_type (
-       code              VARCHAR(32)  NOT NULL COMMENT '题型代码：single_choice/fill_blank等',
-       name              VARCHAR(64)  NOT NULL COMMENT '显示名',
-       status            TINYINT      NOT NULL DEFAULT 1 COMMENT '1=active,0=inactive',
-       created_at        DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       updated_at        DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       PRIMARY KEY (code),
-       KEY idx_qtype_status (status)
-);
-
 -- 2) 题目（聚合根；不放正文）
 DROP TABLE IF EXISTS question;
 CREATE TABLE question (
@@ -34,7 +20,7 @@ CREATE TABLE question_version (
       id                   BIGINT UNSIGNED NOT NULL COMMENT 'PK',
       question_id          BIGINT UNSIGNED NOT NULL COMMENT 'question.id（无FK）',
       version_no           INT             NOT NULL COMMENT '从1递增',
-      type_code            VARCHAR(32)     NOT NULL COMMENT 'question_type.code（无FK）',
+      type_code            VARCHAR(32)     NOT NULL COMMENT '题型编码（应用层枚举 single_choice/multiple_choice 等）',
       title                VARCHAR(255)    NULL     COMMENT '题目标题/摘要',
       stem                 LONGTEXT        NOT NULL COMMENT '题干 LaTeX',
       answer               LONGTEXT        NULL     COMMENT '参考答案（可空）',

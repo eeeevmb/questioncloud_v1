@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.question.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
@@ -58,7 +59,12 @@ public class QuestionAppServiceImpl implements QuestionAppService {
             throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在，debug：题集主不匹配");
         }
 
-        // 3. 创建题目实体和题目版本实体
+        // 3. 校验题型
+        if(!QuestionTypeEnum.ensureValid(req.typeCode())){
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR, "题型不能为空");
+        }
+
+        // 4. 创建题目实体和题目版本实体
         QuestionEntity entity = QuestionEntity.builder()
                 .id(HutoolSnowflakeIdGenerator.generateLongId())
                 .status(QuestionStatusEnum.ACTIVE.getCode())
@@ -66,7 +72,6 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        // TODO：typeCode入库前验证
         QuestionVersionEntity versionEntity = QuestionVersionEntity.builder()
                 .questionId(entity.getId())
                 .versionNo(INITIAL_VERSION)
@@ -79,14 +84,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        // 4. 获取落库的题目版本ID后回填题目实体
+        // 5. 获取落库的题目版本ID后回填题目实体
         Long versionId = questionVersionRepository.save(versionEntity)
                 .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "新建题目失败"));
 
         entity.setCurrentVersionId(versionId);
         questionRepository.save(entity);
 
-        // 5. 将题目添加进题集
+        // 6. 将题目添加进题集
         // TODO：统计题目数有并发问题，但是现在还没有协作修改题集接口，暂时忽略
         int currentCount = queryRepository.CountCollectionItemsById(req.collectionId());
 
@@ -98,7 +103,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .build();
         collectionItemRepository.save(item);
 
-        // 6. 返回题目视图
+        // 7. 返回题目视图
         return QuestionVO.fromEntity(entity, versionEntity);
     }
 

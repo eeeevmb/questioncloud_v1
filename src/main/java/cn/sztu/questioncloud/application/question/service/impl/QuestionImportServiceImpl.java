@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.question.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.application.question.service.QuestionImportService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
@@ -97,7 +98,7 @@ public class QuestionImportServiceImpl implements QuestionImportService {
         }
 
         if (!assetCheckerPort.validateImage(assetFile)) {
-            throw new ApplicationException(QuestionErrorCodeEnum.ASSET_TYPE_NOT_ALLOWED, "上传的文件不合法");
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_ASSET_TYPE_NOT_ALLOWED, "上传的文件不合法");
         }
 
         // 3. 上传文件并刷新会话
@@ -132,6 +133,11 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                             .filter(a -> a.draftId().equals(draft.draftId()))
                             .findFirst()
                             .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "参数错误"));
+
+                    // 题型校验
+                    if(!QuestionTypeEnum.ensureValid(update.typeCode())) {
+                        throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR, "题型不能为空");
+                    }
 
                     return QuestionVersionEntity.builder()
                             .id(HutoolSnowflakeIdGenerator.generateLongId())
