@@ -13,11 +13,11 @@ import java.util.Arrays;
  */
 @Getter
 public enum QuestionTypeEnum {
-    SINGLE_CHOICE("single_choice", "单选题"),
-    MULTIPLE_CHOICE("multiple_choice", "多选题"),
-    TRUE_FALSE("true_false", "判断题"),
-    FILL_IN_BLANK("fill_in", "填空题"),
-    SHORT_ANSWER("short_answer", "简答题");
+    SINGLE_CHOICE("single-choice", "单选题"),
+    MULTIPLE_CHOICE("multiple-choice", "多选题"),
+    TRUE_FALSE("true-false", "判断题"),
+    FILL_IN_BLANK("fill-in", "填空题"),
+    SHORT_ANSWER("short-answer", "简答题");
 
     private final String code;
     private final String description;

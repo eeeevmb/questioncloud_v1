@@ -2,8 +2,6 @@ package cn.sztu.questioncloud.infrastructure.adapter.question.parser;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.enums.AssetSection;
 import cn.sztu.questioncloud.infrastructure.common.persistent.enums.AssetType;
-import cn.sztu.questioncloud.web.rest.v1.question.vo.AssetVO;
-import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDraftVO;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -48,7 +46,7 @@ class SimpleLatexQuestionParserTests {
         QuestionDraftVO first = result.getFirst();
         assertThat(first.stemLatex()).contains("\\iint");
         assertThat(first.solutionLatex()).contains("asset://solu-1-1");
-        AssetVO firstAsset = first.assets().getFirst();
+        DraftAssetVO firstAsset = first.assets().getFirst();
         assertThat(firstAsset.slotId()).isEqualTo("solu-1-1");
         assertThat(firstAsset.section()).isEqualTo(AssetSection.SOLU);
         assertThat(firstAsset.assetType()).isEqualTo(AssetType.IMAGE);
@@ -58,7 +56,7 @@ class SimpleLatexQuestionParserTests {
         QuestionDraftVO second = result.get(1);
         assertThat(second.stemLatex()).contains("第二题题干");
         assertThat(second.solutionLatex()).contains("asset://solu-2-1");
-        AssetVO secondAsset = second.assets().getFirst();
+        DraftAssetVO secondAsset = second.assets().getFirst();
         assertThat(secondAsset.slotId()).isEqualTo("solu-2-1");
         assertThat(secondAsset.suggestedFilename()).isEqualTo("fig2.png");
     }

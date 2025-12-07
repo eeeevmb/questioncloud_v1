@@ -101,7 +101,7 @@ public class UserController {
      *
      * @return 用户基本信息
      */
-    @GetMapping("/query/basic")
+    @GetMapping("/basicInfo")
     public ResultVO<UserBasicInfoVO> getBasicInfo() {
         return ResultVO.success(userAccountService.getUserBasicInfo());
     }

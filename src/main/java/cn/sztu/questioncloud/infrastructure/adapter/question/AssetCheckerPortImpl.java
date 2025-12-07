@@ -23,4 +23,15 @@ public class AssetCheckerPortImpl implements AssetCheckerPort {
     public boolean validateImage(MultipartFile file) {
         return fileValidatorRegistry.get("image").validate(file);
     }
+
+    /**
+     * 检查上传的题目是否为文档文件（doc、docx、pdf、tex）
+     *
+     * @param file 文件
+     * @return 检查结果
+     */
+    @Override
+    public boolean validateDocument(MultipartFile file) {
+        return fileValidatorRegistry.get("document").validate(file);
+    }
 }

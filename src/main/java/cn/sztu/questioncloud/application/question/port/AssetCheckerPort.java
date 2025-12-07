@@ -10,4 +10,12 @@ public interface AssetCheckerPort {
      * @return 检查结果
      */
     boolean validateImage(MultipartFile file);
+
+    /**
+     * 检查上传的题目是否为文档文件（doc、docx、pdf、tex）
+     *
+     * @param file 文件
+     * @return 检查结果
+     */
+    boolean validateDocument(MultipartFile file);
 }
