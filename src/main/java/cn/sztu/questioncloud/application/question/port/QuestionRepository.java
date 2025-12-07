@@ -6,7 +6,6 @@ import java.util.List;
 
 public interface QuestionRepository {
     // ===== 写入操作 =====
-
     /**
      * 保存题目实体
      *
@@ -17,7 +16,7 @@ public interface QuestionRepository {
     /**
      * 批量保存题目实体
      *
-     * @param entities
+     * @param entities 实体列表
      */
     void batchSave(List<QuestionEntity> entities);
 }

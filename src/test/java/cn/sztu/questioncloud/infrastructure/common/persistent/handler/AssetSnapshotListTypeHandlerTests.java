@@ -1,11 +1,9 @@
 package cn.sztu.questioncloud.infrastructure.common.persistent.handler;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.AssetSnapshot;
 import cn.sztu.questioncloud.infrastructure.common.persistent.enums.AssetSection;
 import cn.sztu.questioncloud.infrastructure.common.persistent.enums.AssetType;
 import org.apache.ibatis.type.JdbcType;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;

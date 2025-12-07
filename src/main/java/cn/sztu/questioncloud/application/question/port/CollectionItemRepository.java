@@ -1,11 +1,15 @@
 package cn.sztu.questioncloud.application.question.port;
 
+import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
+import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 
 import java.util.List;
 
 public interface CollectionItemRepository {
-
     // ===== 写入操作 =====
 
     /**

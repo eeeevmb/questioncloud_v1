@@ -1,11 +1,15 @@
 package cn.sztu.questioncloud.web.rest.v1.question;
 
+import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
+import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.CollectionVO;
 
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,12 +19,14 @@ import org.springframework.web.bind.annotation.*;
  * @author eeeevmb
  */
 @RestController
-@RequestMapping("/api/v1/question/collection")
+@RequestMapping("/api/v1/collection")
 public class QuestionCollectionController {
     private final QuestionCollectionService questionCollectionService;
+    private final QuestionAppService questionAppService;
 
-    public QuestionCollectionController(QuestionCollectionService questionCollectionService) {
+    public QuestionCollectionController(QuestionCollectionService questionCollectionService, QuestionAppService questionAppService) {
         this.questionCollectionService = questionCollectionService;
+        this.questionAppService = questionAppService;
     }
 
     /**
@@ -59,5 +65,18 @@ public class QuestionCollectionController {
     ResultVO<Void> deleteCollection(@PathVariable Long collectionId) {
         questionCollectionService.deleteCollection(collectionId);
         return ResultVO.success();
+    }
+
+    /**
+     * 分页查询题集内题目概要
+     *
+     * @param collectionId 题集ID
+     * @param query        分页与筛选条件
+     * @return 题目概要分页结果
+     */
+    @GetMapping("/{collectionId}/questions")
+    public ResultVO<PageResult<QuestionSummaryVO>> pageCollectionQuestions(@PathVariable Long collectionId,
+                                                                  @Valid QuestionInCollectionPageQuery query) {
+        return ResultVO.success(questionAppService.getQuestionSummariesByCollectionId(collectionId, query));
     }
 }

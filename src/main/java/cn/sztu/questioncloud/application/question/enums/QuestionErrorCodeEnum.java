@@ -14,6 +14,7 @@ public enum QuestionErrorCodeEnum implements ResultCodeEnum {
     QUESTION_ASSET_TYPE_NOT_ALLOWED("Q00003", "不允许的附件类型"),
     IMPORT_SESSION_NOT_FOUND("Q00004", "会话不存在"),
     QUESTION_TYPE_ERROR("Q00005", "题型不存在"),
+    QUESTION_ASSET_NOT_FOUND("Q00006", "附件不存在"),
     // ===== 题集相关错误码 =====
     COLLECTION_NOT_FOUND("Q10001", "题集不存在");
 

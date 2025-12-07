@@ -38,6 +38,11 @@ public class QuestionEntity implements Serializable {
     private Long currentVersionId;
 
     /**
+     * 创建者ID
+     */
+    private Long ownerId;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

@@ -203,7 +203,6 @@ public class UserAccountServiceImpl implements UserAccountService {
         return UserBasicInfoVO.fromEntity(user);
     }
 
-
     /**
      * 获取默认头像
      * @return 默认头像DTO
@@ -216,9 +215,6 @@ public class UserAccountServiceImpl implements UserAccountService {
                 .mediaType(type)
                 .build();
     }
-
-
-
 
     private ApplicationException mapToApplicationException(InfrastructureException e) {
         return switch (e.getCode()) {

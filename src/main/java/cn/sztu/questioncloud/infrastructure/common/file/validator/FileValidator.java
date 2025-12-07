@@ -16,4 +16,15 @@ public interface FileValidator {
      * @return 例如 "image", "document", "video"
      */
     String supportedType();
+
+    /**
+     * 获取文件拓展名
+     *
+     * @param filename 文件名
+     * @return 拓展名
+     */
+    static String getExtension(String filename) {
+        if (filename == null || !filename.contains(".")) return "";
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
 }
