@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.question.service;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 
@@ -18,7 +19,7 @@ public interface QuestionAppService {
      * @param req 创建题目请求
      * @return 题目ID
      */
-    Long createQuestion(CreateQuestionReq req);
+    QuestionCreatedVO createQuestion(CreateQuestionReq req);
 
     /**
      * 根据题目ID查询题目详情

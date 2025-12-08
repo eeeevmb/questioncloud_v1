@@ -13,6 +13,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
@@ -58,7 +59,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long createQuestion(CreateQuestionReq req) {
+    public QuestionCreatedVO createQuestion(CreateQuestionReq req) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
 
@@ -133,8 +134,12 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         questionStatRepository.save(stat);
 
-        // 7. 返回题目ID
-        return questionId;
+        // 7. 返回题目创建视图
+        return QuestionCreatedVO.builder()
+                .questionId(questionId)
+                .questionVersionId(questionVersionId)
+                .collectionId(req.getCollectionId())
+                .build();
     }
 
     /**
