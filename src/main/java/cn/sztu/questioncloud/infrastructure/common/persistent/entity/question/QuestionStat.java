@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.infrastructure.common.persistent.entity.question;
 
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableField;
+import cn.xbatis.db.annotations.TableId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class QuestionStat {
     /**
      * 题目主表ID
      */
+    @TableId
     private Long questionId;
 
     /**
@@ -53,6 +55,11 @@ public class QuestionStat {
      * 曝光系数，变化算法依据艾宾浩斯遗忘曲线
      */
     private Double exposureFactor;
+
+    /**
+     * 上次曝光时间
+     */
+    private LocalDateTime lastExposedAt;
 
     /**
      * 更新时间

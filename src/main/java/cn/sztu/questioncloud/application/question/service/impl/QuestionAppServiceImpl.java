@@ -13,6 +13,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
@@ -99,7 +100,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(getAnswerKey(req))
+                .answerKey(getAnswerKey(req.getTypeCode(), req.getCorrectOptions(), req.getAnswer(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)
@@ -129,6 +130,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .correctRate(null)
                 .difficulty(req.getDifficulty() == null ? null : req.getDifficulty().doubleValue())
                 .exposureFactor(INITIAL_EXP)
+                .lastExposedAt(now)
                 .updatedAt(now)
                 .build();
 
@@ -164,6 +166,68 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         return result;
     }
 
+    /**
+     * 在题目ID下创建新题目版本
+     *
+     * @param req        修改请求
+     * @param questionId 题目ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateQuestionById(UpdateQuestionReq req, Long questionId) {
+        // 1. 获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+
+        // 2. 获取题目实体，题目版本和统计信息
+        QuestionEntity questionEntity = questionRepository.getById(questionId);
+        QuestionVersionEntity versionEntity = questionVersionRepository.getCurrentVersionByQuestionId(questionId);
+        QuestionStat questionStat = questionStatRepository.getByQuestionId(questionId);
+
+        // 3. 权限校验和异常处理
+        if (questionEntity == null || versionEntity == null || questionStat == null) {
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND, "题目不存在");
+        }
+
+        if (!userId.equals(questionEntity.getOwnerId())) {
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION, "无权修改题目");
+        }
+
+
+
+        // 4. 创建新题目版本
+        LocalDateTime now = LocalDateTime.now();
+        Long newVersionId = HutoolSnowflakeIdGenerator.generateLongId();
+
+        QuestionVersionEntity newVersionEntity = QuestionVersionEntity.builder()
+                .id(newVersionId)
+                .questionId(questionId)
+                .versionNo(versionEntity.getVersionNo() + 1)
+                .typeCode(versionEntity.getTypeCode())
+                .title(req.getTitle())
+                .stem(req.getStem())
+                .options(req.getOptions())
+                .answer(req.getAnswer())
+                .answerKey(getAnswerKey(versionEntity.getTypeCode(), req.getCorrectOptions(), req.getAnswer(), req.getJudgeAnswer()))
+                .solution(req.getSolution())
+                .assets(req.getAssets())
+                .createdBy(userId)
+                .createdAt(now)
+                .build();
+
+        // 5. 修改题目实体
+        questionEntity.setCurrentVersionId(newVersionId);
+        questionEntity.setUpdatedAt(now);
+
+        // 6. 修改统计数据
+        questionStat.setVersionId(newVersionId);
+        questionStat.setUpdatedAt(now);
+
+        // 7. 统一落库
+        questionVersionRepository.save(newVersionEntity);
+        questionRepository.update(questionEntity);
+        questionStatRepository.update(questionStat);
+    }
+
 
     /**
      * 查询题集内题目概要
@@ -190,28 +254,27 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         return PageResult.of(paging.getResults(), paging.getTotal(), query);
     }
 
-    // 结构化答案转化为answerKey
     @NotNull
-    private static String getAnswerKey(CreateQuestionReq req) {
-        String typeCode = req.getTypeCode();
-
+    private static String getAnswerKey(String typeCode,
+                                       List<String> correctOptions,
+                                       String answer,
+                                       String judgeAnswer) {
         // 单选
-        if (typeCode.equals(QuestionTypeEnum.SINGLE_CHOICE.getCode())) {
-            List<String> opts = req.getCorrectOptions();
-            if (opts == null || opts.size() != 1) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "单选题只能有一个正确选项");
+        if (QuestionTypeEnum.SINGLE_CHOICE.getCode().equals(typeCode)) {
+            if (correctOptions == null || correctOptions.size() != 1) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
+                        "单选题只能有一个正确选项");
             }
-            return normalizeOption(opts.getFirst());
-
+            return normalizeOption(correctOptions.getFirst());
         }
 
         // 多选
-        if (typeCode.equals(QuestionTypeEnum.MULTIPLE_CHOICE.getCode())) {
-            List<String> opts = req.getCorrectOptions();
-            if (opts == null || opts.isEmpty()) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "多选题至少要有一个正确选项");
+        if (QuestionTypeEnum.MULTIPLE_CHOICE.getCode().equals(typeCode)) {
+            if (correctOptions == null || correctOptions.isEmpty()) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
+                        "多选题至少要有一个正确选项");
             }
-            return opts.stream()
+            return correctOptions.stream()
                     .filter(Objects::nonNull)
                     .map(QuestionAppServiceImpl::normalizeOption)
                     .distinct()
@@ -220,25 +283,25 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         }
 
         // 填空
-        if (typeCode.equals(QuestionTypeEnum.FILL_IN_BLANK.getCode())) {
-            String ans = req.getAnswer();
-            return ans == null ? "" : ans;
+        if (QuestionTypeEnum.FILL_IN_BLANK.getCode().equals(typeCode)) {
+            return (answer == null) ? "" : answer;
         }
 
         // 判断
-        if (typeCode.equals(QuestionTypeEnum.TRUE_FALSE.getCode())) {
-            String ans = req.getJudgeAnswer();
-            if (ans == null) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "判断题答案不能为空");
+        if (QuestionTypeEnum.TRUE_FALSE.getCode().equals(typeCode)) {
+            if (judgeAnswer == null) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
+                        "判断题答案不能为空");
             }
-            ans = ans.trim().toUpperCase();
-            if (!ans.equals("T") && !ans.equals("F")) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED, "判断题答案必须为 T 或者 F");
+            String ans = judgeAnswer.trim().toUpperCase();
+            if (!"T".equals(ans) && !"F".equals(ans)) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
+                        "判断题答案必须为 T 或者 F");
             }
-
             return ans;
         }
 
+        // 其它题型目前不参与机器判分
         return "";
     }
 

@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionVersionMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
+import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
@@ -19,6 +20,21 @@ public class QuestionVersionRepositoryImpl implements QuestionVersionRepository 
     public QuestionVersionRepositoryImpl(QuestionVersionMapper questionVersionMapper, SqlSessionFactory sqlSessionFactory) {
         this.questionVersionMapper = questionVersionMapper;
         this.sqlSessionFactory = sqlSessionFactory;
+    }
+
+    /**
+     * 根据题目ID查询最新题目版本实体
+     *
+     * @param questionId 题目ID
+     * @return 最新版本实体
+     */
+    @Override
+    public QuestionVersionEntity getCurrentVersionByQuestionId(Long questionId) {
+        return QueryChain.of(questionVersionMapper)
+                .eq(QuestionVersionEntity::getQuestionId, questionId)
+                .orderByDesc(QuestionVersionEntity::getVersionNo)
+                .limit(1)
+                .get();
     }
 
     /**

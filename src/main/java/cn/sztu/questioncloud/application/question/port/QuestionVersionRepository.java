@@ -6,6 +6,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QuestionVersionRepository {
+    /**
+     * 根据题目ID查询最新题目版本实体
+     *
+     * @param questionId 题目ID
+     * @return 最新版本实体
+     */
+    QuestionVersionEntity getCurrentVersionByQuestionId(Long questionId);
 
     // ===== 写入操作 =====
 

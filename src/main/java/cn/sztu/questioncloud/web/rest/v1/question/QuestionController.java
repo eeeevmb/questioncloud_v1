@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.web.rest.v1.question;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import jakarta.validation.Valid;
@@ -31,7 +32,12 @@ public class QuestionController {
         return ResultVO.success(questionAppService.createQuestion(req));
     }
 
-
+    @PutMapping("{questionId}")
+    public ResultVO<Void> updateQuestion(@Valid @RequestBody UpdateQuestionReq req,
+                                         @PathVariable Long questionId) {
+        questionAppService.updateQuestionById(req, questionId);
+        return ResultVO.success();
+    }
 
     /**
      * 查询单题详情

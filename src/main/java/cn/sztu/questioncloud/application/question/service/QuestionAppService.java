@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.question.service;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
@@ -28,6 +29,14 @@ public interface QuestionAppService {
      * @return 题目详情视图
      */
     QuestionDetailVO getQuestionDetailById(Long questionId);
+
+    /**
+     * 创建新题目版本
+     *
+     * @param req 修改请求
+     * @param questionId 题目ID
+     */
+    void updateQuestionById(UpdateQuestionReq req, Long questionId);
 
     /**
      * 查询题集内题目概要
