@@ -9,6 +9,7 @@ import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
+import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
@@ -162,7 +163,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION, "无查看权限");
         }
 
-        // 2. 获取题目详情
+        // 2. 计算有效曝光系数
+        // 注：库中的曝光系数只在曝光事件（如组卷）时更新，查询时返回根据衰减公式计算出的当日有效曝光系数
+        LocalDateTime now = LocalDateTime.now();
+
+        double effExp = ExposureFactorUtil.calcEffectiveExposure(result.getExposureFactor(), result.getLastExposedAt(), now);
+        result.setExposureFactor(effExp);
+
+        // 3. 返回题目详情
         return result;
     }
 
