@@ -3,6 +3,8 @@ package cn.sztu.questioncloud.web.rest.v1.question;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +28,34 @@ public class QuestionController {
      * @return 题目ID
      */
     @PostMapping
-    public ResultVO<Long> createQuestion(@Valid @RequestBody CreateQuestionReq req) {
+    public ResultVO<QuestionCreatedVO> createQuestion(@Valid @RequestBody CreateQuestionReq req) {
         return ResultVO.success(questionAppService.createQuestion(req));
+    }
+
+    /**
+     * 更新单题
+     *
+     * @param req 更新题目请求
+     * @param questionId 题目ID
+     * @return 无
+     */
+    @PutMapping("{questionId}")
+    public ResultVO<Void> updateQuestion(@Valid @RequestBody UpdateQuestionReq req,
+                                         @PathVariable Long questionId) {
+        questionAppService.updateQuestionById(req, questionId);
+        return ResultVO.success();
+    }
+
+    /**
+     * 删除题目
+     *
+     * @param questionId 题目ID
+     * @return 无
+     */
+    @DeleteMapping("{questionId}")
+    public ResultVO<Void> deleteQuestion(@PathVariable Long questionId) {
+        questionAppService.deleteQuestionById(questionId);
+        return ResultVO.success();
     }
 
     /**

@@ -36,7 +36,7 @@ public class QuestionCollectionController {
      * @return 题集视图响应
      */
     @PostMapping
-    ResultVO<CollectionVO> createCollection(@Valid @RequestBody CreateCollectionReq req) {
+    public ResultVO<CollectionVO> createCollection(@Valid @RequestBody CreateCollectionReq req) {
         CollectionVO vo = questionCollectionService.createCollection(req);
         return ResultVO.success(vo);
     }
@@ -49,7 +49,7 @@ public class QuestionCollectionController {
      * @return 题集视图响应
      */
     @PutMapping("/{collectionId}")
-    ResultVO<CollectionVO> updateCollection(@PathVariable Long collectionId,
+    public ResultVO<CollectionVO> updateCollection(@PathVariable Long collectionId,
                                             @Valid @RequestBody UpdateCollectionReq req) {
         CollectionVO vo = questionCollectionService.updateCollection(collectionId, req);
         return ResultVO.success(vo);
@@ -62,7 +62,7 @@ public class QuestionCollectionController {
      * @return 删除响应
      */
     @DeleteMapping("/{collectionId}")
-    ResultVO<Void> deleteCollection(@PathVariable Long collectionId) {
+    public ResultVO<Void> deleteCollection(@PathVariable Long collectionId) {
         questionCollectionService.deleteCollection(collectionId);
         return ResultVO.success();
     }

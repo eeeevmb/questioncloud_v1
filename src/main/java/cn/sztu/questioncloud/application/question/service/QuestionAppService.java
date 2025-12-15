@@ -3,6 +3,8 @@ package cn.sztu.questioncloud.application.question.service;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateQuestionReq;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 
@@ -18,7 +20,7 @@ public interface QuestionAppService {
      * @param req 创建题目请求
      * @return 题目ID
      */
-    Long createQuestion(CreateQuestionReq req);
+    QuestionCreatedVO createQuestion(CreateQuestionReq req);
 
     /**
      * 根据题目ID查询题目详情
@@ -27,6 +29,22 @@ public interface QuestionAppService {
      * @return 题目详情视图
      */
     QuestionDetailVO getQuestionDetailById(Long questionId);
+
+    /**
+     * 创建新题目版本
+     *
+     * @param req 修改请求
+     * @param questionId 题目ID
+     */
+    void updateQuestionById(UpdateQuestionReq req, Long questionId);
+
+    /**
+     * 硬删除题目：删除 question、question_version、question_stats，
+     * 并从所有题集中移除该题，不重排 collection_item.ordinal。
+     *
+     * @param questionId 题目ID
+     */
+    void deleteQuestionById(Long questionId);
 
     /**
      * 查询题集内题目概要

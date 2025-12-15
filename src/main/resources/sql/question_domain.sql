@@ -65,23 +65,25 @@ CREATE TABLE collection_item (
      UNIQUE KEY uk_ci_no_dup (collection_id, question_version_id)  -- 防止题集重复同一版本
 );
 
--- 元数据/统计读模型（异步作业写入)
--- 暂时使用单行滚动统计方案，可用于排序/推荐/报表的窗口策略后面升级
+-- 元数据/统计读模型（滚动单行）
+-- 设计要点：
+-- exposure_factor 表示“last_exposed_at 时刻的基准曝光强度(0~1)”
+-- 当前有效曝光值在查询/组卷时按 last_exposed_at + 衰减公式计算，不需要定时全量更新
 DROP TABLE IF EXISTS question_stats;
 CREATE TABLE question_stats (
-       question_id     BIGINT UNSIGNED NOT NULL,
-       version_id      BIGINT UNSIGNED NOT NULL,
-       attempts        INT             NOT NULL DEFAULT 0 COMMENT '作答次数',
-       correct_cnt     INT             NOT NULL DEFAULT 0 COMMENT '正确作答次数',
-       correct_rate    DECIMAL(6,4)    NULL               COMMENT '正确率',
-       difficulty      DECIMAL(3,2)    NULL               COMMENT '难度系数',
-       exposure_factor DECIMAL(3,2)    NULL               COMMENT '曝光系数',
---        window_start    DATETIME        NULL,
---        window_end      DATETIME        NULL,
-       updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       PRIMARY KEY (question_id, version_id),
-       KEY idx_qm_ver (version_id),
-       KEY idx_qm_exposure (exposure_factor),
-       KEY idx_qm_updated (updated_at),
-       KEY idx_qm_qid (question_id)
-);
+        question_id      BIGINT UNSIGNED NOT NULL              COMMENT '题目ID',
+        version_id       BIGINT UNSIGNED NOT NULL              COMMENT '当前版本ID（用于join当前版本）',
+        attempts         INT UNSIGNED    NOT NULL DEFAULT 0    COMMENT '作答次数',
+        correct_cnt      INT UNSIGNED    NOT NULL DEFAULT 0    COMMENT '正确作答次数',
+        correct_rate     DECIMAL(6,4)    NULL                  COMMENT '正确率(0~1)，可由异步任务回填',
+        difficulty       DECIMAL(3,2)    NULL                  COMMENT '难度系数(0~1)，人工/算法标注',
+        exposure_factor  DECIMAL(3,2)    NOT NULL DEFAULT 1.00 COMMENT '曝光强度基准值(0~1)，在 last_exposed_at 时刻的值',
+        last_exposed_at  DATETIME        NULL                  COMMENT '上次被组卷/下发时间（用于时间衰减）',
+        updated_at       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (question_id),
+        KEY idx_qs_ver (version_id),
+        KEY idx_qs_exposure (exposure_factor),
+        KEY idx_qs_last_exposed (last_exposed_at),
+        KEY idx_qs_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题目统计与曝光读模型';
