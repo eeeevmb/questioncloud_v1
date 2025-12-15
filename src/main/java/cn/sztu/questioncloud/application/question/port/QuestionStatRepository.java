@@ -6,6 +6,28 @@ import java.util.List;
 
 public interface QuestionStatRepository {
     /**
+     * 根据题目ID查询统计数据
+     *
+     * @param questionId 题目ID
+     * @return 统计数据
+     */
+    QuestionStat getByQuestionId(Long questionId);
+
+    /**
+     * 根据实体更新统计数据
+     *
+     * @param questionStat 统计数据
+     */
+    void update(QuestionStat questionStat);
+
+    /**
+     * 根据题目ID删除统计数据
+     *
+     * @param questionId 题目ID
+     */
+    void deleteByQuestionId(Long questionId);
+
+    /**
      * 保存单个统计数据
      * @param stat 统计数据
      */
