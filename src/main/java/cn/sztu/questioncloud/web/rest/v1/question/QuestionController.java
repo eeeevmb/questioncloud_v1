@@ -32,6 +32,13 @@ public class QuestionController {
         return ResultVO.success(questionAppService.createQuestion(req));
     }
 
+    /**
+     * 更新单题
+     *
+     * @param req 更新题目请求
+     * @param questionId 题目ID
+     * @return 更新响应
+     */
     @PutMapping("{questionId}")
     public ResultVO<Void> updateQuestion(@Valid @RequestBody UpdateQuestionReq req,
                                          @PathVariable Long questionId) {
