@@ -37,12 +37,24 @@ public class QuestionController {
      *
      * @param req 更新题目请求
      * @param questionId 题目ID
-     * @return 更新响应
+     * @return 无
      */
     @PutMapping("{questionId}")
     public ResultVO<Void> updateQuestion(@Valid @RequestBody UpdateQuestionReq req,
                                          @PathVariable Long questionId) {
         questionAppService.updateQuestionById(req, questionId);
+        return ResultVO.success();
+    }
+
+    /**
+     * 删除题目
+     *
+     * @param questionId 题目ID
+     * @return 无
+     */
+    @DeleteMapping("{questionId}")
+    public ResultVO<Void> deleteQuestion(@PathVariable Long questionId) {
+        questionAppService.deleteQuestionById(questionId);
         return ResultVO.success();
     }
 

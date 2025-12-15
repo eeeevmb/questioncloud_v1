@@ -16,9 +16,16 @@ public interface QuestionRepository {
     /**
      * 根据实体更新题目
      *
-     * @param questionEntity 题目实体j
+     * @param questionEntity 题目实体
      */
     void update(QuestionEntity questionEntity);
+
+    /**
+     * 根据ID删除题目
+     *
+     * @param questionId 题目ID
+     */
+    void delete(Long questionId);
 
     // ===== 写入操作 =====
     /**

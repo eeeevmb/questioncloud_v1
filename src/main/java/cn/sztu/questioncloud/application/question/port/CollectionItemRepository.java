@@ -20,6 +20,13 @@ public interface CollectionItemRepository {
     void save(CollectionItem collectionItem);
 
     /**
+     * 根据题目ID删除题集关联
+     *
+     * @param questionId 题目ID
+     */
+    void deleteByQuestionId(Long questionId);
+
+    /**
      * 批量存入题集
      *
      * @param items 题集内容

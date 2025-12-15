@@ -66,15 +66,15 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         // 2. 权限检验
         QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(req.getCollectionId())
-                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在"));
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
 
         if (!userId.equals(collectionEntity.getOwnerId())) {
-            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在");
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
         }
 
         // 3. 校验题型
         if (!QuestionTypeEnum.ensureValid(req.getTypeCode())){
-            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR, "题型非法或为空");
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
 
         // 4. 创建题目实体和题目版本实体
@@ -185,11 +185,11 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         // 3. 权限校验和异常处理
         if (questionEntity == null || versionEntity == null || questionStat == null) {
-            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND, "题目不存在");
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND);
         }
 
         if (!userId.equals(questionEntity.getOwnerId())) {
-            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION, "无权修改题目");
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
 
@@ -228,6 +228,35 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionStatRepository.update(questionStat);
     }
 
+    /**
+     * 硬删除 question、question_version、question_stats，
+     * 并从所有题集中移除该题，不重排 collection_item.ordinal。
+     *
+     * @param questionId 题目ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteQuestionById(Long questionId) {
+        // 1. 获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+
+        // 2. 权限、存在性校验
+        QuestionEntity questionEntity = questionRepository.getById(questionId);
+        if (questionEntity == null) {
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND);
+        }
+
+        if (!userId.equals(questionEntity.getOwnerId())) {
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
+        }
+
+        // 3. 删除实体
+        collectionItemRepository.deleteByQuestionId(questionId);
+        questionStatRepository.deleteByQuestionId(questionId);
+        questionVersionRepository.deleteByQuestionId(questionId);
+        questionRepository.delete(questionId);
+    }
+
 
     /**
      * 查询题集内题目概要
@@ -242,10 +271,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         // 1. 权限验证
         QuestionCollectionEntity collection = questionCollectionRepository.findById(collectionId)
-                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "数据库中没有对应题集"));
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
 
         if (!userId.equals(collection.getOwnerId())) {
-            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "当前登录用户非题集所有者");
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
         // 2. 获取题目概要

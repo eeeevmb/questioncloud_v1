@@ -39,6 +39,14 @@ public interface QuestionAppService {
     void updateQuestionById(UpdateQuestionReq req, Long questionId);
 
     /**
+     * 硬删除题目：删除 question、question_version、question_stats，
+     * 并从所有题集中移除该题，不重排 collection_item.ordinal。
+     *
+     * @param questionId 题目ID
+     */
+    void deleteQuestionById(Long questionId);
+
+    /**
      * 查询题集内题目概要
      *
      * @param collectionId 题集ID

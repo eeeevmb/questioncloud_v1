@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
+import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
@@ -43,6 +44,18 @@ public class QuestionRepositoryImpl implements QuestionRepository {
     @Override
     public void update(QuestionEntity questionEntity) {
         questionMapper.update(questionEntity);
+    }
+
+    /**
+     * 根据ID删除题目
+     *
+     * @param questionId 题目ID
+     */
+    @Override
+    public void delete(Long questionId) {
+        DeleteChain.of(questionMapper)
+                .eq(QuestionEntity::getId ,questionId)
+                .execute();
     }
 
     /**

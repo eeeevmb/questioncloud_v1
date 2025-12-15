@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionVersionMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
+import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
@@ -35,6 +36,18 @@ public class QuestionVersionRepositoryImpl implements QuestionVersionRepository 
                 .orderByDesc(QuestionVersionEntity::getVersionNo)
                 .limit(1)
                 .get();
+    }
+
+    /**
+     * 根据题目ID删除所有题目版本记录
+     *
+     * @param questionId 题目ID
+     */
+    @Override
+    public void deleteByQuestionId(Long questionId) {
+        DeleteChain.of(questionVersionMapper)
+                .eq(QuestionVersionEntity::getQuestionId, questionId)
+                .execute();
     }
 
     /**
