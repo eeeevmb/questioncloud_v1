@@ -1,10 +1,14 @@
 package cn.sztu.questioncloud.web.rest.v1.question.vo;
 
+import cn.sztu.questioncloud.common.json.TwoDecimalDoubleSerializer;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.xbatis.db.annotations.ResultEntity;
 import cn.xbatis.db.annotations.ResultEntityField;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -39,10 +43,14 @@ public class QuestionDetailVO {
     private Integer correctCount;
     @ResultEntityField(target = QuestionStat.class, property = "correctRate")
     private Double correctRate;
+    @JsonSerialize(using = TwoDecimalDoubleSerializer.class)
     @ResultEntityField(target = QuestionStat.class, property = "difficulty")
     private Double difficulty;
+    @JsonSerialize(using = TwoDecimalDoubleSerializer.class)
     @ResultEntityField(target = QuestionStat.class, property = "exposureFactor")
     private Double exposureFactor;
+    @ResultEntityField(target = QuestionStat.class, property = "lastExposedAt")
+    private LocalDateTime lastExposedAt;
 
     private Long ownerId;
     private LocalDateTime createdAt;
