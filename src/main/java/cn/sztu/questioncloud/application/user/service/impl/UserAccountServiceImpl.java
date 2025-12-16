@@ -84,7 +84,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     /**
-     * 用户注册
+     * 用户登陆
      *
      * @param request 登陆请求
      * @return 登陆响应
