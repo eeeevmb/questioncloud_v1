@@ -1,26 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Code stays under `src/main/java/cn/sztu/questioncloud`. Controllers live in `web/rest/v1`, application services and DTO/VO mappers in `application`, and persistence plus adapters inside `infrastructure`. Shared enums and constants belong to `common`. `QuestioncloudApplication.java` boots the service. SQL migrations sit in `src/main/resources/sql`, configuration in `src/main/resources/application.yml`, and static assets in `src/main/resources/static`. Mirror the package tree in `src/test/java` for tests.
-
-## Project Progress
-- **User module**: Registration, login/logout, avatar upload & retrieval, and basic profile APIs are live. RabbitMQ integration emits `user.registered` events that provision default collections.
-- **Question module**: Collection CRUD and LaTeX-based question authoring work end-to-end with MyBatis repositories. Query endpoints remain stubbed (`QuestionQueryController`), and type validation plus collection-item concurrency are TODOs.
-- **Infrastructure**: Local file storage, Sa-Token security, and Snowflake ID generation are wired; MyBatis mappers cover user and question entities. Only the skeleton `QuestioncloudV1ApplicationTests` exists, leaving mapper/service coverage outstanding. Exam package is still empty.
+Source lives under `src/main/java/cn/sztu/questioncloud` and mirrors the layered layout: controllers stay in `web/rest/v1`, application services plus DTO/VO mappers in `application`, infrastructure adapters and persistence code in `infrastructure`, and shared enums/constants beneath `common`. Bootstrapping happens in `QuestioncloudApplication.java`. Keep configuration in `src/main/resources/application.yml`, SQL migrations in `src/main/resources/sql`, and static assets in `src/main/resources/static`. Tests should mirror the main tree inside `src/test/java`, reusing the same package hierarchy for controllers, services, and mappers.
 
 ## Build, Test, and Development Commands
-- `./mvnw clean package` builds the release JAR and runs the full verification pipeline.
-- `./mvnw spring-boot:run` starts the API with Java 21; add `-DskipTests` for fast local loops.
-- `./mvnw test` runs all automated checks; execute before submitting changes.
+- `./mvnw clean package` — runs the full verification pipeline and produces the release JAR.
+- `./mvnw test` — executes all JUnit 5 suites; run before sending patches.
+- `./mvnw spring-boot:run` — launches the API with Java 21; add `-DskipTests` for faster local loops.
+Set `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run` to pick up `application-dev.yml`.
 
 ## Coding Style & Naming Conventions
-Use 4-space indentation and standard Spring naming: classes `PascalCase`, members `camelCase`, constants `UPPER_SNAKE_CASE`. Controllers end with `Controller`; services in `application/*/service` follow `*Service` or `*ServiceImpl`. Prefer Lombok annotations (`@Getter`, `@Builder`, `@RequiredArgsConstructor`) over boilerplate. Keep inbound requests and outbound responses separated by DTO and VO classes.
+Stick to 4-space indentation and standard Spring naming: `PascalCase` classes, `camelCase` members, `UPPER_SNAKE_CASE` constants. Controllers end with `Controller`, services live in `application/*/service` as `*Service` or `*ServiceImpl`. Separate inbound DTOs from outbound VOs. Prefer Lombok (`@Getter`, `@Builder`, `@RequiredArgsConstructor`) over boilerplate; annotate mappers and services with Spring stereotypes where appropriate.
 
 ## Testing Guidelines
-Rely on JUnit 5 via `spring-boot-starter-test`. Name test classes with the `Tests` suffix and align package paths with their targets. Add mapper slice tests for MyBatis components, plus `@SpringBootTest` cases when flows touch web, application, and infrastructure layers. Always confirm `./mvnw test` passes before pushing.
+Use JUnit 5 via `spring-boot-starter-test`. Mirror package paths in `src/test/java` and suffix classes with `Tests` (e.g., `UserServiceTests`). Add mapper slice tests for MyBatis repositories and `@SpringBootTest` coverage for flows that cross web, application, and infrastructure layers. Ensure `./mvnw test` passes locally before opening a PR.
 
 ## Commit & Pull Request Guidelines
-Write concise, imperative commit messages in English or Chinese under 72 characters (e.g., `完善用户模块权限`, `Add file upload validation`). Note SQL changes when editing `src/main/resources/sql`. Pull requests should outline the change scope, record manual verification (`./mvnw test`, smoke requests), and attach screenshots when altering files in `src/main/resources/static`.
+Write concise, imperative commit messages under 72 characters (e.g., `完善用户模块权限`, `Add file upload validation`). Mention SQL changes when touching `src/main/resources/sql`. Pull requests should summarize scope, note manual verification (such as `./mvnw test`, smoke calls), and include screenshots for static asset updates.
 
 ## Security & Configuration Tips
-Keep secrets out of the repo. Extend `application.yml` with profile files such as `application-dev.yml`, then start locally with `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run`. Document any new external keys or validation rules in the accompanying PR or README updates.
+Never commit secrets. Extend `application.yml` with profile-specific files like `application-dev.yml` for local overrides. Document any new external keys or validation rules in the PR or README updates, and prefer environment variables for sensitive configuration.

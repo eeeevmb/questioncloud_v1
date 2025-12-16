@@ -84,7 +84,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     /**
-     * 用户注册
+     * 用户登陆
      *
      * @param request 登陆请求
      * @return 登陆响应
@@ -203,7 +203,6 @@ public class UserAccountServiceImpl implements UserAccountService {
         return UserBasicInfoVO.fromEntity(user);
     }
 
-
     /**
      * 获取默认头像
      * @return 默认头像DTO
@@ -216,9 +215,6 @@ public class UserAccountServiceImpl implements UserAccountService {
                 .mediaType(type)
                 .build();
     }
-
-
-
 
     private ApplicationException mapToApplicationException(InfrastructureException e) {
         return switch (e.getCode()) {

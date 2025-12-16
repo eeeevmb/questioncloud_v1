@@ -1,12 +1,13 @@
 package cn.sztu.questioncloud.infrastructure.common.persistent.entity.question;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.AssetSnapshot;
-import cn.sztu.questioncloud.infrastructure.common.persistent.handler.AssetSnapshotListTypeHandler;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionAsset;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.handler.QuestionAssetListTypeHandler;
+import cn.sztu.questioncloud.infrastructure.common.persistent.handler.QuestionOptionListTypeHandler;
 import cn.xbatis.db.IdAutoType;
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableField;
 import cn.xbatis.db.annotations.TableId;
-import cn.xbatis.db.annotations.TypeHandler;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -57,9 +58,20 @@ public class QuestionVersionEntity implements Serializable {
     private String stem;
 
     /**
+     * 题目选项
+     */
+    @TableField(typeHandler = QuestionOptionListTypeHandler.class)
+    private List<QuestionOption> options;
+
+    /**
      * 答案原文（LaTex格式）
      */
     private String answer;
+
+    /**
+     * 判分用答案
+     */
+    private String answerKey;
 
     /**
      * 题目解析（LaTex格式）
@@ -69,8 +81,8 @@ public class QuestionVersionEntity implements Serializable {
     /**
      * 图片/附件
      */
-    @TableField(typeHandler = AssetSnapshotListTypeHandler.class)
-    private List<AssetSnapshot> assets;
+    @TableField(typeHandler = QuestionAssetListTypeHandler.class)
+    private List<QuestionAsset> assets;
 
     /**
      * 创建者id

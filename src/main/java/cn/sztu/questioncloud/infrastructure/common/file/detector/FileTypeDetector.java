@@ -11,7 +11,7 @@ import java.io.InputStream;
 /**
  * 文件类型检测器（基于魔数/文件头）
  *
- * @author LinSanQi
+ * @author Codex
  */
 @Component
 public class FileTypeDetector {
