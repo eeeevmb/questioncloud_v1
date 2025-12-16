@@ -93,11 +93,11 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
 
         // 2. 获取待更新的题集实体
         QuestionCollectionEntity entity =  questionCollectionRepository.findById(collectionId).orElseThrow(
-                () -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在"));
+                () -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
 
         // 3. 权限校验，有实体但是非题集创建者，也返回找不到，避免信息泄露
         if (!userId.equals(entity.getOwnerId())) {
-            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在");
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
         }
 
         // 4. 更新题集数据
@@ -123,11 +123,11 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
 
         // 2. 获取待删除的题集实体
         QuestionCollectionEntity entity =  questionCollectionRepository.findById(collectionId).orElseThrow(
-                () -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在"));
+                () -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
 
         // 3. 权限校验，有实体但是非题集创建者，也返回找不到，避免信息泄露
         if (!userId.equals(entity.getOwnerId())) {
-            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在");
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
         }
 
         // 4. 删除题集操作（内部实现了关联内容删除）
