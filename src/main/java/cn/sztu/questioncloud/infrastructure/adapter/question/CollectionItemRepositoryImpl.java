@@ -4,6 +4,7 @@ import cn.sztu.questioncloud.application.question.port.CollectionItemRepository;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
+import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
@@ -27,6 +28,18 @@ public class CollectionItemRepositoryImpl implements CollectionItemRepository {
     @Override
     public void save(CollectionItem collectionItem) {
         collectionItemMapper.save(collectionItem);
+    }
+
+    /**
+     * 根据题目ID删除题集关联
+     *
+     * @param questionId 题目ID
+     */
+    @Override
+    public void deleteByQuestionId(Long questionId) {
+        DeleteChain.of(collectionItemMapper)
+                .eq(CollectionItem::getQuestionId, questionId)
+                .execute();
     }
 
     /**

@@ -30,7 +30,7 @@ public class ImageValidator implements FileValidator {
             throw new InfrastructureException(FileExceptionCodeEnum.FILE_EMPTY);
         }
 
-        String ext = getExtension(file.getOriginalFilename());
+        String ext = FileValidator.getExtension(file.getOriginalFilename());
         Set<String> allowedExts = properties.getAllowedImageExtensions();
         String allowed = String.join(",", allowedExts);
 
@@ -48,15 +48,15 @@ public class ImageValidator implements FileValidator {
             throw InfrastructureException.of(FileExceptionCodeEnum.FILE_READ_ERROR, e);
         }
 
-        // 4. 检测到的类型必须是 JPEG 或 PNG
-        if (detectedType == null || !Set.of("jpeg", "png").contains(detectedType)) {
+        // 检测到的类型必须是 JPEG 或 PNG
+        if (detectedType == null || !allowedExts.contains(detectedType)) {
             throw InfrastructureException.of(
                     FileExceptionCodeEnum.FILE_TYPE_INVALID,
                     String.format("检测到的文件类型: %s, 期望类型: jpeg/png", detectedType)
             );
         }
 
-        // 5. 一致性校验（扩展名与内容匹配）
+        // 一致性校验（扩展名与内容匹配）
         if (!isConsistent(ext, detectedType)) {
             throw InfrastructureException.of(
                     FileExceptionCodeEnum.FILE_TYPE_MISMATCH,
@@ -72,11 +72,6 @@ public class ImageValidator implements FileValidator {
     @Override
     public String supportedType() {
         return "image";
-    }
-
-    private String getExtension(String filename) {
-        if (filename == null || !filename.contains(".")) return "";
-        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
     private boolean isConsistent(String ext, String detected) {

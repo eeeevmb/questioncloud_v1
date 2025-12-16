@@ -19,5 +19,5 @@ import java.util.Set;
 public class FileUploadProperties {
     private Set<String> allowedImageExtensions = new HashSet<>(Set.of("jpg", "jpeg", "png"));
 
-    private Set<String> allowedDocExtensions = new HashSet<>(Set.of("doc", "docx", "pdf"));
+    private Set<String> allowedDocExtensions = new HashSet<>(Set.of("doc", "docx", "pdf", "tex"));
 }
