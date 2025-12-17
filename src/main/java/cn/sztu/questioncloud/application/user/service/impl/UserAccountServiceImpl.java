@@ -151,10 +151,13 @@ public class UserAccountServiceImpl implements UserAccountService {
     public AvatarDTO getAvatar(Long userId) {
         log.info("获取头像资源：userId={}", userId);
 
-        UserAccountEntity user = userAccountRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ApplicationException(CommonResultCodeEnum.NOT_FOUND, "用户不存在"));
+        Optional<UserAccountEntity> userOpt = userAccountRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            log.info("用户不存在，返回默认头像：userId={}", userId);
+            return getDefaultAvatar();
+        }
 
+        UserAccountEntity user = userOpt.get();
         String relativePath = user.getAvatarUrl();
 
         if (relativePath == null || relativePath.isEmpty()) {

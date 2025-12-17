@@ -2,10 +2,12 @@
 
 ## 概览
 - **Base URL**：`/api/v1`，题集接口前缀 `/collection`，题目前缀 `/question`。
-- **统一响应包装**：除特别说明外均返回 `ResultVO<T>`，字段：`code`（String）、`message`（String）、`data`（任意 VO）。
+- **统一响应包装**：所有接口均返回 `ResultVO<T>`（`code` `message` `data`），`code` 为字符串。
+- **HTTP 状态**：所有接口 HTTP 恒为 200，成功或失败均以 `ResultVO.code` 判断。
+- **鉴权与会话**：题库接口全部需要登录，Sa-Token 使用 Cookie 会话，Cookie 名 `satoken`。浏览器同域自动携带；跨域联调需 `withCredentials=true`，服务端允许 credentials 且 `Access-Control-Allow-Origin` 不能为 `*`。未携带有效 Cookie 时返回 `code=401000`。
+- **tokenName/tokenValue**：登录接口返回该字段仅供调试，非浏览器客户端可显式设置 `Cookie: satoken=<tokenValue>`；Web 前端以 Cookie 自动携带。
+- **失败 message 结构**：若抛出 `ApplicationException(ResultCodeEnum, "detail")`，`message` 会拼接为 `<默认文案>: <detail>`，如 `题集不存在: 题集不存在`；无附加信息则仅返回默认文案。
 - **成功示例**：`{"code":"200000","message":"请求成功","data":{...}}`
-- **失败 message 结构**：若抛出 `ApplicationException(ResultCodeEnum, "detail")`，`message` 会拼接为 `<默认文案>: <detail>`，如 `题集不存在: 题集不存在`；无附加信息则只返回默认文案。
-- **鉴权**：所有题库接口需登录（Service 层通过 `StpUtil.getLoginIdAsLong()` 校验），请在 Header 或 Cookie 携带 `satoken=<tokenValue>`（登录接口返回的 `tokenName/tokenValue`）。
 
 ### 常见错误码
 | code | message | 场景 |
@@ -40,6 +42,7 @@
 - **Content-Type**：`application/json`
 - **鉴权**：需要登录
 - **请求体（CreateCollectionReq）**
+
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | name | string | 是 | 题集名称，`@NotBlank` |
@@ -76,6 +79,7 @@ curl -X POST https://host/api/v1/collection \
 - **鉴权**：需要登录（仅所有者可更新）
 - **路径参数**：`collectionId` (long)
 - **请求体（UpdateCollectionReq）**
+
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | name | string | 新名称 |

@@ -158,9 +158,9 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         // 1. 校验结果以及权限验证
         QuestionDetailVO result = detailVO
-                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND, "题目不存在"));
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND));
         if (!userId.equals(result.getOwnerId())) {
-            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION, "无查看权限");
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
         // 2. 计算有效曝光系数
