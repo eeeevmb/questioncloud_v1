@@ -1,0 +1,136 @@
+.field-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.field-pair.single {
+  grid-template-columns: 1fr;
+}
+
+.field-pair.with-preview {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.field-pair label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-pair textarea,
+.field-pair input,
+.field-pair select {
+  width: 100%;
+  border: 1px solid #cbd5f5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.preview-card {
+  border: 1px dashed #cbd5f5;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.preview-card p {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.type-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-editor {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-editor:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.option-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.option-head .option-key {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.option-head .option-key input {
+  width: 110px;
+}
+
+.option-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.answer-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 1px solid #cbd5f5;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 36px;
+  user-select: none;
+  font-weight: 500;
+  color: #0f172a;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.answer-selector input {
+  width: 18px;
+  height: 18px;
+}
+
+.answer-selector.active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
+
+.option-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.option-body textarea {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid #cbd5f5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}

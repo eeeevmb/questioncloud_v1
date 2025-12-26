@@ -117,6 +117,15 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
             switch (query.getSortField()) {
                 case "createdAt" ->
                         RepositoryUtils.setSortDirectionCondition(queryChain, QuestionEntity::getCreatedAt, query.getSortDirection());
+                case "updatedAt" ->
+                        RepositoryUtils.setSortDirectionCondition(queryChain, QuestionEntity::getUpdatedAt, query.getSortDirection());
+                case "difficulty" -> {
+                    if (query.getSortDirection() == SortDirectionEnum.ASC) {
+                        queryChain.orderBy(QuestionStat::getDifficulty);
+                    } else {
+                        queryChain.orderByDesc(QuestionStat::getDifficulty);
+                    }
+                }
                 case "typeCode" -> {
                     if (query.getSortDirection() == SortDirectionEnum.ASC) {
                         queryChain.orderBy(QuestionVersionEntity::getTypeCode);

@@ -1,22 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Backend source resides under `src/main/java/cn/sztu/questioncloud` using a layered layout: REST controllers live in `web/rest/v1`, application services plus DTO/VO mappers in `application`, infrastructure adapters in `infrastructure`, and shared enums or constants in `common`. Bootstrapping starts at `QuestioncloudApplication.java`. Configuration defaults to `src/main/resources/application.yml`, with profile overrides such as `application-dev.yml`. Place SQL migrations inside `src/main/resources/sql` and static assets under `src/main/resources/static`. Mirror the same packages in `src/test/java` so every controller, service, and mapper has a matching test location.
+This Spring Boot monolith lives under `src/main/java/cn/sztu/questioncloud`. Controllers belong to `web/rest/v1`, application services plus DTO/VO mappers to `application`, infrastructure adapters to `infrastructure`, and shared enums or constants to `common`. Bootstrapping starts at `QuestioncloudApplication.java`. YAML config resides in `src/main/resources`, with `application.yml` as default and profile overrides such as `application-dev.yml`. Keep SQL migrations inside `src/main/resources/sql` and static assets under `src/main/resources/static`. Tests mirror the production tree inside `src/test/java`, so every controller, service, and mapper keeps matching packages for easy discovery.
 
 ## Build, Test, and Development Commands
-- `./mvnw clean package` – runs the full verification pipeline and assembles the release JAR.
-- `./mvnw test` – executes all JUnit 5 suites; run before pushing any change.
-- `./mvnw spring-boot:run` – launches the API on Java 21; append `-DskipTests` for quick manual checks.
-- `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run` – loads local-only settings from `application-dev.yml`.
+- `./mvnw clean package` – cleans, runs the full verification pipeline, and produces the release JAR.
+- `./mvnw test` – executes all JUnit 5 suites; run it before each push or pull request.
+- `./mvnw spring-boot:run` – launches the API on Java 21; add `-DskipTests` for quick smoke checks.
+- `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run` – starts the app with local-only configuration from `application-dev.yml`.
 
 ## Coding Style & Naming Conventions
-Indent Java code with 4 spaces and follow Spring naming: `PascalCase` types, `camelCase` fields or methods, and `UPPER_SNAKE_CASE` constants. Controllers must end in `Controller`; services under `application/*/service` should be `*Service` or `*ServiceImpl`. Keep inbound DTOs separate from outbound VOs. Prefer Lombok (`@Getter`, `@Builder`, `@RequiredArgsConstructor`) to cut down boilerplate, and annotate application services, mappers, and adapters with the appropriate Spring stereotype.
+Use 4-space indentation and Spring naming: `PascalCase` classes, `camelCase` members and methods, `UPPER_SNAKE_CASE` constants. Controllers end with `Controller`, services under `application/*/service` end with `Service` or `ServiceImpl`. Keep inbound DTOs (`*Request`, `*Command`) separate from outbound VOs (`*Response`, `*View`). Annotate services, mappers, and adapters with the correct Spring stereotypes and lean on Lombok (`@Getter`, `@Builder`, `@RequiredArgsConstructor`) to limit boilerplate.
 
 ## Testing Guidelines
-Tests rely on `spring-boot-starter-test` with JUnit 5. Name classes `*Tests` (e.g., `UserServiceTests`) and mirror the main package path in `src/test/java`. Add mapper slice tests for MyBatis persistence, plus `@SpringBootTest` flows for cross-layer scenarios. Always run `./mvnw test` locally and avoid committing code that skips or ignores suites without justification.
+JUnit 5 via `spring-boot-starter-test` is the default stack. Name suites `*Tests` and mirror their production packages (e.g., `src/test/java/.../application/user/service/UserServiceTests`). Provide mapper slice tests for MyBatis persistence plus `@SpringBootTest` coverage for multi-layer flows. Always run `./mvnw test` locally and add focused scenarios when updating business-critical rules or SQL migrations.
 
 ## Commit & Pull Request Guidelines
-Write concise, imperative commit messages under 72 characters (examples: `完善用户模块权限`, `Add file upload validation`). Reference SQL changes when touching `src/main/resources/sql`. Pull requests should summarize scope, link relevant issues, document manual verification (e.g., `./mvnw test`, smoke API calls), and include screenshots for UI or static asset updates.
+Craft concise, imperative commit messages under 72 characters (e.g., `完善用户模块权限`, `Add file upload validation`). Reference SQL artifacts whenever `src/main/resources/sql` changes. PRs should summarize scope, link relevant issues, list manual verification (`./mvnw test`, smoke API calls), and supply screenshots for UI or static asset updates.
 
 ## Security & Configuration Tips
-Do not commit secrets or environment-specific credentials. Prefer environment variables over hard-coded keys, and document any new configuration in the PR or README. Use profile-specific YAML files to keep local overrides isolated, and confirm new external integrations are feature-flagged or guarded by validation rules.
+Never commit secrets or profile-specific credentials. Favor environment variables for sensitive values and document new configuration surfaces in the PR or README. Keep profile-specific overrides inside dedicated YAML files and ensure external integrations are guarded by feature flags or validation rules before enabling them by default.

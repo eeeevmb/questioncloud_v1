@@ -1,7 +1,9 @@
 package cn.sztu.questioncloud.application.question.port;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.CollectionVO;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface QuestionCollectionRepository {
@@ -13,6 +15,14 @@ public interface QuestionCollectionRepository {
      * @param collectionId 题集ID
      */
     Optional<QuestionCollectionEntity> findById(Long collectionId);
+
+    /**
+     * 根据用户ID获取题集列表
+     *
+     * @param userId 用户ID
+     * @return 题集列表视图
+     */
+    List<CollectionVO> getCollectionsByUserId(Long userId);
 
     // ===== 写入操作 =====
     /**

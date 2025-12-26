@@ -8,6 +8,7 @@ import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeE
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.exception.InfrastructureException;
 import cn.sztu.questioncloud.infrastructure.common.file.exception.FileExceptionCodeEnum;
+import cn.sztu.questioncloud.web.rest.v1.common.vo.FileUploadVO;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,9 +28,9 @@ public class CommonAppServiceImpl implements CommonAppService {
      * @return 文件ID
      */
     @Override
-    public Long uploadFile(MultipartFile file) {
+    public FileUploadVO uploadFile(MultipartFile file) {
         Long userId = StpUtil.getLoginIdAsLong();
-        return filePort.uploadFile(file, userId).getFmId();
+        return new FileUploadVO(filePort.uploadFile(file, userId).getFmId());
     }
 
     /**
