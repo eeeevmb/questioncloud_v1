@@ -35,3 +35,8 @@ build/
 ### MacOS ###
 **/.DS_Store
 .DS_Store
+
+### docker ###
+.env
+.env.*
+!.env.example
