@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 题目模块应用服务实现
@@ -132,5 +133,19 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
 
         // 4. 删除题集操作（内部实现了关联内容删除）
         questionCollectionRepository.deleteById(collectionId);
+    }
+
+    /**
+     * 获取当前登录用户的题集
+     *
+     * @return 题集列表视图
+     */
+    @Override
+    public List<CollectionVO> getCollections() {
+        // 1. 获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+
+        // 2. 获取题集列表
+        return questionCollectionRepository.getCollectionsByUserId(userId);
     }
 }

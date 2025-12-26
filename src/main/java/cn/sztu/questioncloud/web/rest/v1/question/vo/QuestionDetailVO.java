@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.web.rest.v1.question.vo;
 
 import cn.sztu.questioncloud.common.json.TwoDecimalDoubleSerializer;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
@@ -28,6 +29,8 @@ public class QuestionDetailVO {
     private String title;
     @ResultEntityField(target = QuestionVersionEntity.class, property = "stem")
     private String stem;
+    @ResultEntityField(target = QuestionVersionEntity.class, property = "options")
+    private List<QuestionOption> options;
     @ResultEntityField(target = QuestionVersionEntity.class, property = "answer")
     private String answer;
     @ResultEntityField(target = QuestionVersionEntity.class, property = "answerKey")
