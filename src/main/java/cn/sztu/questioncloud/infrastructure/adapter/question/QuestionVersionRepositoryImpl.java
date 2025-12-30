@@ -10,8 +10,11 @@ import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 public class QuestionVersionRepositoryImpl implements QuestionVersionRepository {
@@ -48,6 +51,27 @@ public class QuestionVersionRepositoryImpl implements QuestionVersionRepository 
         DeleteChain.of(questionVersionMapper)
                 .eq(QuestionVersionEntity::getQuestionId, questionId)
                 .execute();
+    }
+
+    /**
+     * 批量查询存在的版本ID列表
+     *
+     * @param ids 待检查的版本ID集合
+     * @return 数据库中实际存在的ID列表
+     */
+    @Override
+    public List<Long> findExistingIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return QueryChain.of(questionVersionMapper)
+                .select(QuestionVersionEntity::getId)
+                .in(QuestionVersionEntity::getId, ids)
+                .list()
+                .stream()
+                .map(QuestionVersionEntity::getId)
+                .collect(Collectors.toList());
     }
 
     /**

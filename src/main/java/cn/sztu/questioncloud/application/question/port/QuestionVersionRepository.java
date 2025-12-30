@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.question.port;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,14 @@ public interface QuestionVersionRepository {
      * @param questionId 题目ID
      */
     void deleteByQuestionId(Long questionId);
+
+    /**
+     * 批量查询存在的版本ID列表
+     *
+     * @param ids 待检查的版本ID集合
+     * @return 数据库中实际存在的ID列表
+     */
+    List<Long> findExistingIds(Collection<Long> ids);
 
     // ===== 写入操作 =====
 
