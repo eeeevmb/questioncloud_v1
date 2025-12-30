@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class PaperSaveReq {
+public class PaperUpdateReq {
     @NotBlank(message = "试卷标题不能为空")
     private String title;
 

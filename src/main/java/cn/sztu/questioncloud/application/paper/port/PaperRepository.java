@@ -19,6 +19,14 @@ public interface PaperRepository {
     void update(PaperEntity paperEntity);
 
     /**
+     * 目前仅更新试卷的统计类信息 (总分、题数)
+     * 注意：此方法不会修改title、description等元数据
+     *
+     * @param paper 包含最新统计数据的实体对象
+     */
+    void updateStatistics(PaperEntity paper);
+
+    /**
      * 根据ID删除试卷
      *
      * @param paperId 试卷ID
