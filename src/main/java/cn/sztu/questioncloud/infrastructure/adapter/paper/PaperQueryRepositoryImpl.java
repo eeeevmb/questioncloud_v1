@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.infrastructure.adapter.Paper;
+package cn.sztu.questioncloud.infrastructure.adapter.paper;
 
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
@@ -14,6 +14,7 @@ import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
         List<PaperItemVO> itemList = QueryChain.of(paperItemMapper)
                 .select(PaperItemVO.class)
                 // 关联 Question 表获取标题 (对应 PaperItemVO 里的 @ResultEntityField)
-                .leftJoin(PaperItemEntity::getQuestionId, QuestionEntity::getId)
+                //.leftJoin(PaperItemEntity::getQuestionId, QuestionEntity::getId)
                 // 关联 Version 表获取题干 (对应 PaperItemVO 里的 stem)
                 .leftJoin(PaperItemEntity::getQuestionVersionId, QuestionVersionEntity::getId)
                 // 关联 Stat 表获取难度 (对应 PaperItemVO 里的 difficulty)
@@ -61,5 +62,35 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
         // 3. 组装返回视图
         paperVO.setItems(itemList);
         return Optional.of(paperVO);
+    }
+
+    /**
+     * 根据试卷ID查询题目总数
+     *
+     * @param paperId 试卷ID
+     * @return 题目总数
+     */
+    @Override
+    public Integer countItemsByPaperId(Long paperId){
+        return QueryChain.of(paperMapper)
+                .select(PaperEntity::getTotalItems)
+                .eq(PaperItemEntity::getPaperId, paperId)
+                .returnType(Integer.class)
+                .get();
+    }
+
+    /**
+     * 根据试卷ID查询试卷总分
+     *
+     * @param paperId 试卷ID
+     * @return 试卷总分
+     */
+    @Override
+    public BigDecimal sumScoreByPaperId(Long paperId){
+        return QueryChain.of(paperMapper)
+                .select(PaperEntity::getTotalScore)
+                .eq(PaperEntity::getId, paperId)
+                .returnType(BigDecimal.class)
+                .get();
     }
 }

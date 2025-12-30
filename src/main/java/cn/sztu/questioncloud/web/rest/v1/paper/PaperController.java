@@ -1,17 +1,23 @@
 package cn.sztu.questioncloud.web.rest.v1.paper;
 
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
+import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
+
+import java.util.List;
+
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemSaveVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 试卷相关接口
+ * 对试卷本体元操作相关接口
  *
  * @author Saler1y
  */
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaperController {
 
     private final PaperAppService paperAppService;
+    private final PaperItemService paperItemService;
 
     /**
      * 创建空试卷
@@ -31,6 +38,19 @@ public class PaperController {
     @PostMapping
     public ResultVO<PaperCreatedVO> createPaper(@Valid @RequestBody PaperSaveReq req) {
         return ResultVO.success(paperAppService.createPaper(req));
+    }
+
+    /**
+     * 全量保存试卷题目
+     * 编辑页面点击"保存"时调用，会覆盖之前的题目列表(delete+save)
+     *
+     * @param paperId 试卷ID
+     * @param reqs    题目列表 (试题顺序由题目列表题目顺序决定)
+     */
+    @PostMapping("/{paperId}/items")
+    public ResultVO<List<PaperItemSaveVO>> savePaperItems(@Valid @RequestBody List<PaperItemSaveReq> reqs,
+                                                          @PathVariable Long paperId) {
+        return ResultVO.success(paperItemService.savePaperItems(paperId, reqs));
     }
 
     /**
@@ -52,8 +72,8 @@ public class PaperController {
      * @return 更新后的基础信息
      */
     @PutMapping("/{paperId}")
-    public ResultVO<PaperBasicVO> updatePaperInfo(@PathVariable("paperId") Long paperId,
-                                                  @Valid @RequestBody PaperSaveReq req) {
+    public ResultVO<PaperBasicVO> updatePaperInfo(@Valid @RequestBody PaperSaveReq req,
+                                                  @PathVariable Long paperId) {
         return ResultVO.success(paperAppService.updatePaperInfo(paperId, req));
     }
 
@@ -66,6 +86,17 @@ public class PaperController {
     @DeleteMapping("/{paperId}")
     public ResultVO<Void> deletePaper(@PathVariable("paperId") Long paperId) {
         paperAppService.deletePaperById(paperId);
+        return ResultVO.success();
+    }
+
+    /**
+     * 清空试卷题目
+     *
+     * @param paperId 试卷ID
+     */
+    @DeleteMapping("/{paperId}/items")
+    public ResultVO<Void> clearPaperItems(@PathVariable Long paperId) {
+        paperItemService.deleteItemsByPaperId(paperId);
         return ResultVO.success();
     }
 }
