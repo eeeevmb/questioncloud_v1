@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
@@ -28,6 +29,8 @@ public class PaperController {
 
     private final PaperAppService paperAppService;
     private final PaperItemService paperItemService;
+
+    // === 自由组卷 ===
 
     /**
      * 创建空试卷
@@ -98,5 +101,17 @@ public class PaperController {
     public ResultVO<Void> clearPaperItems(@PathVariable Long paperId) {
         paperItemService.deleteItemsByPaperId(paperId);
         return ResultVO.success();
+    }
+
+    // === 随机组卷 ===
+
+    /**
+     * 随机组卷 - 纯随机返回
+     * (仅返回随机生成的题目列表，不保存到数据库，不覆盖原有试卷)
+     */
+    @PostMapping("/{paperId}/random-preview")
+    public ResultVO<List<PaperItemSaveVO>> previewRandomBuild(@RequestBody @Valid RandomBuildReq req,
+                                                              @PathVariable("paperId") Long paperId) {
+        return ResultVO.success(paperItemService.previewRandomItems(paperId, req));
     }
 }
