@@ -7,24 +7,30 @@ import cn.sztu.questioncloud.application.paper.port.PaperItemRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperRepository;
 import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
+import cn.sztu.questioncloud.application.question.port.CollectionPresenceCheckerPort;
+import cn.sztu.questioncloud.application.question.port.QuestionCollectionRepository;
+import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.application.question.port.QuestionVersionRepository;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.infrastructure.adapter.question.CollectionPresenceCheckerAdapter;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemSaveVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,9 +38,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PaperItemServiceImpl implements PaperItemService {
 
+    private final QuestionCollectionRepository questionCollectionRepository;
     private final PaperRepository paperRepository;
     private final PaperItemRepository paperItemRepository;
+    private final QuestionQueryRepository questionQueryRepository;
     private final QuestionVersionRepository questionVersionRepository;
+
+    // === 自由组卷 ===
 
     @Override
     public List<PaperItemSaveVO> savePaperItems(Long paperId,List<PaperItemSaveReq> reqs){
@@ -116,6 +126,77 @@ public class PaperItemServiceImpl implements PaperItemService {
         return paperItemRepository.getDetailedItemsByPaperId(paperId);
     }
 
+    // === 随机组卷 ===
+
+    @Override
+    public List<PaperItemSaveVO> previewRandomItems(Long paperId, RandomBuildReq req){
+        // 1. 获取用户ID
+        Long userId = StpUtil.getLoginIdAsLong();
+        PaperEntity paperEntity = paperRepository.getById(paperId);
+
+        // 2 校验存在性与权限
+        validatePaperStatus(paperEntity, userId);
+
+        for (Long collectionId : req.getCollectionIds()) {
+            QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(collectionId)
+                    .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
+            if (!userId.equals(collectionEntity.getOwnerId())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
+            }
+        }
+
+        // 3. 随机组卷逻辑
+        List<PaperItemEntity> finalItems = new ArrayList<>();
+        int currentSeq = 1; // 题号计数器
+
+        for (RandomBuildReq.Rule rule : req.getRules()) {
+            // 3.1 校验题目类型
+            if (!QuestionTypeEnum.ensureValid(rule.getTypeCode())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
+            }
+            // 3.2 搜索所有符合条件的候选题目
+            List<QuestionSummaryVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
+                    req.getCollectionIds(), rule.getTypeCode());
+            // 3.3 校验库存
+            if (candidates.size() < rule.getCount()) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT,
+                        String.format("题库余量不足！[%s]需要 %d 道，题集中实际只有 %d 道",
+                                rule.getTypeCode(), rule.getCount(), candidates.size()));
+            }
+            // 3.4 洗牌抽取
+            Collections.shuffle(candidates, ThreadLocalRandom.current());
+            List<QuestionSummaryVO> selected = new ArrayList<>(candidates.subList(0, rule.getCount()));
+
+            // 3.5 按难度升序 (Easy -> Hard)
+            selected.sort(Comparator.comparingDouble(vo ->
+                    vo.getDifficulty() == null ? 0.0 : vo.getDifficulty()
+            ));
+
+            // 3.6 构建 PaperItem 实体
+            for (QuestionSummaryVO vo : selected) {
+                PaperItemEntity item = PaperItemEntity.builder()
+                        .paperId(paperId)
+                        .questionId(vo.getId())
+                        .questionVersionId(vo.getCurrentVersionId())
+                        .score(rule.getScore())
+                        .seq(currentSeq++)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                finalItems.add(item);
+            }
+        }
+
+        // 4. 返回抽取到的题目
+        return finalItems.stream().map(item -> PaperItemSaveVO.builder()
+                        .questionId(item.getQuestionId())
+                        .questionVersionId(item.getQuestionVersionId())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    // === 校验方法 ===
+
     /**
      * 校验试卷状态与权限
      *
@@ -165,10 +246,6 @@ public class PaperItemServiceImpl implements PaperItemService {
 
         // 3. 比对数量
         if (existingIds.size() != reqVersionIds.size()) {
-            // 进阶优化：找出具体哪个ID不存在，方便排查
-            // reqVersionIds.removeAll(existingIds);
-            // log.warn("检测到不存在的题目版本ID: {}", reqVersionIds);
-
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND,
                     "部分题目版本不存在或已被删除，请刷新题库后重试");
         }

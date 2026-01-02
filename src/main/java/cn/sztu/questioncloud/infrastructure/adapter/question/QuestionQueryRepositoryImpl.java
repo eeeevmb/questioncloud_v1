@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.infrastructure.adapter.question;
 
 import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
@@ -19,6 +20,7 @@ import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -149,4 +151,33 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
         return queryChain.returnType(QuestionSummaryVO.class).paging(query.buildPager());
     }
 
+    /**
+     *
+     * 根据题集IDs和题目类型查询题目ID列表
+     * @param collectionIds 题集IDs
+     * @param typeCode 题目类型
+     * @return 题目ID列表
+     */
+    @Override
+    public List<QuestionSummaryVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode) {
+        if (collectionIds == null || collectionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return QueryChain.of(questionMapper)
+                .select(QuestionSummaryVO.class)
+                .from(QuestionEntity.class)
+                .join(QuestionEntity::getId, CollectionItem::getQuestionId)
+                .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
+                .leftJoin(QuestionEntity::getCurrentVersionId, QuestionStat::getVersionId)
+                // 条件筛选
+                .in(CollectionItem::getCollectionId, collectionIds)
+                .eq(QuestionVersionEntity::getTypeCode, typeCode)
+                .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
+                .groupBy(QuestionEntity::getId)
+                // 暂定按照难度升序排序
+                .orderBy(QuestionStat::getDifficulty)
+                .returnType(QuestionSummaryVO.class)
+                .list();
+    }
 }
