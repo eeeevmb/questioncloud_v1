@@ -159,7 +159,7 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
      * @return 题目ID列表
      */
     @Override
-    public List<QuestionSummaryVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode) {
+    public List<QuestionDetailVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode) {
         if (collectionIds == null || collectionIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -177,7 +177,7 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
                 .groupBy(QuestionEntity::getId)
                 // 暂定按照难度升序排序
                 .orderBy(QuestionStat::getDifficulty)
-                .returnType(QuestionSummaryVO.class)
+                .returnType(QuestionDetailVO.class)
                 .list();
     }
 }
