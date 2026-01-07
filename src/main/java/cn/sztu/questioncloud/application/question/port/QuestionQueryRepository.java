@@ -55,5 +55,5 @@ public interface QuestionQueryRepository {
      * @param typeCode 题目类型(调用方法前先确保typeCode合法)
      * @return 题目ID列表
      */
-    List<QuestionSummaryVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode);
+    List<QuestionDetailVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode);
 }
