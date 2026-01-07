@@ -14,6 +14,8 @@ import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.application.question.port.QuestionVersionRepository;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
+import cn.sztu.questioncloud.common.util.PaperWeightAlgorithmUtil;
 import cn.sztu.questioncloud.infrastructure.adapter.question.CollectionPresenceCheckerAdapter;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
@@ -22,6 +24,7 @@ import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemSaveVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -155,7 +158,7 @@ public class PaperItemServiceImpl implements PaperItemService {
                 throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
             }
             // 3.2 搜索所有符合条件的候选题目
-            List<QuestionSummaryVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
+            List<QuestionDetailVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
                     req.getCollectionIds(), rule.getTypeCode());
             // 3.3 校验库存
             if (candidates.size() < rule.getCount()) {
@@ -163,17 +166,34 @@ public class PaperItemServiceImpl implements PaperItemService {
                         String.format("题库余量不足！[%s]需要 %d 道，题集中实际只有 %d 道",
                                 rule.getTypeCode(), rule.getCount(), candidates.size()));
             }
-            // 3.4 洗牌抽取
+            /*
+            3.4 洗牌抽取
             Collections.shuffle(candidates, ThreadLocalRandom.current());
             List<QuestionSummaryVO> selected = new ArrayList<>(candidates.subList(0, rule.getCount()));
+            */
 
-            // 3.5 按难度升序 (Easy -> Hard)
-            selected.sort(Comparator.comparingDouble(vo ->
-                    vo.getDifficulty() == null ? 0.0 : vo.getDifficulty()
-            ));
+            // 3.4 基于曝光度的加权抽取
+            List<QuestionDetailVO> selected = candidates.stream()
+                    .map(vo -> {
+                        double u = ThreadLocalRandom.current().nextDouble();
+                        if (u <= 0) u = 1e-10;
 
-            // 3.6 构建 PaperItem 实体
-            for (QuestionSummaryVO vo : selected) {
+                        double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
+                                vo.getExposureFactor(), vo.getLastExposedAt(), LocalDateTime.now());
+                        double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(effectiveExp);
+                        double key = PaperWeightAlgorithmUtil.calcGumbelKey(weight, u);
+                        return new AbstractMap.SimpleEntry<>(key, vo);
+                    })
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(Map.Entry::getValue)
+                    .limit(rule.getCount())
+                    .sorted(Comparator.comparingDouble(vo ->
+                            vo.getDifficulty() == null ? 0.0 : vo.getDifficulty()
+                    ))
+                    .toList();
+
+            // 3.5 构建 PaperItem 实体
+            for (QuestionDetailVO vo : selected) {
                 PaperItemEntity item = PaperItemEntity.builder()
                         .paperId(paperId)
                         .questionId(vo.getId())
