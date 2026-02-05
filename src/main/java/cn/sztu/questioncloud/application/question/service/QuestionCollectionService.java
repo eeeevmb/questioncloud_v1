@@ -4,6 +4,8 @@ import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.CollectionVO;
 
+import java.util.List;
+
 /**
  * 题集相关应用服务
  *
@@ -43,5 +45,10 @@ public interface QuestionCollectionService {
      */
     void deleteCollection(Long collectionId);
 
-    // ===== 题集内容相关 =====
+    /**
+     * 获取当前登录用户的题集
+     *
+     * @return 题集列表视图
+     */
+    List<CollectionVO> getCollections();
 }

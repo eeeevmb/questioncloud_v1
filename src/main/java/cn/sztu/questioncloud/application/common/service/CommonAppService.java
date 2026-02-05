@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.application.common.service;
 
+import cn.sztu.questioncloud.web.rest.v1.common.vo.FileUploadVO;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,7 +11,7 @@ public interface CommonAppService {
      * @param file 文件
      * @return 文件ID
      */
-    Long uploadFile(MultipartFile file);
+    FileUploadVO uploadFile(MultipartFile file);
 
     /**
      * 查看图片文件
