@@ -24,7 +24,7 @@ public class CreateQuestionReq {
 
     private List<QuestionOption> options;
 
-    // answer用于展示，correctOptions与judgeAnswer用于判分
+    // answer用于展示，correctOptions,fillInAnswer与judgeAnswer用于判分
     private String answer;
 
     private List<String> correctOptions;

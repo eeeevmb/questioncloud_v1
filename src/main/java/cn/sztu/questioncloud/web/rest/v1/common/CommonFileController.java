@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.web.rest.v1.common;
 import cn.sztu.questioncloud.application.common.service.CommonAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.infrastructure.common.file.util.MediaTypeResolver;
+import cn.sztu.questioncloud.web.rest.v1.common.vo.FileUploadVO;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -23,9 +24,8 @@ public class CommonFileController {
         this.mediaTypeResolver = mediaTypeResolver;
     }
 
-    // TODO:文件VO
     @PostMapping(value = "/file", consumes = {"multipart/form-data"})
-    public ResultVO<Long> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResultVO<FileUploadVO> uploadFile(@RequestParam("file") MultipartFile file) {
         return ResultVO.success(commonAppService.uploadFile(file));
     }
 

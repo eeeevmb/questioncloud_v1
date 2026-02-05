@@ -6,11 +6,13 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.Co
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionCollectionMapper;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.CollectionVO;
 import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -33,6 +35,20 @@ public class QuestionCollectionRepositoryImpl implements QuestionCollectionRepos
         return Optional.ofNullable(QueryChain.of(questionCollectionMapper)
                 .eq(QuestionCollectionEntity::getId, collectionId)
                 .get());
+    }
+
+    /**
+     * 根据用户ID获取题集列表
+     *
+     * @param userId 用户ID
+     * @return 题集列表视图
+     */
+    @Override
+    public List<CollectionVO> getCollectionsByUserId(Long userId) {
+        return QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getOwnerId, userId)
+                .returnType(CollectionVO.class)
+                .list();
     }
 
     /**

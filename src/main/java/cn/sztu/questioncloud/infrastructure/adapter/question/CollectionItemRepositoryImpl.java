@@ -5,6 +5,8 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.Co
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
 import cn.xbatis.core.sql.executor.chain.DeleteChain;
+import cn.xbatis.core.sql.executor.chain.QueryChain;
+import cn.xbatis.core.sql.executor.chain.UpdateChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
@@ -18,6 +20,22 @@ public class CollectionItemRepositoryImpl implements CollectionItemRepository {
     public CollectionItemRepositoryImpl(CollectionItemMapper collectionItemMapper, SqlSessionFactory sqlSessionFactory) {
         this.collectionItemMapper = collectionItemMapper;
         this.sqlSessionFactory = sqlSessionFactory;
+    }
+
+    /**
+     * 根据题集ID和题目ID查询题集内容实体
+     *
+     * @param collectionId 题集ID
+     * @param questionId   题目ID
+     * @return 题集内容实体
+     */
+    @Override
+    public CollectionItem findByQuestionIdAndCollectionId(Long collectionId, Long questionId) {
+        return QueryChain.of(collectionItemMapper)
+                .eq(CollectionItem::getCollectionId, collectionId)
+                .eq(CollectionItem::getQuestionId, questionId)
+                .limit(1)
+                .get();
     }
 
     /**
@@ -50,5 +68,20 @@ public class CollectionItemRepositoryImpl implements CollectionItemRepository {
     @Override
     public void batchSave(List<CollectionItem> items) {
         MybatisBatchUtil.batchSave(sqlSessionFactory, CollectionItemMapper.class, items);
+    }
+
+    /**
+     * 根据题目ID更新题集内容的版本ID
+     * 用于更新题目后题集内容表同步
+     *
+     * @param questionId   题目ID
+     * @param newVersionId 新题目版本ID
+     */
+    @Override
+    public void syncVersionToAllCollections(Long questionId, Long newVersionId) {
+        UpdateChain.of(collectionItemMapper)
+                .set(CollectionItem::getQuestionVersionId, newVersionId)
+                .eq(CollectionItem::getQuestionId, questionId)
+                .execute();
     }
 }

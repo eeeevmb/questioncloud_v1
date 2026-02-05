@@ -13,6 +13,8 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 题集相关接口
  *
@@ -65,6 +67,16 @@ public class QuestionCollectionController {
     public ResultVO<Void> deleteCollection(@PathVariable Long collectionId) {
         questionCollectionService.deleteCollection(collectionId);
         return ResultVO.success();
+    }
+
+    /**
+     * 获取当前用户的所有题集
+     *
+     * @return 题集列表视图
+     */
+    @GetMapping
+    public ResultVO<List<CollectionVO>> getCollections() {
+        return ResultVO.success(questionCollectionService.getCollections());
     }
 
     /**

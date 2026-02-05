@@ -20,7 +20,6 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -101,7 +100,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(getAnswerKey(req.getTypeCode(), req.getCorrectOptions(), req.getAnswer(), req.getJudgeAnswer()))
+                .answerKey(getAnswerKey(req.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)
@@ -186,7 +185,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
 
-        // 2. 获取题目实体，题目版本和统计信息
+        // 2. 获取题目实体，题目版本，统计信息和题集内容实体
         QuestionEntity questionEntity = questionRepository.getById(questionId);
         QuestionVersionEntity versionEntity = questionVersionRepository.getCurrentVersionByQuestionId(questionId);
         QuestionStat questionStat = questionStatRepository.getByQuestionId(questionId);
@@ -199,8 +198,6 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         if (!userId.equals(questionEntity.getOwnerId())) {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
-
-
 
         // 4. 创建新题目版本
         LocalDateTime now = LocalDateTime.now();
@@ -215,7 +212,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(getAnswerKey(versionEntity.getTypeCode(), req.getCorrectOptions(), req.getAnswer(), req.getJudgeAnswer()))
+                .answerKey(getAnswerKey(versionEntity.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)
@@ -230,7 +227,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionStat.setVersionId(newVersionId);
         questionStat.setUpdatedAt(now);
 
-        // 7. 统一落库
+        // 7. 修改题集内容
+        collectionItemRepository.syncVersionToAllCollections(questionId, newVersionId);
+
+        // 8. 统一落库
         questionVersionRepository.save(newVersionEntity);
         questionRepository.update(questionEntity);
         questionStatRepository.update(questionStat);
@@ -291,10 +291,8 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         return PageResult.of(paging.getResults(), paging.getTotal(), query);
     }
 
-    @NotNull
     private static String getAnswerKey(String typeCode,
                                        List<String> correctOptions,
-                                       String answer,
                                        String judgeAnswer) {
         // 单选
         if (QuestionTypeEnum.SINGLE_CHOICE.getCode().equals(typeCode)) {
@@ -319,10 +317,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                     .collect(Collectors.joining());
         }
 
-        // 填空
-        if (QuestionTypeEnum.FILL_IN_BLANK.getCode().equals(typeCode)) {
-            return (answer == null) ? "" : answer;
-        }
+//        // 填空
+//        if (QuestionTypeEnum.FILL_IN_BLANK.getCode().equals(typeCode)) {
+//            return (answer == null) ? "" : answer;
+//        }
 
         // 判断
         if (QuestionTypeEnum.TRUE_FALSE.getCode().equals(typeCode)) {
