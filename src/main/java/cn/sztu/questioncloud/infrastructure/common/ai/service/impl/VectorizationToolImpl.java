@@ -1,0 +1,79 @@
+package cn.sztu.questioncloud.infrastructure.common.ai.service.impl;
+
+import cn.sztu.questioncloud.infrastructure.common.ai.model.VectorizationRequest;
+import cn.sztu.questioncloud.infrastructure.common.ai.service.VectorizationTool;
+import dev.langchain4j.data.document.Metadata;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.output.Response;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingSearchResult;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class VectorizationToolImpl implements VectorizationTool {
+
+    private final EmbeddingStore<TextSegment> embeddingStore;
+    private final EmbeddingModel embeddingModel;
+
+    public VectorizationToolImpl(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+        this.embeddingStore = embeddingStore;
+        this.embeddingModel = embeddingModel;
+    }
+
+    /**
+     * 对单个文本向量化并存储
+     *
+     * @param request        向量化请求，包含text和metadata
+     * @return 存储在向量数据库的ID
+     */
+    @Override
+    public String add(VectorizationRequest request) {
+        TextSegment segment = TextSegment.from(request.getText(), new Metadata(request.getMetadata()));
+        Response<Embedding> embeddingResponse = embeddingModel.embed(segment);
+        return embeddingStore.add(embeddingResponse.content(), segment);
+    }
+
+    /**
+     * 更新已存在的向量，不存在则执行添加操作
+     *
+     * @param vectorId 向量ID
+     * @param request  向量化请求，包含text和metadata
+     */
+    @Override
+    public void upsert(String vectorId, VectorizationRequest request) {
+        TextSegment segment = TextSegment.from(request.getText(), new Metadata(request.getMetadata()));
+        Response<Embedding> embeddingResponse = embeddingModel.embed(segment);
+        embeddingStore.addAll(
+                List.of(vectorId),
+                List.of(embeddingResponse.content()),
+                List.of(segment));
+    }
+
+    /**
+     * 根据向量ID删除单个向量
+     *
+     * @param vectorId 向量ID
+     */
+    @Override
+    public void delete(String vectorId) {
+        embeddingStore.remove(vectorId);
+    }
+
+    /**
+     * 向量搜索请求，包含元数据过滤等高级功能
+     *
+     * @param request 搜索请求
+     * @return 搜索结果
+     */
+    @Override
+    public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request) {
+        return embeddingStore.search(request);
+    }
+
+
+}

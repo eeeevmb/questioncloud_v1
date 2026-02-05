@@ -42,6 +42,20 @@ public class QuestionVersionRepositoryImpl implements QuestionVersionRepository 
     }
 
     /**
+     * 根据版本ID查询题目版本记录
+     *
+     * @param versionId 题目版本ID
+     * @return 题目实体版本
+     */
+    @Override
+    public QuestionVersionEntity getVersionById(Long versionId) {
+        return QueryChain.of(questionVersionMapper)
+                .eq(QuestionVersionEntity::getId, versionId)
+                .limit(1)
+                .get();
+    }
+
+    /**
      * 根据题目ID删除所有题目版本记录
      *
      * @param questionId 题目ID
