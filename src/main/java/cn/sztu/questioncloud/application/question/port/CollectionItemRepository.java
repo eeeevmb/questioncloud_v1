@@ -7,13 +7,13 @@ import java.util.List;
 public interface CollectionItemRepository {
 
     /**
-     * 根据题集ID和题目ID查询题集内容实体
+     * 根据题目ID和版本ID查询题集内容实体
      *
-     * @param collectionId 题集ID
      * @param questionId 题目ID
+     * @param versionId  版本ID
      * @return 题集内容实体
      */
-    CollectionItem findByQuestionIdAndCollectionId(Long collectionId, Long questionId);
+    CollectionItem findByQuestionIdAndVersionId(Long questionId, Long versionId);
 
     // ===== 写入操作 =====
 

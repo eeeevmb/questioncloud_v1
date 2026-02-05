@@ -28,6 +28,20 @@ spring:
 server:
   port: 8080
 
+langchain4j:
+  community:
+    dashscope:
+      embedding-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: text-embedding-v4
+
+chroma:
+  base-url: localhost:8080
+  collection: questions
+  api-version: V2
+  log-requests: true
+  log-responses: true
+
 sa-token:
   token-name: satoken
   timeout: 2592000

@@ -4,6 +4,8 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventMessage;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventPublisher;
 import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
@@ -19,6 +21,7 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionRepository questionRepository;
     private final QuestionVersionRepository questionVersionRepository;
@@ -38,19 +42,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionQueryRepository queryRepository;
     private final QuestionStatRepository questionStatRepository;
     private final CollectionItemRepository collectionItemRepository;
+    private final QuestionEventPublisher questionEventPublisher;
     public static final Integer INITIAL_VERSION = 1;
     public static final Integer INITIAL_COUNT = 0;
     public static final Double INITIAL_EXP = 1.00;
-
-
-    public QuestionAppServiceImpl(QuestionRepository questionRepository, QuestionVersionRepository questionVersionRepository, QuestionCollectionRepository questionCollectionRepository, QuestionQueryRepository queryRepository, CollectionItemRepository collectionItemRepository, QuestionStatRepository questionStatRepository) {
-        this.questionRepository = questionRepository;
-        this.questionVersionRepository = questionVersionRepository;
-        this.questionCollectionRepository = questionCollectionRepository;
-        this.queryRepository = queryRepository;
-        this.collectionItemRepository = collectionItemRepository;
-        this.questionStatRepository = questionStatRepository;
-    }
 
     /**
      * 创建题目
@@ -136,7 +131,15 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         questionStatRepository.save(stat);
 
-        // 7. 返回题目创建视图
+        // 7. 异步向量化入库
+        questionEventPublisher.publishCreated(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .versionId(questionVersionId)
+                        .collectionId(req.getCollectionId())
+                        .ownerId(userId)
+                        .occurredAt(now).build());
+
+        // 8. 返回题目创建视图
         return QuestionCreatedVO.builder()
                 .questionId(questionId)
                 .questionVersionId(questionVersionId)
@@ -234,6 +237,16 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionVersionRepository.save(newVersionEntity);
         questionRepository.update(questionEntity);
         questionStatRepository.update(questionStat);
+
+        // 9. 发布题目领域事件
+        Long collectionId = collectionItemRepository.findByQuestionIdAndVersionId(questionId, newVersionId).getCollectionId();
+        questionEventPublisher.publishUpdated(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .versionId(newVersionId)
+                        .collectionId(collectionId)
+                        .ownerId(userId)
+                        .occurredAt(now)
+                        .build());
     }
 
     /**
@@ -258,7 +271,13 @@ public class QuestionAppServiceImpl implements QuestionAppService {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
-        // 3. 删除实体
+        // 3. 发布题库领域事件
+        questionEventPublisher.publishDeleted(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .occurredAt(LocalDateTime.now())
+                        .build());
+
+        // 4. 删除实体
         collectionItemRepository.deleteByQuestionId(questionId);
         questionStatRepository.deleteByQuestionId(questionId);
         questionVersionRepository.deleteByQuestionId(questionId);

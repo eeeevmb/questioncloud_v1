@@ -22,19 +22,19 @@ public class CollectionItemRepositoryImpl implements CollectionItemRepository {
         this.sqlSessionFactory = sqlSessionFactory;
     }
 
+
     /**
-     * 根据题集ID和题目ID查询题集内容实体
+     * 根据题目ID和版本ID查询题集内容实体
      *
-     * @param collectionId 题集ID
-     * @param questionId   题目ID
+     * @param questionId 题目ID
+     * @param versionId  版本ID
      * @return 题集内容实体
      */
     @Override
-    public CollectionItem findByQuestionIdAndCollectionId(Long collectionId, Long questionId) {
+    public CollectionItem findByQuestionIdAndVersionId(Long questionId, Long versionId) {
         return QueryChain.of(collectionItemMapper)
-                .eq(CollectionItem::getCollectionId, collectionId)
                 .eq(CollectionItem::getQuestionId, questionId)
-                .limit(1)
+                .eq(CollectionItem::getQuestionVersionId, versionId)
                 .get();
     }
 
