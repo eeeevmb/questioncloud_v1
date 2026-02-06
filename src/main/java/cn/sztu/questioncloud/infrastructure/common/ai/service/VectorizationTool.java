@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.service;
 
+import cn.sztu.questioncloud.application.common.dto.SearchQuery;
 import cn.sztu.questioncloud.infrastructure.common.ai.model.VectorizationRequest;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -40,8 +41,8 @@ public interface VectorizationTool {
     /**
      * 向量搜索请求，包含元数据过滤等高级功能
      *
-     * @param request 搜索请求
+     * @param query 搜索请求
      * @return 搜索结果
      */
-    EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request);
+    EmbeddingSearchResult<TextSegment> search(SearchQuery query);
 }

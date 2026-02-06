@@ -39,13 +39,13 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
         String text = "题干：\n" + versionEntity.getStem() +
                 "\n\n解析：\n" + versionEntity.getSolution();
 
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("questionId", String.valueOf(message.getQuestionId()));
-        metadata.put("versionId", String.valueOf(message.getVersionId()));
-        metadata.put("collectionId", String.valueOf(message.getCollectionId()));
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("questionId", message.getQuestionId());
+        metadata.put("versionId", message.getVersionId());
+        metadata.put("collectionId", message.getCollectionId());
         metadata.put("typeCode", versionEntity.getTypeCode());
-        metadata.put("difficulty", String.valueOf(questionStat.getDifficulty() == null ? 0 : questionStat.getDifficulty()));
-        metadata.put("ownerId", String.valueOf(message.getOwnerId()));
+        metadata.put("difficulty", questionStat.getDifficulty() == null ? 0.00 : questionStat.getDifficulty());
+        metadata.put("ownerId", message.getOwnerId());
 
         vectorPort.upsert(vectorId, text, metadata);
     }

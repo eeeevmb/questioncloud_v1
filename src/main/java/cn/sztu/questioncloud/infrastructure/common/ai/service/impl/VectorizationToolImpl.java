@@ -1,5 +1,7 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.service.impl;
 
+import cn.sztu.questioncloud.application.common.dto.SearchFilter;
+import cn.sztu.questioncloud.application.common.dto.SearchQuery;
 import cn.sztu.questioncloud.infrastructure.common.ai.model.VectorizationRequest;
 import cn.sztu.questioncloud.infrastructure.common.ai.service.VectorizationTool;
 import dev.langchain4j.data.document.Metadata;
@@ -10,8 +12,14 @@ import dev.langchain4j.model.output.Response;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.filter.Filter;
+import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
+import dev.langchain4j.store.embedding.filter.comparison.IsGreaterThanOrEqualTo;
+import dev.langchain4j.store.embedding.filter.comparison.IsLessThanOrEqualTo;
+import dev.langchain4j.store.embedding.filter.logical.And;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -67,13 +75,61 @@ public class VectorizationToolImpl implements VectorizationTool {
     /**
      * 向量搜索请求，包含元数据过滤等高级功能
      *
-     * @param request 搜索请求
+     * @param query 搜索请求
      * @return 搜索结果
      */
     @Override
-    public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request) {
-        return embeddingStore.search(request);
+    public EmbeddingSearchResult<TextSegment> search(SearchQuery query) {
+        // 对查询语句向量化处理
+        Response<Embedding> embeddingResponse = embeddingModel.embed(query.getQuery());
+
+        // 转换筛选条件
+        Filter filter = toFilter(query.getFilter());
+
+        return embeddingStore.search(EmbeddingSearchRequest.builder()
+                        .query(query.getQuery())
+                        .queryEmbedding(embeddingResponse.content())
+                        .maxResults(query.getMaxResult())
+                        .minScore(query.getMinScore())
+                        .filter(filter)
+                        .build());
     }
 
+    private Filter toFilter(SearchFilter filter) {
+        if (filter == null) { return null; }
 
+        List<Filter> filterList = new ArrayList<>();
+
+        if (filter.getOwnerId() != null) {
+            filterList.add(new IsEqualTo("ownerId", filter.getOwnerId()));
+        }
+
+        if (filter.getCollectionId() != null) {
+            filterList.add(new IsEqualTo("collectionId", filter.getCollectionId()));
+        }
+
+        if (filter.getDifficultyMin() != null) {
+            filterList.add(new IsGreaterThanOrEqualTo("difficulty", filter.getDifficultyMin()));
+        }
+
+        if (filter.getDifficultyMax() != null) {
+            filterList.add(new IsLessThanOrEqualTo("difficulty", filter.getDifficultyMax()));
+        }
+
+        if (filter.getTypeCode() != null) {
+            filterList.add(new IsEqualTo("typeCode", filter.getTypeCode()));
+        }
+
+        if (filterList.isEmpty()) {
+            return null;
+        } else if (filterList.size() == 1) {
+            return filterList.getFirst();
+        } else {
+            Filter result = filterList.getFirst();
+            for (int i = 1; i < filterList.size(); i++) {
+                result = new And(result, filterList.get(i));
+            }
+            return result;
+        }
+    }
 }
