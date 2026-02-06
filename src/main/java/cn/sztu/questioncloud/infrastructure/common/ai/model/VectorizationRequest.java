@@ -22,5 +22,5 @@ public class VectorizationRequest {
      * 附加元数据
      * eg. Map.fromCode("user_id", "1", "question_id", "2")
      */
-    private Map<String, String> metadata;
+    private Map<String, Object> metadata;
 }
