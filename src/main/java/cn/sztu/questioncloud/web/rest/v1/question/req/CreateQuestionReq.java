@@ -6,17 +6,18 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
+@Builder
 public class CreateQuestionReq {
     @NotBlank(message = "题目类型不能为空")
     private String typeCode;
 
-    @NotBlank(message = "题目标题不能为空")
     private String title;
 
     @NotBlank(message = "题干不能为空")

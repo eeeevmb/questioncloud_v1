@@ -25,12 +25,15 @@ spring:
       port: 6379
       timeout: 3s
 
-server:
-  port: 8080
-
 langchain4j:
   community:
     dashscope:
+      chat-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: deepseek-v3.1 # 百炼还有百万token免费额度，用完换qwen-plus
+      streaming-chat-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: deepseek-v3.1 # 百炼还有百万token免费额度，用完换qwen-plus
       embedding-model:
         api-key: ${DASHSCOPE_API_KEY:}
         model-name: text-embedding-v4

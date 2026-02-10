@@ -6,17 +6,9 @@ import cn.sztu.questioncloud.application.common.port.VectorPort;
 import cn.sztu.questioncloud.infrastructure.common.ai.model.VectorizationRequest;
 import cn.sztu.questioncloud.infrastructure.common.ai.service.VectorizationTool;
 import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
-import dev.langchain4j.store.embedding.filter.Filter;
-import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
-import dev.langchain4j.store.embedding.filter.comparison.IsGreaterThanOrEqualTo;
-import dev.langchain4j.store.embedding.filter.comparison.IsLessThanOrEqualTo;
-import dev.langchain4j.store.embedding.filter.logical.And;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 @Component

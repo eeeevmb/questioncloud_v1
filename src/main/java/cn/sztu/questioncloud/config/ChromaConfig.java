@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ChromaConfig {
-    private final ChromaProperties chromaProperties;;
+    private final ChromaProperties chromaProperties;
 
     public ChromaConfig(ChromaProperties chromaProperties) {
         this.chromaProperties = chromaProperties;
