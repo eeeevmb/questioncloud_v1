@@ -5,14 +5,14 @@ import lombok.Data;
 
 @Data
 @Builder
-public class SessionVO {
+public class ChatSessionVO {
     /**
      * 会话记忆ID(由HuTool生成的雪花ID)
      */
     private String memoryId;
 
     /**
-     * 用户ID
+     * 题集ID
      */
-    private Long userId;
+    private Long collectionId;
 }

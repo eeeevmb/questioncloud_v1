@@ -17,18 +17,20 @@ public interface QuestionAppService {
     /**
      * 创建题目
      *
-     * @param req 创建题目请求
+     * @param req    创建题目请求
+     * @param userId 用户ID
      * @return 题目ID
      */
-    QuestionCreatedVO createQuestion(CreateQuestionReq req);
+    QuestionCreatedVO createQuestion(CreateQuestionReq req, Long userId);
 
     /**
      * 根据题目ID查询题目详情
      *
      * @param questionId 题目ID
+     * @param userId     用户ID
      * @return 题目详情视图
      */
-    QuestionDetailVO getQuestionDetailById(Long questionId);
+    QuestionDetailVO getQuestionDetailById(Long questionId, Long userId);
 
     /**
      * 创建新题目版本

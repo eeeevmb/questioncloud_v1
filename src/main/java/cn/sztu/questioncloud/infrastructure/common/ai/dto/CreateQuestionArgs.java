@@ -19,5 +19,4 @@ public class CreateQuestionArgs {
     private String solution;
 
     private BigDecimal difficulty = BigDecimal.valueOf(0.50);
-    private Long collectionId;
 }

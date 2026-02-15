@@ -5,15 +5,15 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionVersionMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
+import cn.xbatis.core.sql.executor.SubQuery;
 import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
+import db.sql.api.cmd.basic.IDataset;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
+import static db.sql.api.impl.cmd.Methods.*;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -39,6 +39,27 @@ public class QuestionVersionRepositoryImpl implements QuestionVersionRepository 
                 .orderByDesc(QuestionVersionEntity::getVersionNo)
                 .limit(1)
                 .get();
+    }
+
+    /**
+     * 根据题目ID批量查询最新版本记录表
+     *
+     * @param questionIds 题目ID
+     * @return 题目版本表
+     */
+    @Override
+    public Map<Long, QuestionVersionEntity> getCurrentVersionsByQuestionIds(Collection<Long> questionIds) {
+        SubQuery subQuery = SubQuery.create("sub")
+                .select(QuestionVersionEntity::getQuestionId)
+                .select(QuestionVersionEntity::getVersionNo, c -> max(c).as("max_version_no"))
+                .from(QuestionVersionEntity.class)
+                .in(QuestionVersionEntity::getQuestionId, questionIds)
+                .groupBy(QuestionVersionEntity::getQuestionId);
+        return QueryChain.of(questionVersionMapper)
+                .join(QuestionVersionEntity.class, subQuery, on -> on
+                        .eq(QuestionVersionEntity::getQuestionId, subQuery.$outerField(QuestionVersionEntity::getQuestionId))
+                        .eq(QuestionVersionEntity::getVersionNo,  subQuery.$outerField("max_version_no")))
+                .mapWithKey(QuestionVersionEntity::getQuestionId);
     }
 
     /**
