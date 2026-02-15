@@ -55,9 +55,9 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public QuestionCreatedVO createQuestion(CreateQuestionReq req) {
-        // 1. 获取用户ID
-        Long userId = StpUtil.getLoginIdAsLong();
+    public QuestionCreatedVO createQuestion(CreateQuestionReq req, Long userId) {
+//        // 1. 获取用户ID
+//        Long userId = StpUtil.getLoginIdAsLong();
 
         // 2. 权限检验
         QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(req.getCollectionId())
@@ -151,11 +151,11 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      * 根据题目ID查询题目详情
      *
      * @param questionId 题目ID
+     * @param userId     用户ID
      * @return 题目详情视图
      */
     @Override
-    public QuestionDetailVO getQuestionDetailById(Long questionId) {
-        Long userId = StpUtil.getLoginIdAsLong();
+    public QuestionDetailVO getQuestionDetailById(Long questionId, Long userId) {
         Optional<QuestionDetailVO> detailVO = queryRepository.getQuestionDetailById(questionId);
 
         // 1. 校验结果以及权限验证

@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.web.rest.v1.question;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
@@ -29,7 +30,8 @@ public class QuestionController {
      */
     @PostMapping
     public ResultVO<QuestionCreatedVO> createQuestion(@Valid @RequestBody CreateQuestionReq req) {
-        return ResultVO.success(questionAppService.createQuestion(req));
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(questionAppService.createQuestion(req, userId));
     }
 
     /**
@@ -60,11 +62,13 @@ public class QuestionController {
 
     /**
      * 查询单题详情
+     *
      * @return 题目详情视图
      */
     @GetMapping("{questionId}")
     public ResultVO<QuestionDetailVO> getQuestionDetail(@PathVariable Long questionId) {
-        return ResultVO.success(questionAppService.getQuestionDetailById(questionId));
+        Long  userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(questionAppService.getQuestionDetailById(questionId, userId));
     }
 
 }
