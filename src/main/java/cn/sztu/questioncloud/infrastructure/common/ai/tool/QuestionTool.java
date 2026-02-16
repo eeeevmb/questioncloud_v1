@@ -41,6 +41,13 @@ public class QuestionTool {
         this.cacheService = cacheService;
     }
 
+    /**
+     * 创建题目工具
+     *
+     * @param memoryId 会话记忆ID
+     * @param args     题目创建参数
+     * @return         工具调用结果
+     */
     @Tool(QuestionToolDocs.CREATE_QUESTION)
     public ToolResult<Long> createQuestion (
             @ToolMemoryId String memoryId,
@@ -74,6 +81,12 @@ public class QuestionTool {
         }
     }
 
+    /**
+     * 获取题目详细信息工具
+     *
+     * @param memoryId 会话记忆ID
+     * @return         工具调用结果
+     */
     @Tool(QuestionToolDocs.GET_QUESTION_DETAIL)
     public ToolResult<List<QuestionDetail>> getQuestionDetail (
             @ToolMemoryId String memoryId) {
@@ -100,6 +113,14 @@ public class QuestionTool {
         }
     }
 
+    /**
+     * RAG检索题库中的题目
+     *
+     * @param memoryId       会话记忆ID
+     * @param query          用户查询语句
+     * @param ragSearchParam RAG检索参数
+     * @return               工具调用结果
+     */
     @Tool(QuestionToolDocs.RAG_SEARCH)
     public ToolResult<List<QuestionHitDTO>> searchQuestion(
             @ToolMemoryId String memoryId,

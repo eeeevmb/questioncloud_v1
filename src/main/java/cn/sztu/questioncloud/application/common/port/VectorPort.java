@@ -6,6 +6,10 @@ import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 
 import java.util.Map;
 
+/**
+ * 向量能力端口
+ * 定义应用层对向量化与向量检索的抽象
+ */
 public interface VectorPort {
     /**
      * 将文本向量化并存储

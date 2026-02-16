@@ -5,6 +5,9 @@ import cn.sztu.questioncloud.infrastructure.common.ai.dto.RAGSearchParam;
 
 import java.util.List;
 
+/**
+ * RAG检索服务
+ */
 public interface SearchService {
     /**
      * RAG检索题集内相关题目

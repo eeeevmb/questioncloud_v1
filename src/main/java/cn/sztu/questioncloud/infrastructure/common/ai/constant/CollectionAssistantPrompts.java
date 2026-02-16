@@ -1,7 +1,7 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.constant;
 
 /**
- * 题集小助手提示词枚举
+ * 题集小助手提示词
  */
 public class CollectionAssistantPrompts {
     public static final String CHAT_TEST_PROMPT = """

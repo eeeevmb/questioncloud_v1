@@ -2,7 +2,7 @@ spring:
   application:
     name: questioncloud
   profiles:
-    active: local
+    active: local # 默认启用本地配置文件
   datasource:
     url: jdbc:mysql://localhost:3306/questioncloud_db?serverTimezone=Asia/Shanghai
     username: root

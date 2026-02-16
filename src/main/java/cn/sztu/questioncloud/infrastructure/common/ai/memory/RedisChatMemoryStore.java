@@ -10,6 +10,11 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 基于 Redis 的 {@link ChatMemoryStore} 实现。
+ * 消息列表以 JSON 形式存储到 Redis，并设置 TTL 以控制上下文生命周期，避免缓存无限增长。</p>
+ * <p>Key 规则：{@code chat:<memoryId>}</p>
+ */
 @Component
 public class RedisChatMemoryStore implements ChatMemoryStore {
     private final CacheService cacheService;

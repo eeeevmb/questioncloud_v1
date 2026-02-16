@@ -2,6 +2,11 @@ package cn.sztu.questioncloud.application.ai.port;
 
 import reactor.core.publisher.Flux;
 
+/**
+ * 题集小助手对话端口。
+ * 定义面向应用层的大模型对话能力抽象。
+ * 接口方法返回 {@link Flux} 以支持流式输出（如 SSE）。
+ */
 public interface CollectionAssistantChatPort {
     /**
      * 与大模型进行对话测试
