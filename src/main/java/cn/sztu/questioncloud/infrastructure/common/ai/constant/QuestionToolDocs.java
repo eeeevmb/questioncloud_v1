@@ -1,5 +1,10 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.constant;
 
+/**
+ * 供大模型在工具调用时阅读的说明文档。
+ *
+ * <p>用于向模型解释各工具的用途、触发时机、返回值语义与注意事项，帮助模型在合适的场景下正确调用工具。</p>
+ */
 public class QuestionToolDocs {
     public static final String CREATE_QUESTION = """
     【createQuestion】在题集中添加题目，返回新题目ID。

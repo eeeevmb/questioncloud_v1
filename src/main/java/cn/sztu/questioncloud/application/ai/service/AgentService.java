@@ -4,6 +4,11 @@ import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
 import reactor.core.publisher.Flux;
 
+/**
+ * Agent 应用服务。
+ * 对外提供与Agent交互的应用层能力，包括对话、会话创建等。
+ * 返回 {@link Flux} 以支持流式输出（如 SSE）。
+ */
 public interface AgentService {
     /**
      * 测试用聊天接口
