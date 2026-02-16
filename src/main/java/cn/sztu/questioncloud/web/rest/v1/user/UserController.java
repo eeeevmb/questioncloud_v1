@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.AvatarVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
@@ -42,12 +43,13 @@ public class UserController {
      * @return 用户id
      */
     @PostMapping("/register")
-    public ResultVO<Long> registerUser(@Valid @RequestBody RegisterReq request) {
+    public ResultVO<RegisterVO> registerUser(@Valid @RequestBody RegisterReq request) {
         return ResultVO.success(userAccountService.register(request));
     }
 
     /**
      * 用户登陆
+     *
      * @param request 登陆请求
      * @return 登陆响应
      */
