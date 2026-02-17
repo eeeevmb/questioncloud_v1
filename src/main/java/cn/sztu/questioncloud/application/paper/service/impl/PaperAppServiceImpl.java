@@ -1,23 +1,21 @@
 package cn.sztu.questioncloud.application.paper.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.bean.BeanUtil;
 import cn.sztu.questioncloud.application.paper.enums.PaperErrorCodeEnum;
-import cn.sztu.questioncloud.application.paper.enums.PaperStatusEnum;
 import cn.sztu.questioncloud.application.paper.port.PaperItemRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperPresenceCheckerRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperRepository;
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
-import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperQueryReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.*;
+import cn.xbatis.core.mybatis.mapper.context.Pager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -48,7 +45,6 @@ public class PaperAppServiceImpl implements PaperAppService {
 
         // 2. 业务校验
         boolean exists = paperPresenceCheckerRepository.existsByTitle(req.getTitle(), userId);
-        //TODO:允许创建同名试卷，创建时在试卷末端填补"(N-1)"
         if (exists) {
             throw new ApplicationException(PaperErrorCodeEnum.PAPER_TITLE_DUPLICATE, "您已存在同名试卷，请勿重复创建");
         }
@@ -62,7 +58,6 @@ public class PaperAppServiceImpl implements PaperAppService {
                 .ownerId(userId)
                 .title(req.getTitle())
                 .description(req.getDescription())
-                .status(PaperStatusEnum.DRAFT.getCode())
                 .totalItems(INITIAL_COUNT)
                 .totalScore(BigDecimal.ZERO)
                 .createdAt(now)
@@ -77,36 +72,24 @@ public class PaperAppServiceImpl implements PaperAppService {
                 .build();
     }
 
-    /**
-     * 根据试卷ID查询题目详情
-     *
-     * @param paperId 试卷ID
-     * @return 试卷详情视图
-     */
     @Override
-    public PaperDetailVO getPaperDetailById(Long paperId){
+    public Pager<PaperBasicVO> searchPapers(PaperQueryReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
-        Optional<PaperDetailVO> detailVO = paperQueryRepository.getPaperDetailById(paperId);
+        return paperQueryRepository.searchPapers(req, userId);
+    }
 
-        // 1. 校验结果与验证
-        PaperDetailVO result = detailVO
-                .orElseThrow(() -> new ApplicationException(PaperErrorCodeEnum.PAPER_NOT_FOUND));
-        if (!result.getOwnerId().equals(userId)) {
-            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
-        }
+    @Override
+    public PaperDetailVO getPaperDetailById(Long paperId) {
+        PaperEntity paperEntity = paperRepository.getById(paperId);
+        Long userId = StpUtil.getLoginIdAsLong();
+        validatePaperStatus(paperEntity, userId);
 
-        List<PaperItemVO> items = paperItemRepository.getDetailedItemsByPaperId(paperId);
+        PaperDetailVO result = BeanUtil.toBean(paperEntity, PaperDetailVO.class);
+        List<PaperItemDetailVO> items = paperQueryRepository.listPaperItemsByPaperId(paperId);
         result.setItems(items);
-
-        // 2. 返回结果
         return result;
     }
 
-    /**
-     * 硬删除 paper、paperItem
-     *
-     * @param paperId 试卷ID
-     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletePaperById(Long paperId) {
@@ -119,18 +102,12 @@ public class PaperAppServiceImpl implements PaperAppService {
 
         // 3. 删除试卷及其关联题目
         paperRepository.delete(paperId);
-         paperItemRepository.deleteItemsByPaperId(paperId);
+        paperItemRepository.deleteItemsByPaperId(paperId);
     }
 
-    /**
-     * 修改草稿试卷信息(重命名、修改描述)
-     *
-     * @param paperId 试卷ID
-     * @return 试卷详情视图
-     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PaperBasicVO updatePaperInfo(Long paperId, PaperSaveReq req){
+    public PaperBasicVO updatePaperInfo(Long paperId, PaperSaveReq req) {
         // 1. 基础查询
         PaperEntity paperEntity = paperRepository.getById(paperId);
         Long userId = StpUtil.getLoginIdAsLong();
@@ -148,7 +125,7 @@ public class PaperAppServiceImpl implements PaperAppService {
         paperEntity.setDescription(req.getDescription());
         paperEntity.setUpdatedAt(LocalDateTime.now());
 
-        paperRepository.update(paperEntity);
+        paperRepository.updateStatistics(paperEntity);
         LocalDateTime now = LocalDateTime.now();
 
         // 4. 返回结果
@@ -156,18 +133,15 @@ public class PaperAppServiceImpl implements PaperAppService {
                 .id(paperEntity.getId())
                 .title(paperEntity.getTitle())
                 .description(paperEntity.getDescription())
-                .status(paperEntity.getStatus())
                 .totalItems(paperEntity.getTotalItems())
                 .totalScore(paperEntity.getTotalScore())
                 .updatedAt(now)
                 .build();
     }
 
+    // === 其他 ===
     /**
      * 校验试卷状态与权限
-     *
-     * @param paperEntity 试卷实体
-     * @param userId      当前操作用户ID
      */
     private void validatePaperStatus(PaperEntity paperEntity, Long userId) {
         // 1. 校验是否存在
@@ -175,15 +149,9 @@ public class PaperAppServiceImpl implements PaperAppService {
             throw new ApplicationException(PaperErrorCodeEnum.PAPER_NOT_FOUND);
         }
 
-        // 2. 校验权限 (TODO: 后续扩展多人协同)
+        // 2. 校验权限
         if (!userId.equals(paperEntity.getOwnerId())) {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
-        }
-
-        // 3. 校验状态 (必须是草稿)
-        if (!Objects.equals(paperEntity.getStatus(), PaperStatusEnum.DRAFT.getCode())) {
-            throw new ApplicationException(PaperErrorCodeEnum.PAPER_STATUS_ERROR,
-                    "非草稿试卷无法修改试卷，当前状态：" + paperEntity.getStatus());
         }
     }
 }
