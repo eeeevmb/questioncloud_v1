@@ -75,7 +75,7 @@ public class UserController {
      * @param file 头像文件
      * @return 头像存储相对路径
      */
-    @PostMapping(value = "/upload-avatar", consumes = {"multipart/form-data"})
+    @PostMapping(value = "/avatar", consumes = {"multipart/form-data"})
     public ResultVO<AvatarVO> uploadAvatar(@RequestParam("file") MultipartFile file) {
         String url = userAccountService.uploadAvatar(file);
         AvatarVO vo = new AvatarVO(url);
