@@ -1,6 +1,9 @@
 package cn.sztu.questioncloud.infrastructure.adapter.paper;
 
+import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
+import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
+import cn.sztu.questioncloud.infrastructure.adapter.utils.RepositoryUtils;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
@@ -8,8 +11,12 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.Qu
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.paper.PaperItemMapper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.paper.PaperMapper;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemDetailVO;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
+import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -27,48 +34,65 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
 
     /**
      * 根据试卷ID查询题目详情
-     *
-     * @param paperId 试卷ID
-     * @return 查询结果
      */
     @Override
-    public Optional<PaperDetailVO> getPaperDetailById(Long paperId){
-        // 1. 查询试卷主表信息
-        PaperDetailVO paperVO = QueryChain.of(paperMapper)
+    public PaperDetailVO getBasicPaperById(Long paperId) {
+        return QueryChain.of(paperMapper)
                 .select(PaperDetailVO.class)
+                .from(PaperEntity.class)
                 .eq(PaperEntity::getId, paperId)
                 .returnType(PaperDetailVO.class)
-                .limit(1)
                 .get();
-        // 如果试卷不存在返回空，不再查题目
-        if (paperVO == null) {
-            return Optional.empty();
-        }
+    }
 
-        // 2. 查询关联的题目列表 (Items List)
-        List<PaperItemVO> itemList = QueryChain.of(paperItemMapper)
-                .select(PaperItemVO.class)
-                // 关联 Question 表获取标题 (对应 PaperItemVO 里的 @ResultEntityField)
-                //.leftJoin(PaperItemEntity::getQuestionId, QuestionEntity::getId)
-                // 关联 Version 表获取题干 (对应 PaperItemVO 里的 stem)
+    /**
+     * 分页查询试卷列表
+     */
+    @Override
+    public Pager<PaperBasicVO> searchPapers(PaperPageQuery query, Long userId) {
+        QueryChain<PaperEntity> queryChain = QueryChain.of(paperMapper)
+                .select(PaperBasicVO.class)
+                .from(PaperEntity.class)
+                .eq(PaperEntity::getOwnerId, userId)
+                .ignoreNullValueInCondition(true)
+                .ignoreEmptyInCondition(true)
+                .trimStringInCondition(true)
+                .like(PaperEntity::getTitle, query.getKeyword());
+
+        // 排序处理
+        if (StrUtil.isNotBlank(query.getSortField())) {
+            switch (query.getSortField()) {
+                case "createdAt" ->
+                        RepositoryUtils.setSortDirectionCondition(queryChain, PaperEntity::getCreatedAt, query.getSortDirection());
+                case "updatedAt" ->
+                        RepositoryUtils.setSortDirectionCondition(queryChain, PaperEntity::getUpdatedAt, query.getSortDirection());
+                default -> queryChain.orderBy(QuestionEntity::getCreatedAt);
+            }
+        } else {
+            // 默认按试卷创建日期升序排序
+            queryChain.orderBy(QuestionEntity::getCreatedAt);
+        }
+        return queryChain.returnType(PaperBasicVO.class).paging(query.buildPager());
+    }
+
+    /**
+     * 查询试卷关联的题目详情列表
+     */
+    @Override
+    public List<PaperItemDetailVO> listPaperItemsByPaperId(Long paperId) {
+        return QueryChain.of(paperItemMapper)
+                .select(PaperItemDetailVO.class)
+                .from(PaperItemEntity.class)
                 .leftJoin(PaperItemEntity::getQuestionVersionId, QuestionVersionEntity::getId)
-                // 关联 Stat 表获取难度 (对应 PaperItemVO 里的 difficulty)
                 .leftJoin(PaperItemEntity::getQuestionVersionId, QuestionStat::getVersionId)
                 .eq(PaperItemEntity::getPaperId, paperId)
-                .orderBy(PaperItemEntity::getSeq) // 按照题号排序
-                .returnType(PaperItemVO.class)
+                .orderBy(PaperItemEntity::getSeq)
+                .returnType(PaperItemDetailVO.class)
                 .list();
-
-        // 3. 组装返回视图
-        paperVO.setItems(itemList);
-        return Optional.of(paperVO);
     }
 
     /**
      * 根据试卷ID查询题目总数
-     *
-     * @param paperId 试卷ID
-     * @return 题目总数
      */
     @Override
     public Integer countItemsByPaperId(Long paperId){
@@ -81,9 +105,6 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
 
     /**
      * 根据试卷ID查询试卷总分
-     *
-     * @param paperId 试卷ID
-     * @return 试卷总分
      */
     @Override
     public BigDecimal sumScoreByPaperId(Long paperId){

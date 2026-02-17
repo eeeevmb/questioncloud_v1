@@ -5,7 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.Qu
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.paper.PaperItemMapper;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemDetailVO;
 import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
@@ -32,34 +32,20 @@ public class PaperItemRepositoryImpl implements PaperItemRepository {
     }
 
     /**
-     * 根据试卷ID获取试卷下所有试题关联
-     *
-     * @param paperId 试卷ID
-     * @return 试卷题目实体列表(由题序排列)
-     */
-    @Override
-    public List<PaperItemEntity> getItemsByPaperId(Long paperId){
-        return QueryChain.of(paperItemMapper)
-                .eq(PaperItemEntity::getPaperId, paperId)
-                .orderBy(PaperItemEntity::getSeq) // 按题号排序返回
-                .list();
-    }
-
-    /**
      * 根据试卷ID获取试卷下所有实体详情
      *
      * @param paperId 试卷ID
      * @return 试卷题目详情实体列表
      */
     @Override
-    public List<PaperItemVO> getDetailedItemsByPaperId(Long paperId){
+    public List<PaperItemDetailVO> getDetailedItemsByPaperId(Long paperId){
         return QueryChain.of(paperItemMapper)
-                .select(PaperItemVO.class)
+                .select(PaperItemDetailVO.class)
                 .leftJoin(PaperItemEntity::getQuestionVersionId, QuestionVersionEntity::getId)
                 .leftJoin(PaperItemEntity::getQuestionVersionId, QuestionStat::getVersionId)
                 .eq(PaperItemEntity::getPaperId, paperId)
                 .orderBy(PaperItemEntity::getSeq)
-                .returnType(PaperItemVO.class)
+                .returnType(PaperItemDetailVO.class)
                 .list();
     }
 
