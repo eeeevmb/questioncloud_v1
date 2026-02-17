@@ -2,8 +2,9 @@ package cn.sztu.questioncloud.application.paper.service;
 
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemSaveVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomReplaceReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemDetailVO;
 
 import java.util.List;
 
@@ -13,9 +14,7 @@ import java.util.List;
  * @author Saler1y
  */
 public interface PaperItemService {
-
-    // === 自由组卷 ===
-
+    // =================== 人工组卷 ===================
     /**
      * 存储试卷题目
      * 若要新增、更改部分题目，请调用此方法
@@ -23,7 +22,7 @@ public interface PaperItemService {
      * @param paperId 试卷ID
      * @param reqs 存储试卷题目请求
      */
-    List<PaperItemSaveVO> savePaperItems(Long paperId,List<PaperItemSaveReq> reqs);
+    List<PaperItemVO> savePaperItems(Long paperId, List<PaperItemSaveReq> reqs);
 
     /**
      * 删除试卷所有题目
@@ -40,20 +39,31 @@ public interface PaperItemService {
      * @param paperId 试卷ID
      * @return 试卷题目列表
      */
-    List<PaperItemVO> getItemsByPaperId(Long paperId);
+    List<PaperItemDetailVO> getItemsByPaperId(Long paperId);
 
-    // === 随机组卷 ===
+
+    // ===================== 随机组卷 ===================
     /**
-     * 纯随机组卷
+     * 根据规则抽取题目
      * 仅返回题目列表，不存储试卷题目，供前端预览使用
      *
      * @param paperId 试卷ID
      * @param req 随机组卷请求
      * @return 试卷题目列表
      */
-    List<PaperItemSaveVO> previewRandomItems(Long paperId, RandomBuildReq req);
+    List<PaperItemVO> previewRandomItems(Long paperId, RandomBuildReq req);
 
-    // === 暂时废弃 ===
+    /**
+     * 根据规则重新抽取一道题目
+     *
+     * @param paperId 试卷ID
+     * @param req 随机组卷请求
+     * @return 试卷题目列表
+     */
+    PaperItemVO randomReplaceItem(Long paperId, RandomReplaceReq req);
+
+
+    // ===================== 其他 ==================
     /*
       更改指定试题分数 (暂时废弃)
 
