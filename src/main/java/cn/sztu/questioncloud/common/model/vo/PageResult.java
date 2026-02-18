@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.common.model.vo;
 
 import cn.sztu.questioncloud.common.model.query.BasePageQuery;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.util.Collections;
