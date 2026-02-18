@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.ai.service.impl;
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
 import cn.sztu.questioncloud.application.ai.port.CollectionAssistantChatPort;
 import cn.sztu.questioncloud.application.ai.service.AgentService;
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
@@ -36,7 +37,9 @@ public class AgentServiceImpl implements AgentService {
      */
     public Flux<String> simpleChat(Long userId, ChatTestReq req) {
         // 1. 更新Redis中的上下文内容
-        ChatSessionContext context = cacheService.get(req.getMemoryId());
+
+        String key = CacheKeyUtil.chatContextKey(req.getMemoryId());
+        ChatSessionContext context = cacheService.get(key);
 
         List<Long> oldIds = Optional.ofNullable(context.getQuestionIds()).orElse(List.of());
         List<Long> newIds = Optional.ofNullable(req.getContext().getSelectedQuestionIds()).orElse(List.of());
@@ -45,7 +48,7 @@ public class AgentServiceImpl implements AgentService {
             context.setQuestionIds(newIds);
         }
         // 重置TTL
-        cacheService.set(req.getMemoryId(), context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
+        cacheService.set(key, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
 
         // 2. 生成回复
         return collectionAssistantChatPort.chatTest(req.getMemoryId(), req.getMessage());
@@ -74,13 +77,15 @@ public class AgentServiceImpl implements AgentService {
         // 1. 生成会话记忆ID
         String memoryId = HutoolSnowflakeIdGenerator.generateId();
 
+
         // 2. 将业务上下文信息写入Redis
+        String key = CacheKeyUtil.chatContextKey(memoryId);
         ChatSessionContext context = ChatSessionContext.builder()
                 .userId(userId)
                 .collectionId(collectionId)
                 .build();
 
-        cacheService.set(memoryId, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
+        cacheService.set(key, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
 
         // 3. 构造结果返回
         return ChatSessionVO.builder()

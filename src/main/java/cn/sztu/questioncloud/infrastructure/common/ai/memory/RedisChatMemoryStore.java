@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.memory;
 
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
@@ -19,19 +20,14 @@ import java.util.concurrent.TimeUnit;
 public class RedisChatMemoryStore implements ChatMemoryStore {
     private final CacheService cacheService;
     private static final long MEMORY_TTL_DAYS = 3L;
-    private static final String KEY_PREFIX = "chat:";
 
     public RedisChatMemoryStore(CacheService cacheService) {
         this.cacheService = cacheService;
     }
 
-    private static String key(Object memoryId) {
-        return KEY_PREFIX + memoryId;
-    }
-
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
-        String json = cacheService.get(key(memoryId));
+        String json = cacheService.get(CacheKeyUtil.chatMemoryKey((String) memoryId));
         if (json == null) {
             return List.of();
         } else {
@@ -42,7 +38,7 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> list) {
         cacheService.set(
-                key((memoryId)),
+                CacheKeyUtil.chatMemoryKey(String.valueOf(memoryId)),
                 ChatMessageSerializer.messagesToJson(list),
                 MEMORY_TTL_DAYS,
                 TimeUnit.DAYS);
@@ -50,6 +46,6 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
 
     @Override
     public void deleteMessages(Object memoryId) {
-        cacheService.delete(key(memoryId));
+        cacheService.delete(CacheKeyUtil.chatMemoryKey(String.valueOf(memoryId)));
     }
 }

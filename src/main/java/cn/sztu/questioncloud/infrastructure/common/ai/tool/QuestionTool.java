@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.application.ai.dto.QuestionHitDTO;
 import cn.sztu.questioncloud.application.ai.service.SearchService;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.ai.constant.QuestionToolDocs;
 import cn.sztu.questioncloud.infrastructure.common.ai.constant.QuestionToolParamDocs;
 import cn.sztu.questioncloud.infrastructure.common.ai.dto.CreateQuestionArgs;
@@ -58,7 +59,7 @@ public class QuestionTool {
                 : DEFAULT_DIFF;
         try {
             // 从redis获取业务信息
-            ChatSessionContext context = cacheService.get(memoryId);
+            ChatSessionContext context = cacheService.get(CacheKeyUtil.chatContextKey(memoryId));
             if (context == null) {
                 return new ToolResult<>(false, null, "上下文已过期或不存在", null);
             }
@@ -92,7 +93,7 @@ public class QuestionTool {
             @ToolMemoryId String memoryId) {
         try {
             // 从redis获取业务信息
-            ChatSessionContext context = cacheService.get(memoryId);
+            ChatSessionContext context = cacheService.get(CacheKeyUtil.chatContextKey(memoryId));
             if (context == null) {
                 return new ToolResult<>(false, null, "上下文已过期或不存在", null);
             }
@@ -127,7 +128,7 @@ public class QuestionTool {
             @P(QuestionToolParamDocs.RAG_SEARCH_PARAM_QUERY) String query,
             @P(QuestionToolParamDocs.RAG_SEARCH_PARAM) RAGSearchParam ragSearchParam) {
         // 从redis获取业务信息
-        ChatSessionContext context = cacheService.get(memoryId);
+        ChatSessionContext context = cacheService.get(CacheKeyUtil.chatContextKey(memoryId));
         if (context == null) {
             return new ToolResult<>(false, null, "上下文已过期或不存在", null);
         }
