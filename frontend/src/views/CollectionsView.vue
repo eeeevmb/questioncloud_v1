@@ -22,11 +22,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in collections" :key="item.id">
+        <tr v-for="item in collections" :key="item.collectionId">
           <td>{{ item.name }}</td>
           <td>{{ item.description || '-' }}</td>
           <td class="table-actions">
-            <button class="primary-btn" type="button" @click="enterCollection(item.id)">题目列表</button>
+            <button class="primary-btn" type="button" @click="enterCollection(item.collectionId)">题目列表</button>
             <button class="secondary-btn" type="button" @click="startEdit(item)">编辑</button>
             <button class="danger-btn" type="button" @click="handleDelete(item)">删除</button>
           </td>
@@ -123,7 +123,7 @@ async function handleCreate() {
 }
 
 function startEdit(collection: CollectionView) {
-  editingId.value = collection.id;
+  editingId.value = collection.collectionId;
   editForm.name = collection.name;
   editForm.description = collection.description || '';
 }
@@ -156,16 +156,16 @@ async function handleDelete(collection: CollectionView) {
   if (!confirm(`确定删除题集「${collection.name}」吗？`)) {
     return;
   }
-  await deleteCollection(collection.id);
+  await deleteCollection(collection.collectionId);
   showSuccess('题集删除成功');
-  if (collection.id === editingId.value) {
+  if (collection.collectionId === editingId.value) {
     cancelEdit();
   }
   await loadCollections();
 }
 
 function enterCollection(collectionId: string) {
-  const collection = collections.value.find((item) => item.id === collectionId);
+  const collection = collections.value.find((item) => item.collectionId === collectionId);
   router.push({
     name: 'collection-questions',
     params: { collectionId },

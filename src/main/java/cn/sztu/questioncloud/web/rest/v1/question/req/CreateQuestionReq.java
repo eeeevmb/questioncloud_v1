@@ -34,6 +34,7 @@ public class CreateQuestionReq {
 
     private String solution;
 
+    @NotNull(message = "难度不能为空")
     @DecimalMin(value = "0.00", inclusive = true, message = "难度不能小于 0.00")
     @DecimalMax(value = "1.00", inclusive = true, message = "难度不能大于 1.00")
     private BigDecimal difficulty;

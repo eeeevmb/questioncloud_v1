@@ -107,11 +107,11 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
                 .like(QuestionVersionEntity::getTitle, query.getKeyword());
         // 难度筛选
         if (query.getLevelMin() != null) {
-            queryChain.gt(QuestionStat::getDifficulty, query.getLevelMin());
+            queryChain.gte(QuestionStat::getDifficulty, query.getLevelMin());
         }
 
         if (query.getLevelMax() != null) {
-            queryChain.lt(QuestionStat::getDifficulty, query.getLevelMax());
+            queryChain.lte(QuestionStat::getDifficulty, query.getLevelMax());
         }
 
         // 排序处理

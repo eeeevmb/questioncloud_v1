@@ -264,7 +264,7 @@ async function resolveCollectionName() {
   nameLoading.value = true;
   try {
     const allCollections: CollectionView[] = await fetchCollections();
-    const match = allCollections.find((item) => item.id === collectionId.value);
+    const match = allCollections.find((item) => item.collectionId === collectionId.value);
     collectionName.value = match?.name ?? '';
   } finally {
     nameLoading.value = false;
