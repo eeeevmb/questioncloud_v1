@@ -1,13 +1,17 @@
 package cn.sztu.questioncloud.application.ai.service;
 
+import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 /**
  * Agent 应用服务。
  * 对外提供与Agent交互的应用层能力，包括对话、会话创建等。
- * 返回 {@link Flux} 以支持流式输出（如 SSE）。
+ * 返回 {@link Flux} 以支持流式输出。
  */
 public interface AgentService {
     /**
@@ -24,10 +28,18 @@ public interface AgentService {
      *
      * @param memoryId     会话记忆ID
      * @param collectionId 题集ID
-     * @param message      用户消息
+     * @param req          聊天请求
      * @return 流式响应
      */
-    Flux<String> chatWithAssistant(String memoryId, Long collectionId, String message);
+    Flux<String> chatWithAssistant(String memoryId, Long collectionId, AssistantChatReq req);
+
+    /**
+     * 获取会话历史
+     *
+     * @param memoryId 记忆ID
+     * @return 会话历史
+     */
+    List<ChatMessageVO> getChatHistory(String memoryId);
 
     /**
      * 创建新会话

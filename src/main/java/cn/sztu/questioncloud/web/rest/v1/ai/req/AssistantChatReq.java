@@ -21,7 +21,8 @@ public class AssistantChatReq {
      */
     private Context context;
 
-    private static class Context {
+    @Data
+    public static class Context {
         List<Long> selectedQuestionIds;
     }
 }

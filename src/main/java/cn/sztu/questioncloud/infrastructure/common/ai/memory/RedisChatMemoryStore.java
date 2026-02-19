@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
 import dev.langchain4j.data.message.ChatMessageSerializer;
+import dev.langchain4j.data.message.ChatMessageType;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import org.springframework.stereotype.Component;
 
@@ -36,10 +37,15 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
     }
 
     @Override
-    public void updateMessages(Object memoryId, List<ChatMessage> list) {
+    public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+        // 过滤系统消息
+        List<ChatMessage> filtered = messages.stream()
+                .filter(m -> m.type() != ChatMessageType.SYSTEM)
+                .toList();
+
         cacheService.set(
                 CacheKeyUtil.chatMemoryKey(String.valueOf(memoryId)),
-                ChatMessageSerializer.messagesToJson(list),
+                ChatMessageSerializer.messagesToJson(filtered),
                 MEMORY_TTL_DAYS,
                 TimeUnit.DAYS);
     }

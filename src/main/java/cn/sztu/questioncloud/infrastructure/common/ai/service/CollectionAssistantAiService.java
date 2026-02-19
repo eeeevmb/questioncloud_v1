@@ -32,5 +32,6 @@ public interface CollectionAssistantAiService {
     Flux<String> chatWithAssistant(
             @MemoryId String memoryId,
             @V("collectionId") Long collectionId,
+            @V("ctx") String ctx,
             @UserMessage String message);
 }
