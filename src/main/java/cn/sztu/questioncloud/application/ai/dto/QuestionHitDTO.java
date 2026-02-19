@@ -16,11 +16,6 @@ public class QuestionHitDTO {
     private Integer matchRank;
 
     /**
-     * 题目ID
-     */
-    private Long questionId;
-
-    /**
      * 题干，截断前200个字符
      */
     private String stemPreview;
@@ -34,6 +29,4 @@ public class QuestionHitDTO {
      * 难度系数
      */
     private Double difficulty;
-
-
 }

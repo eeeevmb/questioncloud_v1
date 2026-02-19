@@ -50,7 +50,7 @@ public class QuestionTool {
      * @return         工具调用结果
      */
     @Tool(QuestionToolDocs.CREATE_QUESTION)
-    public ToolResult<Long> createQuestion (
+    public ToolResult<Void> createQuestion (
             @ToolMemoryId String memoryId,
             @P(QuestionToolParamDocs.CREATE_QUESTION_PARAM) CreateQuestionArgs args) {
             // 默认难度兜底
@@ -64,7 +64,7 @@ public class QuestionTool {
                 return new ToolResult<>(false, null, "上下文已过期或不存在", null);
             }
 
-            Long questionId = questionAppService.createQuestion(CreateQuestionReq.builder()
+            questionAppService.createQuestion(CreateQuestionReq.builder()
                             .typeCode(args.getTypeCode())
                             .title(args.getTitle())
                             .stem(args.getStem())
@@ -75,8 +75,9 @@ public class QuestionTool {
                             .solution(args.getSolution())
                             .difficulty(difficulty)
                             .collectionId(context.getCollectionId())
-                            .build(), context.getUserId()).getQuestionId();
-            return new ToolResult<>(true, null, null, questionId);
+                            .build(), context.getUserId());
+
+            return new ToolResult<>(true, null, null, null);
         } catch (ApplicationException e) {
             return new ToolResult<>(false, e.getCode(), e.getMessage(), null);
         }

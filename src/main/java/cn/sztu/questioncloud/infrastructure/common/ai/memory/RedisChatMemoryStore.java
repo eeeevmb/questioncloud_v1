@@ -39,13 +39,13 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
         // 过滤系统消息
-        List<ChatMessage> filtered = messages.stream()
+        List<ChatMessage> flitered = messages.stream()
                 .filter(m -> m.type() != ChatMessageType.SYSTEM)
                 .toList();
 
         cacheService.set(
                 CacheKeyUtil.chatMemoryKey(String.valueOf(memoryId)),
-                ChatMessageSerializer.messagesToJson(filtered),
+                ChatMessageSerializer.messagesToJson(flitered),
                 MEMORY_TTL_DAYS,
                 TimeUnit.DAYS);
     }

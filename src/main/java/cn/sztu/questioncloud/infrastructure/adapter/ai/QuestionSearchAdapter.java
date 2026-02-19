@@ -59,7 +59,6 @@ public class QuestionSearchAdapter implements QuestionSearchPort {
 
             result.add(QuestionHitDTO.builder()
                     .matchRank(result.size() + 1)
-                    .questionId(questionId)
                     .stemPreview(stem.substring(0, Math.min(stem.length(), 200)))   // 截取前200个字符
                     .typeCode(versionEntityMap.get(questionId).getTypeCode())
                     .difficulty(questionStatMap.get(questionId).getDifficulty())

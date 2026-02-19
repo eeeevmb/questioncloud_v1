@@ -10,7 +10,6 @@ import java.util.List;
 @Data
 @Builder
 public class QuestionDetail {
-    private Long questionId;
     private String typeCode;
     private String title;
     private String stem;
@@ -22,7 +21,6 @@ public class QuestionDetail {
 
     public static QuestionDetail fromVO(QuestionDetailVO VO) {
         return QuestionDetail.builder()
-                .questionId(VO.getId())
                 .typeCode(VO.getTypeCode())
                 .title(VO.getTitle())
                 .stem(VO.getStem())
