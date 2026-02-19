@@ -1,22 +1,30 @@
 package cn.sztu.questioncloud.application.ai.service.impl;
 
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
+import cn.sztu.questioncloud.application.ai.helper.ChatMessageConverter;
 import cn.sztu.questioncloud.application.ai.port.CollectionAssistantChatPort;
 import cn.sztu.questioncloud.application.ai.service.AgentService;
 import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ChatMessageDeserializer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Slf4j
 public class AgentServiceImpl implements AgentService {
     private final CollectionAssistantChatPort collectionAssistantChatPort;
     private final CacheService cacheService;
@@ -36,21 +44,8 @@ public class AgentServiceImpl implements AgentService {
      * @return 流式响应
      */
     public Flux<String> simpleChat(Long userId, ChatTestReq req) {
-        // 1. 更新Redis中的上下文内容
-
-        String key = CacheKeyUtil.chatContextKey(req.getMemoryId());
-        ChatSessionContext context = cacheService.get(key);
-
-        List<Long> oldIds = Optional.ofNullable(context.getQuestionIds()).orElse(List.of());
-        List<Long> newIds = Optional.ofNullable(req.getContext().getSelectedQuestionIds()).orElse(List.of());
-
-        if (!Objects.equals(oldIds, newIds)) {
-            context.setQuestionIds(newIds);
-        }
-        // 重置TTL
-        cacheService.set(key, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
-
-        // 2. 生成回复
+        refreshSelectedQuestions(req.getMemoryId(),
+                Optional.ofNullable(req.getContext()).map(ChatTestReq.Context::getSelectedQuestionIds).orElse(null));
         return collectionAssistantChatPort.chatTest(req.getMemoryId(), req.getMessage());
     }
 
@@ -59,12 +54,29 @@ public class AgentServiceImpl implements AgentService {
      *
      * @param memoryId     会话记忆ID
      * @param collectionId 题集ID
-     * @param message      用户消息
+     * @param req          聊天请求
      * @return 流式响应
      */
+    public Flux<String> chatWithAssistant(String memoryId, Long collectionId, AssistantChatReq req) {
+        refreshSelectedQuestions(memoryId,
+                Optional.ofNullable(req.getContext()).map(AssistantChatReq.Context::getSelectedQuestionIds).orElse(null));
+        return collectionAssistantChatPort.chatWithAssistant(memoryId, collectionId, req.getMessage());
+    }
+
+    /**
+     * 获取会话历史
+     *
+     * @param memoryId 记忆ID
+     * @return 会话历史
+     */
     @Override
-    public Flux<String> chatWithAssistant(String memoryId, Long collectionId, String message) {
-        return collectionAssistantChatPort.chatWithAssistant(memoryId, collectionId, message);
+    public List<ChatMessageVO> getChatHistory(String memoryId) {
+        String json = cacheService.get(CacheKeyUtil.chatMemoryKey(memoryId));
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        List<ChatMessage> messages = ChatMessageDeserializer.messagesFromJson(json);
+        return ChatMessageConverter.toVOList(messages);
     }
 
     /**
@@ -75,8 +87,7 @@ public class AgentServiceImpl implements AgentService {
     @Override
     public ChatSessionVO createNewChatSession(Long userId, Long collectionId) {
         // 1. 生成会话记忆ID
-        String memoryId = HutoolSnowflakeIdGenerator.generateId();
-
+        String memoryId = UUID.randomUUID().toString();
 
         // 2. 将业务上下文信息写入Redis
         String key = CacheKeyUtil.chatContextKey(memoryId);
@@ -92,5 +103,28 @@ public class AgentServiceImpl implements AgentService {
                 .memoryId(memoryId)
                 .collectionId(collectionId)
                 .build();
+    }
+
+    /**
+     * 刷新所选题目
+     *
+     * @param memoryId 会话记忆ID
+     * @param candidateIds 候选ID
+     */
+    private void refreshSelectedQuestions(String memoryId, List<Long> candidateIds) {
+        String key = CacheKeyUtil.chatContextKey(memoryId);
+        ChatSessionContext context = cacheService.get(key);
+        if (context == null) {
+            log.warn("上下文不存在，memoryId={}", memoryId);
+            return;
+        }
+
+        List<Long> newIds = candidateIds == null ? List.of() : candidateIds;
+        List<Long> oldIds = Optional.ofNullable(context.getQuestionIds()).orElse(List.of());
+
+        if (!Objects.equals(oldIds, newIds)) {
+            context.setQuestionIds(newIds);
+        }
+        cacheService.set(key, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
     }
 }

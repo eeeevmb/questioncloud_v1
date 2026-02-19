@@ -7,7 +7,7 @@ import lombok.Data;
 @Builder
 public class ChatSessionVO {
     /**
-     * 会话记忆ID(由HuTool生成的雪花ID)
+     * 会话记忆ID(UUID)
      */
     private String memoryId;
 

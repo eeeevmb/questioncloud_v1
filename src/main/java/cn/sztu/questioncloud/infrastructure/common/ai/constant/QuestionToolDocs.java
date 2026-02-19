@@ -24,13 +24,13 @@ public class QuestionToolDocs {
     
     何时调用：
     - 用户说“讲解这道题/这题答案是什么/给这几道题解析”，且前端已通过 UI 选择题目作为上下文
-    - 或者你已在 Redis 会话上下文中写入 selectedQuestionIds
     
     返回：ToolResult<List<QuestionDetail>>
     - success=true：data 为题目详情列表（可能为空列表）
     - success=false：code/message 说明原因（例如上下文不存在/已过期、题目不存在、无权限）
     
     注意：
+    - 调用该工具不需要手动注入题目ID，工具内部自动从上下文中获取
     - 回答必须以返回的题干/选项为准，不要自行改写题干或选项文本。
     - 若 data 为空列表，应提示用户先在 UI 选择题目或先进行搜索。
     """;
