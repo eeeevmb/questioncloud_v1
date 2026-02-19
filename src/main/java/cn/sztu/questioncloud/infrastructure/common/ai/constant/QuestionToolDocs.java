@@ -7,13 +7,13 @@ package cn.sztu.questioncloud.infrastructure.common.ai.constant;
  */
 public class QuestionToolDocs {
     public static final String CREATE_QUESTION = """
-    【createQuestion】在题集中添加题目，返回新题目ID。
+    【createQuestion】在题集中添加题目。
     何时调用：用户明确提出“新增/创建题目”或你需要把用户给出的题目落库时。
-    返回：ToolResult<Long>
-      - success=true: data 为 questionId
+    返回：ToolResult<Void>
+      - success=true: data 为 null
       - success=false: code/message 给出失败原因（必须把 message 反馈给用户，并提示补充/修正参数后重试）
     注意：
-    - 不要臆造 collectionId/typeCode/options 等；缺信息就先追问或让用户选择。
+    - 不要臆造 typeCode/options 等；缺信息就先追问或让用户选择。
     - difficulty 可省略；省略时系统默认 0.50（不要传 null）。
     """;
 
@@ -30,17 +30,27 @@ public class QuestionToolDocs {
     - success=false：code/message 说明原因（例如上下文不存在/已过期、题目不存在、无权限）
     
     注意：
-    - 调用该工具不需要手动注入题目ID，工具内部自动从上下文中获取
+    - 调用该工具不需要手动注入任何参数，工具内部自动从上下文中获取
     - 回答必须以返回的题干/选项为准，不要自行改写题干或选项文本。
     - 若 data 为空列表，应提示用户先在 UI 选择题目或先进行搜索。
     """;
 
     public static final String RAG_SEARCH = """
-    【searchQuestion】根据用户的模糊描述 + 题集ID + 可选筛选条件，返回候选题列表。
-    何时调用：用户说“找一下类似的题/我记得有道题大概是…/讲解一下这道题”但无法定位 questionId。
+    【searchQuestion】根据用户的模糊描述，在“当前题集”内检索，返回候选题列表（用于定位题目）。
+    何时调用：用户说“找一下类似的题/我记得有道题大概是…/讲解一下这道题”但无法定位具体哪道题。
+    
     返回：ToolResult<List<QuestionHitDTO>>
-      - data 为候选题（含 matchRank、questionId、stemPreview 等）
+    - success=true：data 为候选题列表（最多 topK 条）
+    - 每条候选题包含：
+      - matchRank：候选序号（从 1 开始），仅用于让用户选择“第几条候选题”
+      - stemPreview：题干预览（截断）
+      - typeCode / difficulty：辅助信息
+    
+    使用方式：
+    1) 你必须把候选题按 matchRank=1..K 列给用户（输出序号 + 题干预览 + 题型/难度）。
+    2) 让用户回复“选第N条/就是第N条”或补充更多关键词，再继续检索或获取详情。
+    
     注意：
-    - 这是“候选”，不是最终定位；通常需要让用户从候选中选一题，再调用 getQuestionDetail。
+    - 候选题仅用于定位，不代表最终答案；用户选中后再调用 getQuestionDetail。
     """;
 }

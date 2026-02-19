@@ -17,7 +17,7 @@ public class QuestionToolParamDocs {
         - true-false      判断题
         - fill-in         填空题
         - short-answer    简答题
-        
+       
         通用字段（任何题型都可填写，可省略）：
         - title：题目标题
         - answer：答案文本（用于展示；填空/简答用它承载答案）
@@ -41,6 +41,10 @@ public class QuestionToolParamDocs {
            - answer 必填：填空答案文本（多个空可用分号/换行分隔）
         5) 仅当 typeCode=short-answer：
            - answer 必填：简答题答案文本
+           
+       【调用约束】
+       - 缺少必填字段时：不要调用工具，先向用户追问补齐。
+       - 不要编造选项/答案/解析：信息不足就先问清楚再调用。
         """;
 
     public static final String RAG_SEARCH_PARAM_QUERY = """
