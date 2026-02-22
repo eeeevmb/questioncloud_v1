@@ -29,6 +29,17 @@ services:
       RABBITMQ_DEFAULT_USER: ${QC_RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${QC_RABBITMQ_PASS}
 
+  chroma:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    volumes:
+      - qc_chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/api/v1/heartbeat >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
   backend:
     build:
       context: .
@@ -41,11 +52,15 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_started
+      chroma:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       MYSQL_PASSWORD: ${QC_MYSQL_PASSWORD}
       RABBITMQ_DEFAULT_USER: ${QC_RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${QC_RABBITMQ_PASS}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      CHROMA_BASE_URL: http://chroma:8000
     ports:
       - "${QC_BACKEND_PORT}:8080"
     volumes:
@@ -65,3 +80,4 @@ volumes:
   qc_mysql_data:
   qc_redis_data:
   qc_storage:
+  qc_chroma_data:
