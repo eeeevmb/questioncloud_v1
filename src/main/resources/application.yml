@@ -30,16 +30,16 @@ langchain4j:
     dashscope:
       chat-model:
         api-key: ${DASHSCOPE_API_KEY:}
-        model-name: deepseek-v3.1 # 百炼还有百万token免费额度，用完换qwen-plus
+        model-name: deepseek-v3.1
       streaming-chat-model:
         api-key: ${DASHSCOPE_API_KEY:}
-        model-name: deepseek-v3.1 # 百炼还有百万token免费额度，用完换qwen-plus
+        model-name: deepseek-v3.1
       embedding-model:
         api-key: ${DASHSCOPE_API_KEY:}
         model-name: text-embedding-v4
 
 chroma:
-  base-url: localhost:8080
+  base-url: ${CHROMA_BASE_URL:http://127.0.0.1:8000}
   collection: questions
   api-version: V2
   log-requests: true
