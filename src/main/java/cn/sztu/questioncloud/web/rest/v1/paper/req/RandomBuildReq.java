@@ -26,9 +26,5 @@ public class RandomBuildReq {
 
         @NotNull(message = "题目数量不能为空")
         private Integer count;   // 例如: 5道
-
-        @NotNull(message = "单题分值不能为空")
-        @DecimalMin(value = "0.5", message = "单题分数不能低于0.5分")
-        private BigDecimal score; // 例如: 每题2分
     }
 }

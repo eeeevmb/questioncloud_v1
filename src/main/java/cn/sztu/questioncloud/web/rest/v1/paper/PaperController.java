@@ -5,13 +5,10 @@ import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.*;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.*;
 
 import java.util.List;
 
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,13 +44,13 @@ public class PaperController {
      * 全量保存试卷题目
      * 编辑页面点击"保存"时调用，会覆盖之前的题目列表(delete+save)
      *
-     * @param paperId 试卷ID
-     * @param reqs    题目列表 (试题顺序由题目列表题目顺序决定)
+     * @param paperId     试卷ID
+     * @param batchReq    题目列表 (试题顺序由题目列表题目顺序决定)
      */
     @PostMapping("/{paperId}/items")
-    public ResultVO<List<PaperItemVO>> savePaperItems(@Valid @RequestBody List<PaperItemSaveReq> reqs,
+    public ResultVO<List<PaperItemVO>> savePaperItems(@Valid @RequestBody PaperItemBatchSaveReq batchReq,
                                                       @PathVariable Long paperId) {
-        return ResultVO.success(paperItemService.savePaperItems(paperId, reqs));
+        return ResultVO.success(paperItemService.savePaperItems(paperId, batchReq.getItems()));
     }
 
     // === 随机组卷 ===
@@ -62,19 +59,17 @@ public class PaperController {
      * 接口 1: 随机组卷 - 纯随机返回
      * (仅返回随机生成的题目列表，不保存到数据库，不覆盖原有试卷)
      */
-    @PostMapping("/{paperId}/random-preview")
-    public ResultVO<List<PaperItemVO>> previewRandomBuild(@RequestBody @Valid RandomBuildReq req,
-                                                          @PathVariable("paperId") Long paperId) {
-        return ResultVO.success(paperItemService.previewRandomItems(paperId, req));
+    @PostMapping("/actions/random-preview")
+    public ResultVO<List<PaperItemDetailVO>> previewRandomBuild(@RequestBody @Valid RandomBuildReq req) {
+        return ResultVO.success(paperItemService.previewRandomItems(req));
     }
 
     /**
      * 接口 2: 随机换题
      */
-    @PostMapping("/{paperId}/replace-item")
-    public ResultVO<PaperItemVO> randomReplaceItem(@RequestBody @Valid RandomReplaceReq req,
-                                                   @PathVariable("paperId") Long paperId) {
-        return ResultVO.success(paperItemService.randomReplaceItem(paperId, req));
+    @PostMapping("/actions/replace-item")
+    public ResultVO<PaperItemDetailVO> randomReplaceItem(@RequestBody @Valid RandomReplaceReq req) {
+        return ResultVO.success(paperItemService.randomReplaceItem(req));
     }
 
     // =================== 公共接口 ===================
@@ -85,7 +80,7 @@ public class PaperController {
      * @param query 查询请求参数
      * @return 试卷视图列表
      */
-    @GetMapping("/search")
+    @GetMapping
     public ResultVO<PageResult<PaperBasicVO>> searchPapers(@Valid PaperPageQuery query) {
         return ResultVO.success(paperAppService.searchPapers(query));
     }

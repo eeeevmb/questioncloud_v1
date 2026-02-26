@@ -20,9 +20,7 @@ import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Repository
 public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
@@ -164,8 +162,8 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
             return Collections.emptyList();
         }
 
-        return QueryChain.of(questionMapper)
-                .select(QuestionSummaryVO.class)
+        List<QuestionDetailVO> rawList = QueryChain.of(questionMapper)
+                .select(QuestionDetailVO.class)
                 .from(QuestionEntity.class)
                 .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
@@ -174,10 +172,21 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
                 .in(CollectionItem::getCollectionId, collectionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
-                .groupBy(QuestionEntity::getId)
                 // 暂定按照难度升序排序
                 .orderBy(QuestionStat::getDifficulty)
                 .returnType(QuestionDetailVO.class)
                 .list();
+
+        List<QuestionDetailVO> distinctList = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
+
+        // 用 set去重，QueryChain做了多表连接无法使用 Group By
+        for (QuestionDetailVO vo : rawList) {
+            if (seenIds.add(vo.getId())) {
+                distinctList.add(vo);
+            }
+        }
+
+        return distinctList;
     }
 }

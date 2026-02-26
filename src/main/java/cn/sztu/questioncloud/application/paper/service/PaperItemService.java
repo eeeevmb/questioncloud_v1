@@ -47,20 +47,18 @@ public interface PaperItemService {
      * 根据规则抽取题目
      * 仅返回题目列表，不存储试卷题目，供前端预览使用
      *
-     * @param paperId 试卷ID
      * @param req 随机组卷请求
      * @return 试卷题目列表
      */
-    List<PaperItemVO> previewRandomItems(Long paperId, RandomBuildReq req);
+    List<PaperItemDetailVO> previewRandomItems(RandomBuildReq req);
 
     /**
      * 根据规则重新抽取一道题目
      *
-     * @param paperId 试卷ID
      * @param req 随机组卷请求
      * @return 试卷题目列表
      */
-    PaperItemVO randomReplaceItem(Long paperId, RandomReplaceReq req);
+    PaperItemDetailVO randomReplaceItem(RandomReplaceReq req);
 
 
     // ===================== 其他 ==================

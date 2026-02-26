@@ -127,52 +127,40 @@ public class PaperItemServiceImpl implements PaperItemService {
 
     // === 随机组卷 ===
     @Override
-    public List<PaperItemVO> previewRandomItems(Long paperId, RandomBuildReq req){
-        // 1. 获取用户ID
+    public List<PaperItemDetailVO> previewRandomItems(RandomBuildReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
-        PaperEntity paperEntity = paperRepository.getById(paperId);
 
-        // 2 校验存在性与权限
-        validatePaperStatus(paperEntity, userId);
-
+        // 1. 权限校验
         for (Long collectionId : req.getCollectionIds()) {
             QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(collectionId)
-                    .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
+                    .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在"));
             if (!userId.equals(collectionEntity.getOwnerId())) {
-                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
+                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "无权限访问该题集");
             }
         }
 
-        // 3. 随机组卷逻辑
-        List<PaperItemEntity> finalItems = new ArrayList<>();
-        int currentSeq = 1; // 题号计数器
+        List<PaperItemDetailVO> finalItems = new ArrayList<>();
 
+        // 2. 循环处理每种题型的抽取规则
         for (RandomBuildReq.Rule rule : req.getRules()) {
-            // 3.1 校验题目类型
             if (!QuestionTypeEnum.ensureValid(rule.getTypeCode())) {
                 throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
             }
-            // 3.2 搜索所有符合条件的候选题目
+
             List<QuestionDetailVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
                     req.getCollectionIds(), rule.getTypeCode());
-            // 3.3 校验库存
+
             if (candidates.size() < rule.getCount()) {
                 throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT,
                         String.format("题库余量不足！[%s]需要 %d 道，题集中实际只有 %d 道",
                                 rule.getTypeCode(), rule.getCount(), candidates.size()));
             }
-            /*
-            3.4 洗牌抽取
-            Collections.shuffle(candidates, ThreadLocalRandom.current());
-            List<QuestionSummaryVO> selected = new ArrayList<>(candidates.subList(0, rule.getCount()));
-            */
 
-            // 3.4 基于曝光度的加权抽取
+            // 基于曝光度加权抽取
             List<QuestionDetailVO> selected = candidates.stream()
                     .map(vo -> {
                         double u = ThreadLocalRandom.current().nextDouble();
                         if (u <= 0) u = 1e-10;
-
                         double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
                                 vo.getExposureFactor(), vo.getLastExposedAt(), LocalDateTime.now());
                         double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(effectiveExp);
@@ -187,62 +175,57 @@ public class PaperItemServiceImpl implements PaperItemService {
                     ))
                     .toList();
 
-            // 3.5 构建 PaperItem 实体
             for (QuestionDetailVO vo : selected) {
-                PaperItemEntity item = PaperItemEntity.builder()
-                        .paperId(paperId)
+                PaperItemDetailVO itemVO = PaperItemDetailVO.builder()
                         .questionId(vo.getId())
-                        .questionVersionId(vo.getCurrentVersionId())
-                        .score(rule.getScore())
-                        .seq(currentSeq++)
-                        .createdAt(LocalDateTime.now())
+                        .questionTitle(vo.getTitle())
+                        .stem(vo.getStem())
+                        .typeCode(vo.getTypeCode())
+                        .difficulty(vo.getDifficulty())
+                        .correctRate(vo.getCorrectRate())
                         .build();
 
-                finalItems.add(item);
+                finalItems.add(itemVO);
             }
         }
 
-        // 4. 返回抽取到的题目
-        return finalItems.stream().map(item -> PaperItemVO.builder()
-                        .questionId(item.getQuestionId())
-                        .questionVersionId(item.getQuestionVersionId())
-                        .build())
-                .collect(Collectors.toList());
+        return finalItems;
     }
 
     @Override
-    public PaperItemVO randomReplaceItem(Long paperId, RandomReplaceReq req){
-        // 1. 获取用户ID
+    public PaperItemDetailVO randomReplaceItem(RandomReplaceReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
-        PaperEntity paperEntity = paperRepository.getById(paperId);
 
-        // 2 校验存在性与权限
-        validatePaperStatus(paperEntity, userId);
+        // 1. 权限校验
         for (Long collectionId : req.getCollectionIds()) {
             QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(collectionId)
-                    .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND));
+                    .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "题集不存在"));
             if (!userId.equals(collectionEntity.getOwnerId())) {
-                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
+                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND, "无权限访问该题集");
             }
         }
 
-        // 3. 随机抽题逻辑
-        List<Long> excludedIds = req.getExcludedQuestionIds();
         if (!QuestionTypeEnum.ensureValid(req.getTypeCode())) {
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
+
+        // 2. 获取候选并过滤
         List<QuestionDetailVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
-                excludedIds, req.getTypeCode());
+                req.getCollectionIds(), req.getTypeCode());
+
+        List<Long> excludedIds = req.getExcludedQuestionIds();
         if (excludedIds != null && !excludedIds.isEmpty()) {
             Set<Long> excludeSet = new HashSet<>(excludedIds);
             candidates = candidates.stream()
                     .filter(vo -> !excludeSet.contains(vo.getId()))
                     .toList();
         }
+
         if (candidates.isEmpty()) {
-            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT);
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT, "无符合条件的题目可替换");
         }
 
+        // 3. 加权抽取单题
         QuestionDetailVO selected = candidates.stream()
                 .map(p -> {
                     double ran = ThreadLocalRandom.current().nextDouble();
@@ -255,11 +238,15 @@ public class PaperItemServiceImpl implements PaperItemService {
                 })
                 .min(Map.Entry.comparingByKey())
                 .map(Map.Entry::getValue)
-                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT, "无符合条件的题目可替换"));
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT, "抽题失败"));
 
-        return PaperItemVO.builder()
+        return PaperItemDetailVO.builder()
                 .questionId(selected.getId())
-                .questionVersionId(selected.getCurrentVersionId())
+                .questionTitle(selected.getTitle())
+                .stem(selected.getStem())
+                .typeCode(selected.getTypeCode())
+                .difficulty(selected.getDifficulty())
+                .correctRate(selected.getCorrectRate())
                 .build();
     }
 

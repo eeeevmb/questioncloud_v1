@@ -7,11 +7,17 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.Qu
 import cn.xbatis.db.annotations.ResultEntity;
 import cn.xbatis.db.annotations.ResultEntityField;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @ResultEntity(PaperItemEntity.class) // 映射到关联表
 public class PaperItemDetailVO {
     // --- 基础信息 ---
