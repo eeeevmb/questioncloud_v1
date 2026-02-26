@@ -65,6 +65,16 @@ public class QuestionCollectionRepositoryImpl implements QuestionCollectionRepos
     }
 
     /**
+     * 批量保存题集实体
+     *
+     * @param questionCollections 保存的题集列表
+     */
+    @Override
+    public void batchSave(List<QuestionCollectionEntity> questionCollections) {
+        questionCollectionMapper.saveBatch(questionCollections);
+    }
+
+    /**
      * 通过实体更新题集
      *
      * @param questionCollection 题集实体
