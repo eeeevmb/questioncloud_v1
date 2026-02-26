@@ -8,6 +8,7 @@ import cn.sztu.questioncloud.application.paper.port.PaperPresenceCheckerReposito
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperRepository;
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
+import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
@@ -117,18 +118,21 @@ public class PaperAppServiceImpl implements PaperAppService {
         // 2. 校验存在性与权限
         validatePaperStatus(paperEntity, userId);
 
-        boolean exists = paperPresenceCheckerRepository.existsByTitle(req.getTitle(), userId);
-        if (exists) {
-            throw new ApplicationException(PaperErrorCodeEnum.PAPER_TITLE_DUPLICATE, "您已存在同名试卷，请勿重复创建");
+        if (!req.getTitle().equals(paperEntity.getTitle())) {
+            boolean exists = paperPresenceCheckerRepository.existsByTitle(req.getTitle(), userId);
+            if (exists) {
+                throw new ApplicationException(PaperErrorCodeEnum.PAPER_TITLE_DUPLICATE, "您已存在同名试卷，请使用其他名称");
+            }
+            paperEntity.setTitle(req.getTitle());
         }
 
-        // 3. 更新字段
-        paperEntity.setTitle(req.getTitle());
+        // 3. 更新 title以外的字段
+        LocalDateTime now = LocalDateTime.now();
         paperEntity.setDescription(req.getDescription());
-        paperEntity.setUpdatedAt(LocalDateTime.now());
+        paperEntity.setUpdatedAt(now);
 
         paperRepository.updateStatistics(paperEntity);
-        LocalDateTime now = LocalDateTime.now();
+        paperEntity = paperRepository.getById(paperId);
 
         // 4. 返回结果
         return PaperBasicVO.builder()

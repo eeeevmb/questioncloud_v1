@@ -40,13 +40,7 @@ public class PaperRepositoryImpl implements PaperRepository {
      */
     @Override
     public void updateStatistics(PaperEntity paper){
-        UpdateChain.of(paperMapper)
-                .update(PaperEntity.class)
-                .set(PaperEntity::getTotalItems, paper.getTotalItems())
-                .set(PaperEntity::getTotalScore, paper.getTotalScore())
-                .set(PaperEntity::getUpdatedAt, LocalDateTime.now())
-                .eq(PaperEntity::getId, paper.getId())
-                .execute();
+        paperMapper.update(paper);
     }
 
     /**

@@ -21,10 +21,6 @@ public class RandomReplaceReq {
     @NotNull(message = "题目类型不能为空")
     private String typeCode;
 
-    @NotNull(message = "单题分值不能为空")
-    @DecimalMin(value = "0.5", message = "单题分数不能低于0.5分")
-    private BigDecimal score;
-
     // private Double difficultyMin;
     // private Double difficultyMax;
 }
