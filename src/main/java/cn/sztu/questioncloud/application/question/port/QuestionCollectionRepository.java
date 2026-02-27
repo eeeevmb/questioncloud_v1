@@ -33,6 +33,13 @@ public interface QuestionCollectionRepository {
     void save(QuestionCollectionEntity questionCollection);
 
     /**
+     * 批量保存题集实体
+     *
+     * @param questionCollections 保存的题集列表
+     */
+    void batchSave(List<QuestionCollectionEntity> questionCollections);
+
+    /**
      * 根据实体更新题集
      *
      * @param questionCollection 题集实体
