@@ -17,7 +17,8 @@ public enum QuestionErrorCodeEnum implements ResultCodeEnum {
     QUESTION_ASSET_NOT_FOUND("Q00006", "附件不存在"),
     // ===== 题集相关错误码 =====
     COLLECTION_NOT_FOUND("Q10001", "题集不存在"),
-    QUESTION_QUANTITY_INSUFFICIENT("Q10002", "题库余量不足");
+    QUESTION_QUANTITY_INSUFFICIENT("Q10002", "题库余量不足"),
+    COLLECTION_NAME_CONFLICT("Q10003", "题集名称已存在");
 
     private final String code;
     private final String message;

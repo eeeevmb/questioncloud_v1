@@ -43,12 +43,12 @@ CREATE TABLE question_collection (
      id           BIGINT UNSIGNED NOT NULL COMMENT 'PK',
      name         VARCHAR(128)    NOT NULL,
      description  VARCHAR(255)    NULL,
-     owner_id     BIGINT UNSIGNED NULL,
+     owner_id     BIGINT UNSIGNED NOT NULL,
      source       TINYINT         NOT NULL COMMENT '0=用户自建，1=系统默认',
      created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      PRIMARY KEY (id),
-     KEY idx_qc_owner (owner_id)
+     UNIQUE KEY uk_qc_owner_name (owner_id, name)
 );
 
 
