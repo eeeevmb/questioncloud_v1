@@ -1,0 +1,212 @@
+package cn.sztu.questioncloud.application.importer.service;
+
+import cn.hutool.core.util.StrUtil;
+import cn.sztu.questioncloud.application.importer.dto.ImportErrorReport;
+import cn.sztu.questioncloud.application.importer.dto.ImportExcelRow;
+import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
+import cn.sztu.questioncloud.application.importer.port.ImportItemRepository;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportItemEntity;
+import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.read.listener.ReadListener;
+import lombok.Getter;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 导入会话解析监听器。
+ *
+ * @author Codex
+ */
+
+public class ImportExcelListener implements ReadListener<ImportExcelRow> {
+    private static final Map<String, String> TYPE_MAPPING = Map.of(
+            "单选题", "single-choice",
+            "多选题", "multiple-choice",
+            "判断题", "true-false",
+            "填空题", "fill-in",
+            "简答题", "short-answer"
+    );
+
+    private final ImportItemRepository importItemRepository;
+    private final CollectionAutoCreator collectionAutoCreator;
+    private final Long importId;
+    private final Long ownerId;
+    private final int batchSize;
+    private final List<ImportItemEntity> buffer = new ArrayList<>();
+    private final Map<String, Boolean> ensuredCollections = new ConcurrentHashMap<>();
+    private int index = 1;
+    @Getter
+    private int total;
+    @Getter
+    private int valid;
+    @Getter
+    private int invalid;
+
+    public ImportExcelListener(ImportItemRepository importItemRepository,
+                               CollectionAutoCreator collectionAutoCreator,
+                               Long importId,
+                               Long ownerId,
+                               int batchSize) {
+        this.importItemRepository = importItemRepository;
+        this.collectionAutoCreator = collectionAutoCreator;
+        this.importId = importId;
+        this.ownerId = ownerId;
+        this.batchSize = batchSize;
+    }
+
+    @Override
+    public void invoke(ImportExcelRow row, AnalysisContext context) {
+        if (row == null || row.isEmptyRow()) {
+            return;
+        }
+        String collectionName = StrUtil.blankToDefault(row.getCollectionName(), "").trim();
+
+        QuestionDraft draft = buildDraft(row);
+        List<ImportErrorReport> errors = ImportDraftValidator.validate(collectionName, draft);
+
+        if (errors.isEmpty() && StrUtil.isNotBlank(collectionName)) {
+            ensureCollection(collectionName);
+        }
+
+        ImportItemEntity entity = ImportItemEntity.builder()
+                .id(HutoolSnowflakeIdGenerator.generateLongId())
+                .importId(importId)
+                .collectionName(collectionName)
+                .indexNo(index++)
+                .draft(draft)
+                .status(errors.isEmpty() ? 0 : 1)
+                .errors(errors)
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        total++;
+        if (errors.isEmpty()) {
+            valid++;
+        } else {
+            invalid++;
+        }
+        buffer.add(entity);
+        if (buffer.size() >= batchSize) {
+            flush();
+        }
+    }
+
+    @Override
+    public void doAfterAllAnalysed(AnalysisContext context) {
+        flush();
+    }
+
+    public void flush() {
+        if (buffer.isEmpty()) {
+            return;
+        }
+        importItemRepository.batchSave(new ArrayList<>(buffer));
+        buffer.clear();
+    }
+
+    private void ensureCollection(String name) {
+        ensuredCollections.computeIfAbsent(name, key -> {
+            collectionAutoCreator.ensureCollection(ownerId, key);
+            return Boolean.TRUE;
+        });
+    }
+
+    private QuestionDraft buildDraft(ImportExcelRow row) {
+        QuestionDraft draft = new QuestionDraft();
+        draft.setTypeCode(TYPE_MAPPING.getOrDefault(StrUtil.trim(row.getType()), null));
+        draft.setTitle(trim(row.getTitle()));
+        draft.setStem(trim(row.getStem()));
+        draft.setSolution(trim(row.getSolution()));
+        draft.setDifficulty(parseDifficulty(row.getDifficulty()));
+        if (isChoiceType(draft.getTypeCode())) {
+            draft.setOptions(buildOptions(row));
+            draft.setCorrectOptions(parseChoiceAnswer(row.getChoiceAnswer()));
+        } else {
+            draft.setOptions(Collections.emptyList());
+        }
+        switch (draft.getTypeCode() == null ? "" : draft.getTypeCode()) {
+            case "fill-in" -> draft.setAnswer(trim(row.getCorrectAnswer()));
+            case "short-answer" -> draft.setAnswer(trim(row.getCorrectAnswer()));
+            case "true-false" -> {
+                String normalized = normalizeJudgeAnswer(row.getJudgeAnswer());
+                draft.setJudgeAnswer(normalized);
+                draft.setAnswer(normalized);
+            }
+            case "single-choice", "multiple-choice" -> draft.setAnswer(String.join("", draft.getCorrectOptions()));
+            default -> draft.setAnswer(trim(row.getCorrectAnswer()));
+        }
+        return draft;
+    }
+
+    private boolean isChoiceType(String typeCode) {
+        return "single-choice".equals(typeCode) || "multiple-choice".equals(typeCode);
+    }
+
+    private List<QuestionOption> buildOptions(ImportExcelRow row) {
+        List<QuestionOption> options = new ArrayList<>();
+        addOption(options, "A", row.getOptionA());
+        addOption(options, "B", row.getOptionB());
+        addOption(options, "C", row.getOptionC());
+        addOption(options, "D", row.getOptionD());
+        addOption(options, "E", row.getOptionE());
+        addOption(options, "F", row.getOptionF());
+        return options;
+    }
+
+    private void addOption(List<QuestionOption> options, String key, String content) {
+        if (StrUtil.isBlank(content)) {
+            return;
+        }
+        QuestionOption option = new QuestionOption();
+        option.setKey(key);
+        option.setContent(content.trim());
+        options.add(option);
+    }
+
+    private List<String> parseChoiceAnswer(String raw) {
+        if (StrUtil.isBlank(raw)) {
+            return new ArrayList<>();
+        }
+        List<String> result = new ArrayList<>();
+        for (char c : raw.toCharArray()) {
+            if (Character.isLetter(c)) {
+                result.add(String.valueOf(Character.toUpperCase(c)));
+            }
+        }
+        return result;
+    }
+
+    private String normalizeJudgeAnswer(String raw) {
+        if (StrUtil.isBlank(raw)) {
+            return null;
+        }
+        String val = raw.trim().toUpperCase();
+        if ("对".equals(val) || "TRUE".equals(val) || "T".equals(val)) {
+            return "T";
+        }
+        if ("错".equals(val) || "FALSE".equals(val) || "F".equals(val)) {
+            return "F";
+        }
+        return val;
+    }
+
+    private BigDecimal parseDifficulty(String raw) {
+        if (StrUtil.isBlank(raw)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(raw.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+}
