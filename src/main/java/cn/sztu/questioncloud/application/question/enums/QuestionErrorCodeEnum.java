@@ -25,7 +25,8 @@ public enum QuestionErrorCodeEnum implements ResultCodeEnum {
     IMPORT_SESSION_COMMITTING("Q20004", "导入中，请稍等"),
     IMPORT_SESSION_PARSING("Q20005", "文件解析中，请稍等"),
     IMPORT_SESSION_CANCELED("Q20006", "批量导入已取消，请重新导入"),
-    IMPORT_SESSION_FAILED("Q20007", "批量导入失败，请检查上传的模版是否有误");
+    IMPORT_SESSION_FAILED("Q20007", "批量导入失败，请检查上传的模版是否有误"),
+    IMPORT_SESSION_CANNOT_CANCEL("Q20008", "当前导入会话无法取消");
 
     private final String code;
     private final String message;

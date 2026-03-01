@@ -222,6 +222,29 @@ public class ImportAppServiceImpl implements ImportAppService {
         importSessionRepository.update(session);
     }
 
+    /**
+     * 取消批量导入
+     *
+     * @param userId   用户ID
+     * @param importId 导入会话ID
+     */
+    @Override
+    public void cancelImport(Long userId, Long importId) {
+        // 验证用户
+        ImportSession session = loadSession(importId);
+        ensureOwner(session);
+
+        if (session.getStatus().equals(ImportSessionStatusEnum.READY.getCode())) {
+            session.setStatus(ImportSessionStatusEnum.CANCELED.getCode());
+            importSessionRepository.update(session);
+            return;
+        } else if (session.getStatus().equals(ImportSessionStatusEnum.CANCELED.getCode())) {
+            return;
+        }
+
+        throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_CANNOT_CANCEL);
+    }
+
     private ImportSession loadSession(Long importId) {
         return importSessionRepository.findById(importId)
                 .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_NOT_FOUND));
