@@ -3,8 +3,10 @@ package cn.sztu.questioncloud.infrastructure.adapter.importer;
 import cn.sztu.questioncloud.application.importer.port.ImportItemRepository;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportItemEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.importer.ImportItemMapper;
+import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -33,6 +35,17 @@ public class ImportItemRepositoryImpl implements ImportItemRepository {
     @Override
     public ImportItemEntity findById(Long itemId) {
         return importItemMapper.getById(itemId);
+    }
+
+    @Override
+    public List<ImportItemEntity> findValidByImportId(Long importId) {
+        List<ImportItemEntity> result = QueryChain.of(importItemMapper)
+                .eq(ImportItemEntity::getImportId, importId)
+                .eq(ImportItemEntity::getStatus, 0)
+                .orderBy(ImportItemEntity::getIndexNo)
+                .list();
+
+        return result == null ? List.of() : result;
     }
 
     @Override

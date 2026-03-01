@@ -2,20 +2,28 @@ package cn.sztu.questioncloud.application.importer.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.common.port.FilePort;
+import cn.sztu.questioncloud.application.importer.dto.CreatedQuestionIds;
+import cn.sztu.questioncloud.application.importer.dto.ImportCommitContext;
 import cn.sztu.questioncloud.application.importer.dto.ImportErrorReport;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
+import cn.sztu.questioncloud.application.importer.enums.ImportSessionStatusEnum;
 import cn.sztu.questioncloud.application.importer.port.ImportItemRepository;
 import cn.sztu.questioncloud.application.importer.port.ImportSessionRepository;
+import cn.sztu.questioncloud.application.importer.service.CollectionAutoCreator;
 import cn.sztu.questioncloud.application.importer.service.ImportAppService;
 import cn.sztu.questioncloud.application.importer.service.ImportDraftValidator;
 import cn.sztu.questioncloud.application.importer.service.ImportParseService;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
+import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventMessage;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventPublisher;
+import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
+import cn.sztu.questioncloud.infrastructure.adapter.utils.QuestionUtils;
 import cn.sztu.questioncloud.infrastructure.common.file.model.InfraFileMetadata;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportItemEntity;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportSession;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.web.rest.v1.importer.query.ImportItemPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.importer.req.ImportItemBatchUpdateReq;
@@ -30,9 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static cn.sztu.questioncloud.application.question.service.impl.QuestionAppServiceImpl.*;
 
 /**
  * 批量导入应用服务实现。
@@ -45,8 +54,18 @@ import java.util.Objects;
 public class ImportAppServiceImpl implements ImportAppService {
     private final ImportSessionRepository importSessionRepository;
     private final ImportItemRepository importItemRepository;
+
+    private final QuestionCollectionRepository questionCollectionRepository;
+    private final QuestionRepository questionRepository;
+    private final QuestionVersionRepository questionVersionRepository;
+    private final QuestionStatRepository questionStatRepository;
+    private final QuestionQueryRepository queryRepository;
+    private final CollectionItemRepository collectionItemRepository;
+
     private final FilePort filePort;
     private final ImportParseService importParseService;
+    private final CollectionAutoCreator collectionAutoCreator;
+    private final QuestionEventPublisher questionEventPublisher;
 
     public ImportCreateVO createImportSession(ImportSessionCreateReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
@@ -82,12 +101,14 @@ public class ImportAppServiceImpl implements ImportAppService {
                 .build();
     }
 
+    @Override
     public ImportSessionVO getSession(Long importId) {
         ImportSession session = loadSession(importId);
         ensureOwner(session);
         return toSessionVO(session);
     }
 
+    @Override
     public PageResult<ImportItemVO> pageItems(Long importId, ImportItemPageQuery query) {
         ImportSession session = loadSession(importId);
         ensureOwner(session);
@@ -99,6 +120,7 @@ public class ImportAppServiceImpl implements ImportAppService {
         return PageResult.of(voList, total, query);
     }
 
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public List<ImportItemVO> updateItems(Long importId, ImportItemBatchUpdateReq req) {
         ImportSession session = loadSession(importId);
@@ -122,15 +144,93 @@ public class ImportAppServiceImpl implements ImportAppService {
         return result;
     }
 
+    /**
+     * 提交题目草稿。
+     *
+     * @param importId 导入会话ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void commitImport(Long userId, Long importId, boolean ignoreInvalidDraft) {
+        // 验证用户
+        ImportSession session = loadSession(importId);
+        ensureOwner(session);
+
+        // 尝试取锁
+        int updated = importSessionRepository.tryMarkCommitting(
+                importId,
+                ImportSessionStatusEnum.READY.getCode(),
+                ImportSessionStatusEnum.COMMITTING.getCode()
+        );
+
+        // 没有取到锁，要么PARSING, 要么COMMITTING，要么COMMITTED或用户CANCELED/FAILED
+        if (updated == 0) {
+            session = loadSession(importId);
+
+            if (session.getStatus().equals(ImportSessionStatusEnum.COMMITTING.getCode())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_COMMITTING);
+            } else if (session.getStatus().equals(ImportSessionStatusEnum.COMMITTED.getCode())) {
+                return;
+            } else if (session.getStatus().equals(ImportSessionStatusEnum.PARSING.getCode())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_PARSING);
+            } else if (session.getStatus().equals(ImportSessionStatusEnum.CANCELED.getCode())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_CANCELED);
+            } else if (session.getStatus().equals(ImportSessionStatusEnum.FAILED.getCode())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_FAILED);
+            }
+
+            // 兜底，正常情况下不会触发
+            throw new ApplicationException(CommonResultCodeEnum.TOO_MANY_REQUESTS);
+        }
+
+        // 抢到锁了，继续提交逻辑
+        session = loadSession(importId);
+
+        // 不忽略非法题目时，校验是否存在非法题目
+        if (!ignoreInvalidDraft && session.getInvalidCnt() != null && session.getInvalidCnt() > 0) {
+            throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_CONTAINS_INVALID_ITEMS);
+        }
+
+        // 拉取合法题目草稿列表
+        List<ImportItemEntity> drafts = importItemRepository.findValidByImportId(importId);
+        if (drafts.isEmpty()) {
+            throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_NO_VALID_ITEM);
+        }
+
+        ImportCommitContext ctx = prepareContext(userId, drafts);
+        List<QuestionEventMessage> messages = new ArrayList<>(drafts.size());
+
+        // 提交题目草稿并构造消息
+        for (ImportItemEntity draft : drafts) {
+            CreatedQuestionIds ids = commitOne(ctx, draft);
+            messages.add(QuestionEventMessage.builder()
+                    .questionId(ids.getQuestionId())
+                    .versionId(ids.getVersionId())
+                    .collectionId(ids.getCollectionId())
+                    .ownerId(userId)
+                    .occurredAt(ctx.getNow())
+                    .build());
+        }
+
+        // 发布领域事件
+        messages.forEach(questionEventPublisher::publishCreated);
+
+        // 更新草稿状态
+//        drafts.forEach(item -> item.setStatus(2));
+
+        session.setStatus(ImportSessionStatusEnum.COMMITTED.getCode());
+        importSessionRepository.update(session);
+    }
+
     private ImportSession loadSession(Long importId) {
         return importSessionRepository.findById(importId)
-                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_NOT_FOUND, "导入会话不存在"));
+                .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.IMPORT_SESSION_NOT_FOUND));
     }
 
     private void ensureOwner(ImportSession session) {
         Long userId = StpUtil.getLoginIdAsLong();
         if (!Objects.equals(session.getUserId(), userId)) {
-            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION, "无权访问该导入会话");
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
     }
 
@@ -179,5 +279,106 @@ public class ImportAppServiceImpl implements ImportAppService {
         long valid = importItemRepository.countByStatus(importId, 0);
         long invalid = importItemRepository.countByStatus(importId, 1);
         importSessionRepository.updateCounts(importId, (int) valid, (int) invalid);
+    }
+
+    // 准备提交的上下文
+    private ImportCommitContext prepareContext(Long userId, List<ImportItemEntity> drafts) {
+        LocalDateTime now = LocalDateTime.now();
+
+        Map<String, Long> collectionIdByName = questionCollectionRepository.getMapsByUserId(userId);
+
+        Set<Long> collectionIds = drafts.stream()
+                .map(ImportItemEntity::getCollectionName)
+                .map(name -> name == null ? "" : name.trim())
+                .map(name -> {
+                    Long id = collectionIdByName.get(name);
+                    if (id != null) {
+                        return id;
+                    }
+                    Long createdId = collectionAutoCreator.ensureCollection(userId, name).getId();
+                    collectionIdByName.put(name, createdId);
+                    return createdId;
+                })
+                .collect(Collectors.toSet());
+
+        Map<Long, Integer> nextOrdinalByCollectionId = new HashMap<>();
+        for (Long cid : collectionIds) {
+            int max = queryRepository.getMaxOrdinal(cid);
+            nextOrdinalByCollectionId.put(cid, max + 1);
+        }
+
+        return new ImportCommitContext(userId, collectionIdByName, nextOrdinalByCollectionId, now);
+    }
+
+    // 把一个 draft 落库并返回创建的题目相关ID
+    private CreatedQuestionIds commitOne(ImportCommitContext ctx, ImportItemEntity item) {
+        QuestionDraft d = item.getDraft();
+
+        String name = item.getCollectionName() == null ? "" : item.getCollectionName().trim();
+        Long collectionId = ctx.getCollectionIdByName().get(name);
+        if (collectionId == null) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "题集不存在: " + item.getCollectionName());
+        }
+
+        Long questionId = HutoolSnowflakeIdGenerator.generateLongId();
+        Long versionId  = HutoolSnowflakeIdGenerator.generateLongId();
+
+        LocalDateTime now = ctx.getNow();
+
+        QuestionEntity q = QuestionEntity.builder()
+                .id(questionId)
+                .status(QuestionStatusEnum.ACTIVE.getCode())
+                .currentVersionId(versionId)
+                .ownerId(ctx.getUserId())
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        QuestionVersionEntity v = QuestionVersionEntity.builder()
+                .id(versionId)
+                .questionId(questionId)
+                .versionNo(INITIAL_VERSION)
+                .typeCode(d.getTypeCode())
+                .title(d.getTitle())
+                .stem(d.getStem())
+                .options(d.getOptions())
+                .answer(d.getAnswer())
+                .answerKey(QuestionUtils.getAnswerKey(d.getTypeCode(), d.getCorrectOptions(), d.getJudgeAnswer()))
+                .solution(d.getSolution())
+                .createdBy(ctx.getUserId())
+                .createdAt(now)
+                .build();
+
+        questionRepository.save(q);
+        questionVersionRepository.save(v);
+
+        // ordinal：用 ctx 的缓存，避免每题查 maxOrdinal
+        int ordinal = ctx.getNextOrdinalByCollectionId().compute(collectionId, (k, oldVal) -> {
+            int cur = (oldVal == null ? 1 : oldVal);
+            return cur + 1;
+        }) - 1;
+
+        CollectionItem ci = CollectionItem.builder()
+                .collectionId(collectionId)
+                .ordinal(ordinal)
+                .questionId(questionId)
+                .questionVersionId(versionId)
+                .build();
+        collectionItemRepository.save(ci);
+
+        QuestionStat stat = QuestionStat.builder()
+                .questionId(questionId)
+                .versionId(versionId)
+                .attempts(INITIAL_COUNT)
+                .correctCount(INITIAL_COUNT)
+                .correctRate(null)
+                .difficulty(d.getDifficulty() == null ? null : d.getDifficulty().doubleValue())
+                .exposureFactor(INITIAL_EXP)
+                .lastExposedAt(now)
+                .updatedAt(now)
+                .build();
+        questionStatRepository.save(stat);
+
+        return new CreatedQuestionIds(questionId, versionId, collectionId);
     }
 }

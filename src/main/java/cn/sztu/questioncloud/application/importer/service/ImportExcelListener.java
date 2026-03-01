@@ -11,6 +11,7 @@ import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.read.listener.ReadListener;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author Codex
  */
-
+@Slf4j
 public class ImportExcelListener implements ReadListener<ImportExcelRow> {
     private static final Map<String, String> TYPE_MAPPING = Map.of(
             "单选题", "single-choice",
@@ -31,6 +32,7 @@ public class ImportExcelListener implements ReadListener<ImportExcelRow> {
             "填空题", "fill-in",
             "简答题", "short-answer"
     );
+    private static final String DEFAULT_COLLECTION_NAME = "默认题集";
 
     private final ImportItemRepository importItemRepository;
     private final CollectionAutoCreator collectionAutoCreator;
@@ -64,35 +66,11 @@ public class ImportExcelListener implements ReadListener<ImportExcelRow> {
         if (row == null || row.isEmptyRow()) {
             return;
         }
-        String collectionName = StrUtil.blankToDefault(row.getCollectionName(), "").trim();
-
-        QuestionDraft draft = buildDraft(row);
-        List<ImportErrorReport> errors = ImportDraftValidator.validate(collectionName, draft);
-
-        if (errors.isEmpty() && StrUtil.isNotBlank(collectionName)) {
-            ensureCollection(collectionName);
-        }
-
-        ImportItemEntity entity = ImportItemEntity.builder()
-                .id(HutoolSnowflakeIdGenerator.generateLongId())
-                .importId(importId)
-                .collectionName(collectionName)
-                .indexNo(index++)
-                .draft(draft)
-                .status(errors.isEmpty() ? 0 : 1)
-                .errors(errors)
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        total++;
-        if (errors.isEmpty()) {
-            valid++;
-        } else {
-            invalid++;
-        }
-        buffer.add(entity);
-        if (buffer.size() >= batchSize) {
-            flush();
+        try {
+            handleRow(row);
+        } catch (Exception ex) {
+            log.warn("处理导入行失败，importId={}，indexNo={}", importId, index, ex);
+            recordRowFailure(row, ex);
         }
     }
 
@@ -116,9 +94,82 @@ public class ImportExcelListener implements ReadListener<ImportExcelRow> {
         });
     }
 
-    private QuestionDraft buildDraft(ImportExcelRow row) {
+    private void handleRow(ImportExcelRow row) {
+        String collectionName = normalizeCollectionName(row.getCollectionName());
+        String originalType = normalizeTypeLabel(row.getType());
+        String typeCode = resolveTypeCode(originalType);
+
+        QuestionDraft draft = buildDraft(row, typeCode);
+        List<ImportErrorReport> errors = ImportDraftValidator.validate(collectionName, draft, originalType);
+
+        String persistedName = persistDraft(collectionName, draft, errors);
+        if (errors.isEmpty() && StrUtil.isNotBlank(persistedName)) {
+            ensureCollection(persistedName);
+        }
+    }
+
+    private void recordRowFailure(ImportExcelRow row, Exception ex) {
+        ImportErrorReport error = ImportErrorReport.builder()
+                .field("row")
+                .code("EXCEPTION")
+                .message(buildExceptionMessage(ex))
+                .build();
+        persistDraft(normalizeCollectionName(row.getCollectionName()), new QuestionDraft(), List.of(error));
+    }
+
+    private String persistDraft(String collectionName, QuestionDraft draft, List<ImportErrorReport> errors) {
+        String persistedName = StrUtil.blankToDefault(collectionName, DEFAULT_COLLECTION_NAME);
+        ImportItemEntity entity = ImportItemEntity.builder()
+                .id(HutoolSnowflakeIdGenerator.generateLongId())
+                .importId(importId)
+                .collectionName(persistedName)
+                .indexNo(index++)
+                .draft(draft)
+                .status(errors.isEmpty() ? 0 : 1)
+                .errors(errors)
+                .updatedAt(LocalDateTime.now())
+                .build();
+        total++;
+        if (errors.isEmpty()) {
+            valid++;
+        } else {
+            invalid++;
+        }
+        buffer.add(entity);
+        if (buffer.size() >= batchSize) {
+            flush();
+        }
+        return persistedName;
+    }
+
+    private String normalizeCollectionName(String raw) {
+        String trimmed = StrUtil.trim(raw);
+        return StrUtil.blankToDefault(trimmed, DEFAULT_COLLECTION_NAME);
+    }
+
+    private String normalizeTypeLabel(String rawType) {
+        String trimmed = StrUtil.trim(rawType);
+        return StrUtil.isBlank(trimmed) ? null : trimmed;
+    }
+
+    private String resolveTypeCode(String originalType) {
+        if (originalType == null) {
+            return null;
+        }
+        return TYPE_MAPPING.get(originalType);
+    }
+
+    private String buildExceptionMessage(Exception ex) {
+        String message = ex.getMessage();
+        if (StrUtil.isBlank(message)) {
+            message = ex.getClass().getSimpleName();
+        }
+        return "系统解析异常：" + message;
+    }
+
+    private QuestionDraft buildDraft(ImportExcelRow row, String typeCode) {
         QuestionDraft draft = new QuestionDraft();
-        draft.setTypeCode(TYPE_MAPPING.getOrDefault(StrUtil.trim(row.getType()), null));
+        draft.setTypeCode(typeCode);
         draft.setTitle(trim(row.getTitle()));
         draft.setStem(trim(row.getStem()));
         draft.setSolution(trim(row.getSolution()));
