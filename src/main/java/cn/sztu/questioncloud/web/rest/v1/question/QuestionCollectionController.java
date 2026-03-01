@@ -4,6 +4,7 @@ import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
+import cn.sztu.questioncloud.web.rest.v1.question.req.BatchCreateCollectionsReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
@@ -41,6 +42,17 @@ public class QuestionCollectionController {
     public ResultVO<CollectionVO> createCollection(@Valid @RequestBody CreateCollectionReq req) {
         CollectionVO vo = questionCollectionService.createCollection(req);
         return ResultVO.success(vo);
+    }
+
+    /**
+     * 批量创建题集
+     *
+     * @param req 批量创建请求
+     * @return 批量创建结果
+     */
+    @PostMapping("/batch")
+    public ResultVO<List<CollectionVO>> batchCreateCollections(@Valid @RequestBody BatchCreateCollectionsReq req) {
+        return ResultVO.success(questionCollectionService.createCollections(req.collections()));
     }
 
     /**

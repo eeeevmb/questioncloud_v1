@@ -7,6 +7,7 @@ import cn.sztu.questioncloud.application.question.port.CollectionPresenceChecker
 import cn.sztu.questioncloud.application.question.port.QuestionCollectionRepository;
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
@@ -15,7 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 题目模块应用服务实现
@@ -43,11 +46,9 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
     public void createDefaultCollection(Long userId) {
         // 1. 检查是否有默认题集
         if (collectionPresenceCheckerPort.existsDefaultByUserId(userId)) {
-            log.info("存在默认题集，不进行创建操作。");
             return;
         }
         // 2. 创建默认题集
-        log.info("开始创建默认题集");
         QuestionCollectionEntity defaultCollection = QuestionCollectionEntity.builder()
                 .name("默认题集")
                 .description("系统自动创建")
@@ -67,18 +68,53 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
     public CollectionVO createCollection(CreateCollectionReq req) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
+        LocalDateTime now = LocalDateTime.now();
+
+        ensureNameAvailable(userId, req.name());
 
         // 2. 构建题集实体
         QuestionCollectionEntity collection = QuestionCollectionEntity.builder()
+                .id(HutoolSnowflakeIdGenerator.generateLongId())
                 .name(req.name())
                 .description(req.description())
                 .ownerId(userId)
                 .source(CollectionSourceEnum.USER.getCode())
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
         questionCollectionRepository.save(collection);
 
         // 3. 返回视图对象
         return CollectionVO.fromEntity(collection);
+    }
+
+    @Override
+    public List<CollectionVO> createCollections(List<CreateCollectionReq> reqs) {
+        if (reqs == null || reqs.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Long userId = StpUtil.getLoginIdAsLong();
+        ensureNamesAvailable(userId, reqs.stream().map(CreateCollectionReq::name).toList());
+
+        List<QuestionCollectionEntity> collections = reqs.stream()
+                .map(req -> QuestionCollectionEntity.builder()
+                        .id(HutoolSnowflakeIdGenerator.generateLongId())
+                        .name(req.name())
+                        .description(req.description())
+                        .ownerId(userId)
+                        .source(CollectionSourceEnum.USER.getCode())
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build())
+                .toList();
+        questionCollectionRepository.batchSave(collections);
+
+        return collections.stream()
+                .map(CollectionVO::fromEntity)
+                .toList();
     }
 
     /**
@@ -147,5 +183,27 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
 
         // 2. 获取题集列表
         return questionCollectionRepository.getCollectionsByUserId(userId);
+    }
+
+    private void ensureNameAvailable(Long ownerId, String name) {
+        if (collectionPresenceCheckerPort.existsByOwnerIdAndName(ownerId, name)) {
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NAME_CONFLICT, name);
+        }
+    }
+
+    private void ensureNamesAvailable(Long ownerId, List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String name : names) {
+            if (!seen.add(name)) {
+                throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NAME_CONFLICT, name);
+            }
+        }
+        List<String> exists = collectionPresenceCheckerPort.findExistingNames(ownerId, names);
+        if (!exists.isEmpty()) {
+            throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NAME_CONFLICT, exists.getFirst());
+        }
     }
 }

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -35,6 +36,35 @@ public class QuestionCollectionRepositoryImpl implements QuestionCollectionRepos
         return Optional.ofNullable(QueryChain.of(questionCollectionMapper)
                 .eq(QuestionCollectionEntity::getId, collectionId)
                 .get());
+    }
+
+    /**
+     * 根据用户ID和题集名查询题集
+     *
+     * @param userId 用户ID
+     * @param name   题集名
+     * @return 题集
+     */
+    @Override
+    public Optional<QuestionCollectionEntity> findByUserIdAndName(Long userId, String name) {
+
+        return Optional.ofNullable(QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getOwnerId, userId)
+                .eq(QuestionCollectionEntity::getName, name)
+                .get());
+    }
+
+    /**
+     * 根据用户ID获取题集名-题集ID的映射表
+     *
+     * @param userId 用户ID
+     * @return 映射表
+     */
+    @Override
+    public Map<String, Long> getMapsByUserId(Long userId) {
+        return QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getOwnerId, userId)
+                .mapWithKeyAndValue(QuestionCollectionEntity::getName, QuestionCollectionEntity::getId);
     }
 
     /**
@@ -62,6 +92,16 @@ public class QuestionCollectionRepositoryImpl implements QuestionCollectionRepos
             questionCollection.setId(HutoolSnowflakeIdGenerator.generateLongId());
         }
         questionCollectionMapper.save(questionCollection);
+    }
+
+    /**
+     * 批量保存题集实体
+     *
+     * @param questionCollections 保存的题集列表
+     */
+    @Override
+    public void batchSave(List<QuestionCollectionEntity> questionCollections) {
+        questionCollectionMapper.saveBatch(questionCollections);
     }
 
     /**
