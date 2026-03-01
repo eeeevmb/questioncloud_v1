@@ -35,6 +35,14 @@ public interface ImportAppService {
     ImportSessionVO getSession(Long importId);
 
     /**
+     * 获取当前用户的所有导入会话详情。
+     *
+     * @param userId 用户ID
+     * @return 导入会话视图列表
+     */
+    List<ImportSessionVO> getSessionList(Long userId);
+
+    /**
      * 分页查询导入草稿。
      *
      * @param importId 导入会话ID
