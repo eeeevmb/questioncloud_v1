@@ -62,4 +62,10 @@ public class ImportController {
         importAppService.cancelImport(userId, importId);
         return ResultVO.success();
     }
+
+    @GetMapping
+    public ResultVO<List<ImportSessionVO>> getImportSessions() {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(importAppService.getSessionList(userId));
+    }
 }

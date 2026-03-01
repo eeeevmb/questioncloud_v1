@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.adapter.importer;
 
+import cn.sztu.questioncloud.application.importer.enums.ImportSessionStatusEnum;
 import cn.sztu.questioncloud.application.importer.port.ImportSessionRepository;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportSession;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.importer.ImportSessionMapper;
@@ -8,6 +9,7 @@ import cn.xbatis.core.sql.executor.chain.UpdateChain;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -80,5 +82,13 @@ public class ImportSessionRepositoryImpl implements ImportSessionRepository {
                 .set(ImportSession::getUpdatedAt, LocalDateTime.now())
                 .eq(ImportSession::getId, sessionId)
                 .execute();
+    }
+
+    @Override
+    public List<ImportSession> findReadyByUserId(Long userId) {
+        return QueryChain.of(importSessionMapper)
+                .eq(ImportSession::getUserId, userId)
+                .eq(ImportSession::getStatus, ImportSessionStatusEnum.READY.getCode())
+                .list();
     }
 }

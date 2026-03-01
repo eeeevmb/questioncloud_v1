@@ -108,6 +108,20 @@ public class ImportAppServiceImpl implements ImportAppService {
         return toSessionVO(session);
     }
 
+    /**
+     * 获取当前用户的所有导入会话详情。
+     *
+     * @param userId 用户ID
+     * @return 导入会话视图列表
+     */
+    @Override
+    public List<ImportSessionVO> getSessionList(Long userId) {
+        List<ImportSession> importSessions = importSessionRepository.findReadyByUserId(userId);
+        return importSessions.stream()
+                .map(this::toSessionVO)
+                .collect(Collectors.toList());
+    }
+
     @Override
     public PageResult<ImportItemVO> pageItems(Long importId, ImportItemPageQuery query) {
         ImportSession session = loadSession(importId);
