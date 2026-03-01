@@ -1,7 +1,5 @@
 package cn.sztu.questioncloud.application.importer.service;
 
-import cn.sztu.questioncloud.application.importer.dto.ImportErrorReport;
-import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.web.rest.v1.importer.query.ImportItemPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.importer.req.ImportItemBatchUpdateReq;
@@ -53,4 +51,13 @@ public interface ImportAppService {
      * @return 更新后的草稿视图列表
      */
     List<ImportItemVO> updateItems(Long importId, ImportItemBatchUpdateReq req);
+
+    /**
+     * 提交题目草稿。
+     *
+     * @param importId           导入会话ID
+     * @param userId             用户ID
+     * @param ignoreInvalidDraft 是否忽略非法题目草稿
+     */
+    void commitImport(Long userId, Long importId, boolean ignoreInvalidDraft);
 }

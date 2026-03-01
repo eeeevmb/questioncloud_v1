@@ -11,5 +11,7 @@ public interface ImportSessionRepository {
 
     Optional<ImportSession> findById(Long sessionId);
 
+    int tryMarkCommitting(Long importId, int expectedStatus, int newStatus);
+
     void updateCounts(Long sessionId, int validCount, int invalidCount);
 }

@@ -19,6 +19,10 @@ public class ImportDraftValidator {
     private ImportDraftValidator() {}
 
     public static List<ImportErrorReport> validate(String collectionName, QuestionDraft draft) {
+        return validate(collectionName, draft, null);
+    }
+
+    public static List<ImportErrorReport> validate(String collectionName, QuestionDraft draft, String rawTypeLabel) {
         List<ImportErrorReport> errors = new ArrayList<>();
         if (StrUtil.isBlank(collectionName)) {
             errors.add(ImportErrorReport.builder()
@@ -35,12 +39,22 @@ public class ImportDraftValidator {
                     .build());
             return errors;
         }
-        checkRequired(draft.getTypeCode(), "typeCode", "题型", errors);
+        boolean hasTypeCode = StrUtil.isNotBlank(draft.getTypeCode());
+        if (!hasTypeCode) {
+            if (StrUtil.isNotBlank(rawTypeLabel)) {
+                errors.add(error("typeCode", "UNSUPPORTED", "不支持的题型：" + rawTypeLabel));
+            } else {
+                errors.add(error("typeCode", "REQUIRED", "题型不能为空"));
+            }
+        }
         checkRequired(draft.getStem(), "stem", "题干", errors);
         if (draft.getDifficulty() == null) {
             errors.add(error("difficulty", "REQUIRED", "难度系数不能为空"));
         } else if (!inRange(draft.getDifficulty())) {
             errors.add(error("difficulty", "INVALID", "难度系数取值应在[0,1]"));
+        }
+        if (!hasTypeCode) {
+            return errors;
         }
         switch (draft.getTypeCode()) {
             case "single-choice", "multiple-choice" -> validateChoice(draft, errors);
@@ -50,7 +64,7 @@ public class ImportDraftValidator {
                     errors.add(error("answer", "REQUIRED", "答案不能为空"));
                 }
             }
-            default -> errors.add(error("typeCode", "UNSUPPORTED", "不支持的题型"));
+            default -> errors.add(error("typeCode", "UNSUPPORTED", "不支持的题型：" + draft.getTypeCode()));
         }
         return errors;
     }

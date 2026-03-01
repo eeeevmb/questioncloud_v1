@@ -12,5 +12,7 @@ public interface ImportItemRepository {
 
     ImportItemEntity findById(Long itemId);
 
+    List<ImportItemEntity> findValidByImportId(Long importId);
+
     void update(ImportItemEntity item);
 }

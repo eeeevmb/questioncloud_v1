@@ -62,6 +62,16 @@ public class ImportSessionRepositoryImpl implements ImportSessionRepository {
     }
 
     @Override
+    public int tryMarkCommitting(Long importId, int expectedStatus, int newStatus) {
+        return UpdateChain.of(importSessionMapper)
+                .set(ImportSession::getStatus, newStatus)
+                .set(ImportSession::getUpdatedAt, LocalDateTime.now())
+                .eq(ImportSession::getId, importId)
+                .eq(ImportSession::getStatus, expectedStatus)
+                .execute();
+    }
+
+    @Override
     public void updateCounts(Long sessionId, int validCount, int invalidCount) {
         UpdateChain.of(importSessionMapper)
                 .update(ImportSession.class)

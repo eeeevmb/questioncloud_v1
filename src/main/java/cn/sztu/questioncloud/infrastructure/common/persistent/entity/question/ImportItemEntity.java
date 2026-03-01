@@ -37,7 +37,7 @@ public class ImportItemEntity {
     private QuestionDraft draft;
 
     /**
-     * 0=VALID, 1=INVALID
+     * 0=VALID, 1=INVALID, 2=COMMITED
      */
     private Integer status;
 
