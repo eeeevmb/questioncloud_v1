@@ -55,4 +55,11 @@ public class ImportController {
         importAppService.commitImport(userId, importId, ignore);
         return ResultVO.success();
     }
+
+    @PostMapping("/{importId}/cancel")
+    public ResultVO<Void> cancelImport(@PathVariable Long importId) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        importAppService.cancelImport(userId, importId);
+        return ResultVO.success();
+    }
 }

@@ -60,4 +60,12 @@ public interface ImportAppService {
      * @param ignoreInvalidDraft 是否忽略非法题目草稿
      */
     void commitImport(Long userId, Long importId, boolean ignoreInvalidDraft);
+
+    /**
+     * 取消批量导入
+     *
+     * @param userId   用户ID
+     * @param importId 导入会话ID
+     */
+    void cancelImport(Long userId, Long importId);
 }
