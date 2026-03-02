@@ -1,27 +1,38 @@
-# dependencies
-node_modules/
-
-# build output
-dist/
-.vite/
-
-# logs & reports
+# Logs
+logs
 *.log
-*.log.*
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
-coverage/
+lerna-debug.log*
 
-# local env/config
-.env
-.env.*
-
-# IDE/editor artifacts
+node_modules
 .DS_Store
-.idea/
-.vscode/
+dist
+dist-ssr
+coverage
+*.local
 
-# lockfiles from other package managers
-*.lock.hold
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
+*.tsbuildinfo
+
+.eslintcache
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest
+__screenshots__/
+
+node_modules/
