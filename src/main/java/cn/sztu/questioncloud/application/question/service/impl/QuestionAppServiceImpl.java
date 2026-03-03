@@ -11,8 +11,10 @@ import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.QuestionUtils;
+import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
@@ -24,6 +26,7 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -44,6 +48,9 @@ public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionStatRepository questionStatRepository;
     private final CollectionItemRepository collectionItemRepository;
     private final QuestionEventPublisher questionEventPublisher;
+    private final CacheService cacheService;
+
+    public static final Long CACHE_TTL_HOURS = 12L;
     public static final Integer INITIAL_VERSION = 1;
     public static final Integer INITIAL_COUNT = 0;
     public static final Double INITIAL_EXP = 1.00;
@@ -155,20 +162,45 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     public QuestionDetailVO getQuestionDetailById(Long questionId, Long userId) {
-        Optional<QuestionDetailVO> detailVO = queryRepository.getQuestionDetailById(questionId);
+        LocalDateTime now = LocalDateTime.now();
+
+        // 检查是否已有缓存
+        String key = CacheKeyUtil.questionDetailKey(String.valueOf(questionId));
+        QuestionDetailVO cache = cacheService.get(key);
+
+        if (cache != null) {
+            if (!userId.equals(cache.getOwnerId())) {
+                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND);
+            }
+            // 续缓存
+            cacheService.expire(key, CACHE_TTL_HOURS, TimeUnit.HOURS);
+
+            // 计算返回曝光系数
+            double effExp = ExposureFactorUtil.calcEffectiveExposure(cache.getExposureFactor(), cache.getLastExposedAt(), now);
+
+            QuestionDetailVO result = new QuestionDetailVO();
+            BeanUtils.copyProperties(cache, result);
+            result.setExposureFactor(effExp);
+            return result;
+        }
+
+        Optional<QuestionDetailVO> optional = queryRepository.getQuestionDetailById(questionId);
 
         // 1. 校验结果以及权限验证
-        QuestionDetailVO result = detailVO
+        QuestionDetailVO detailVO = optional
                 .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND));
-        if (!userId.equals(result.getOwnerId())) {
+        if (!userId.equals(detailVO.getOwnerId())) {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
+        // 设置缓存
+        cacheService.set(key, detailVO, CACHE_TTL_HOURS, TimeUnit.HOURS);
+
         // 2. 计算有效曝光系数
         // 注：库中的曝光系数只在曝光事件（如组卷）时更新，查询时返回根据衰减公式计算出的当日有效曝光系数
-        LocalDateTime now = LocalDateTime.now();
-
-        double effExp = ExposureFactorUtil.calcEffectiveExposure(result.getExposureFactor(), result.getLastExposedAt(), now);
+        double effExp = ExposureFactorUtil.calcEffectiveExposure(detailVO.getExposureFactor(), detailVO.getLastExposedAt(), now);
+        QuestionDetailVO result = new QuestionDetailVO();
+        BeanUtils.copyProperties(detailVO, result);
         result.setExposureFactor(effExp);
 
         // 3. 返回题目详情
@@ -237,7 +269,11 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionRepository.update(questionEntity);
         questionStatRepository.update(questionStat);
 
-        // 9. 发布题目领域事件
+        // 9. 删除缓存
+        String key = CacheKeyUtil.questionDetailKey(String.valueOf(questionId));
+        cacheService.delete(key);
+
+        // 10. 发布题目领域事件
         Long collectionId = collectionItemRepository.findByQuestionIdAndVersionId(questionId, newVersionId).getCollectionId();
         questionEventPublisher.publishUpdated(QuestionEventMessage.builder()
                         .questionId(questionId)
@@ -281,6 +317,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionStatRepository.deleteByQuestionId(questionId);
         questionVersionRepository.deleteByQuestionId(questionId);
         questionRepository.delete(questionId);
+
+        // 5. 删除缓存
+        String key = CacheKeyUtil.questionDetailKey(String.valueOf(questionId));
+        cacheService.delete(key);
     }
 
 
