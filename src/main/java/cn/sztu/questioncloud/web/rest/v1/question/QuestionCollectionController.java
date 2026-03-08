@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.web.rest.v1.question;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
@@ -88,7 +89,8 @@ public class QuestionCollectionController {
      */
     @GetMapping
     public ResultVO<List<CollectionVO>> getCollections() {
-        return ResultVO.success(questionCollectionService.getCollections());
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(questionCollectionService.getCollections(userId));
     }
 
     /**

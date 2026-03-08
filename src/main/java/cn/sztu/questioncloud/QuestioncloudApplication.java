@@ -9,5 +9,4 @@ public class QuestioncloudApplication {
     public static void main(String[] args) {
         SpringApplication.run(QuestioncloudApplication.class, args);
     }
-
 }

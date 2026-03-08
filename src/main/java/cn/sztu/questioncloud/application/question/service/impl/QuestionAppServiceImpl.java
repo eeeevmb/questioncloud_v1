@@ -31,11 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -172,8 +169,6 @@ public class QuestionAppServiceImpl implements QuestionAppService {
             if (!userId.equals(cache.getOwnerId())) {
                 throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND);
             }
-            // 续缓存
-            cacheService.expire(key, CACHE_TTL_HOURS, TimeUnit.HOURS);
 
             // 计算返回曝光系数
             double effExp = ExposureFactorUtil.calcEffectiveExposure(cache.getExposureFactor(), cache.getLastExposedAt(), now);

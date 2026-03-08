@@ -59,5 +59,5 @@ public interface QuestionCollectionService {
      *
      * @return 题集列表视图
      */
-    List<CollectionVO> getCollections();
+    List<CollectionVO> getCollections(Long userId);
 }

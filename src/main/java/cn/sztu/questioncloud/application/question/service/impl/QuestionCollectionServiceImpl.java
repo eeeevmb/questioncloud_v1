@@ -7,18 +7,23 @@ import cn.sztu.questioncloud.application.question.port.CollectionPresenceChecker
 import cn.sztu.questioncloud.application.question.port.QuestionCollectionRepository;
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
+import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.CollectionVO;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 题目模块应用服务实现
@@ -27,15 +32,13 @@ import java.util.Set;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class QuestionCollectionServiceImpl implements QuestionCollectionService {
     private final CollectionPresenceCheckerPort collectionPresenceCheckerPort;
     private final QuestionCollectionRepository questionCollectionRepository;
+    private final CacheService cacheService;
 
-    public QuestionCollectionServiceImpl(CollectionPresenceCheckerPort collectionPresenceCheckerPort, QuestionCollectionRepository questionCollectionRepository) {
-        this.collectionPresenceCheckerPort = collectionPresenceCheckerPort;
-        this.questionCollectionRepository = questionCollectionRepository;
-    }
-
+    public static final Long CACHE_TTL_HOURS = 4L;
     /**
      * 创建默认题集
      * 用户注册后调用一次
@@ -84,6 +87,9 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
                 .build();
         questionCollectionRepository.save(collection);
 
+        String key = CacheKeyUtil.questionCollectionKey(userId);
+        cacheService.delete(key);
+
         // 3. 返回视图对象
         return CollectionVO.fromEntity(collection);
     }
@@ -111,6 +117,9 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
                         .build())
                 .toList();
         questionCollectionRepository.batchSave(collections);
+
+        String key = CacheKeyUtil.questionCollectionKey(userId);
+        cacheService.delete(key);
 
         return collections.stream()
                 .map(CollectionVO::fromEntity)
@@ -145,6 +154,10 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
         // 5. 回填数据库
         questionCollectionRepository.updateByModel(entity);
 
+        // 6. 删除缓存
+        String key = CacheKeyUtil.questionCollectionKey(userId);
+        cacheService.delete(key);
+
         return CollectionVO.fromEntity(entity);
     }
 
@@ -154,6 +167,7 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
      * @param collectionId 题集ID
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteCollection(Long collectionId) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -169,6 +183,10 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
 
         // 4. 删除题集操作（内部实现了关联内容删除）
         questionCollectionRepository.deleteById(collectionId);
+
+        // 5. 删除缓存
+        String key = CacheKeyUtil.questionCollectionKey(userId);
+        cacheService.delete(key);
     }
 
     /**
@@ -177,12 +195,19 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
      * @return 题集列表视图
      */
     @Override
-    public List<CollectionVO> getCollections() {
-        // 1. 获取用户ID
-        Long userId = StpUtil.getLoginIdAsLong();
+    public List<CollectionVO> getCollections(Long userId) {
+        // 1. 查询缓存
+        String key = CacheKeyUtil.questionCollectionKey(userId);
+        List<CollectionVO> cache = cacheService.get(key);
+        if (cache != null) {
+            // 返回缓存
+            return cache;
+        }
 
-        // 2. 获取题集列表
-        return questionCollectionRepository.getCollectionsByUserId(userId);
+        // 2. 获取题集列表并设置缓存
+        List<CollectionVO> result = questionCollectionRepository.getCollectionsByUserId(userId);
+        cacheService.set(key, result, CACHE_TTL_HOURS, TimeUnit.HOURS);
+        return result;
     }
 
     private void ensureNameAvailable(Long ownerId, String name) {
