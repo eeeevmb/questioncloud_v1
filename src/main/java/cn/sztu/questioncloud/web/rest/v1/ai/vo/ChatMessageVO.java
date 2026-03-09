@@ -1,5 +1,8 @@
 package cn.sztu.questioncloud.web.rest.v1.ai.vo;
 
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.Content;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionRequest;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,53 +39,22 @@ public class ChatMessageVO {
     /**
      * 用户消息的内容片段（文本、图片、音频等）。
      */
-    private List<ContentVO> contents;
+    private List<Content> contents;
 
     /**
      * AI 消息中携带的工具调用请求。
      */
-    private List<ToolExecutionRequestVO> toolExecutionRequests;
+    private List<ToolExecutionRequest> toolExecutionRequests;
 
     /**
      * 工具执行结果。
      */
-    private ToolExecutionResultVO toolExecutionResult;
+    private ToolExecutionResult toolExecutionResult;
 
     /**
      * 附加属性，来自 AiMessage/CustomMessage 的 attributes。
      */
     private Map<String, Object> attributes;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ContentVO {
-        private String type;
-        private String text;
-        private String url;
-        private String mimeType;
-        private String detailLevel;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ToolExecutionRequestVO {
-        private String id;
-        private String name;
-        private Map<String, Object> arguments;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ToolExecutionResultVO {
-        private String id;
-        private String toolName;
-        private String text;
-    }
 
 }

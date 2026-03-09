@@ -1,7 +1,7 @@
 package cn.sztu.questioncloud.infrastructure.common.persistent.entity.question;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionAsset;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionAsset;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.handler.QuestionAssetListTypeHandler;
 import cn.sztu.questioncloud.infrastructure.common.persistent.handler.QuestionOptionListTypeHandler;
 import cn.xbatis.db.IdAutoType;

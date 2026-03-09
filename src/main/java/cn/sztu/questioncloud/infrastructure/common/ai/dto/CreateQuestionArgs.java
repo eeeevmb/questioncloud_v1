@@ -1,6 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.dto;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import lombok.Data;
 
 import java.math.BigDecimal;

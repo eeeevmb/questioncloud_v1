@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto;
+package cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.enums.AssetSection;
 import lombok.Data;
