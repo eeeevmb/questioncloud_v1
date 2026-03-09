@@ -5,11 +5,13 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.handler.SessionMet
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableField;
 import cn.xbatis.db.annotations.TableId;
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
+@Builder
 @Table("chat_session")
 public class ChatSessionEntity {
     @TableId

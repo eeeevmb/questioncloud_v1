@@ -1,18 +1,25 @@
 package cn.sztu.questioncloud.web.rest.v1.ai.vo;
 
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.SessionMetadata;
 import lombok.Builder;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 @Builder
 public class ChatSessionVO {
-    /**
-     * 会话记忆ID(UUID)
-     */
-    private String memoryId;
+    private Long sessionId;
 
-    /**
-     * 题集ID
-     */
-    private Long collectionId;
+    private String agentName;
+
+    private Long userId;
+
+    private String title;
+
+    private SessionMetadata metadata;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

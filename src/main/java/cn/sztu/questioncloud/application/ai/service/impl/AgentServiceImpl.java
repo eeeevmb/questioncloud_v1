@@ -1,40 +1,46 @@
 package cn.sztu.questioncloud.application.ai.service.impl;
 
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
+import cn.sztu.questioncloud.application.ai.enums.AgentErrorCodeEnum;
 import cn.sztu.questioncloud.application.ai.helper.ChatMessageConverter;
+import cn.sztu.questioncloud.application.ai.port.AgentRepository;
+import cn.sztu.questioncloud.application.ai.port.ChatSessionRepository;
 import cn.sztu.questioncloud.application.ai.port.CollectionAssistantChatPort;
 import cn.sztu.questioncloud.application.ai.service.AgentService;
+import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.AgentEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatSessionEntity;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.OldChatSessionVO;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class AgentServiceImpl implements AgentService {
     private final CollectionAssistantChatPort collectionAssistantChatPort;
     private final CacheService cacheService;
+    private final AgentRepository agentRepository;
+    private final ChatSessionRepository chatSessionRepository;
 
     private static final long MEMORY_TTL_DAYS = 3L;
-
-    public AgentServiceImpl(CollectionAssistantChatPort collectionAssistantChatPort, CacheService cacheService) {
-        this.collectionAssistantChatPort = collectionAssistantChatPort;
-        this.cacheService = cacheService;
-    }
+    private static final String AGENT_NAME_ID_MAP_CACHE_KEY = "agent:map:name-id";
 
     /**
      * 测试用聊天接口
@@ -85,7 +91,7 @@ public class AgentServiceImpl implements AgentService {
      * @return 会话视图对象
      */
     @Override
-    public ChatSessionVO createNewChatSession(Long userId, Long collectionId) {
+    public OldChatSessionVO createNewChatSession(Long userId, Long collectionId) {
         // 1. 生成会话记忆ID
         String memoryId = UUID.randomUUID().toString();
 
@@ -99,9 +105,56 @@ public class AgentServiceImpl implements AgentService {
         cacheService.set(key, context, MEMORY_TTL_DAYS, TimeUnit.DAYS);
 
         // 3. 构造结果返回
-        return ChatSessionVO.builder()
+        return OldChatSessionVO.builder()
                 .memoryId(memoryId)
                 .collectionId(collectionId)
+                .build();
+    }
+
+    /**
+     * 创建新智能体会话
+     *
+     * @param userId    用户ID
+     * @param agentName 智能体名称
+     * @return 会话视图
+     */
+    @Override
+    public ChatSessionVO createNewChatSession(Long userId, String agentName) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // 缓存取映射表
+        Map<String, Long> cache = cacheService.get(AGENT_NAME_ID_MAP_CACHE_KEY);
+        if (cache == null) {
+            Map<Long, AgentEntity> agentEntityMap = agentRepository.getEntityMap();
+            cache = agentEntityMap.values().stream()
+                    .collect(Collectors.toMap(AgentEntity::getName, AgentEntity::getId));
+            cacheService.set(AGENT_NAME_ID_MAP_CACHE_KEY, cache);
+        }
+
+        // 映射表中无对应Agent则抛异常
+        if (!cache.containsKey(agentName)) {
+            throw new ApplicationException(AgentErrorCodeEnum.AGENT_NOT_FOUND);
+        }
+        Long sessionId = HutoolSnowflakeIdGenerator.generateLongId();
+        ChatSessionEntity chatSessionEntity = ChatSessionEntity.builder()
+                .id(sessionId)
+                .agentId(cache.get(agentName))
+                .userId(userId)
+                .title(null)    // 等待ai生成
+                .metadata(null) // 预留扩展
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        chatSessionRepository.save(chatSessionEntity);
+
+        return ChatSessionVO.builder()
+                .sessionId(chatSessionEntity.getId())
+                .agentName(agentName)
+                .userId(chatSessionEntity.getUserId())
+                .title(chatSessionEntity.getTitle())
+                .metadata(chatSessionEntity.getMetadata())
+                .createdAt(chatSessionEntity.getCreatedAt())
+                .updatedAt(chatSessionEntity.getUpdatedAt())
                 .build();
     }
 
