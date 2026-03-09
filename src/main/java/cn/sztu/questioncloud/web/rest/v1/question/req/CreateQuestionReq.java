@@ -1,7 +1,7 @@
 package cn.sztu.questioncloud.web.rest.v1.question.req;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionAsset;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionAsset;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

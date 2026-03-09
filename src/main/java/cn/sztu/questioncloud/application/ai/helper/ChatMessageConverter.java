@@ -1,11 +1,12 @@
 package cn.sztu.questioncloud.application.ai.helper;
 
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.Content;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionRequest;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionResult;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
-import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.AudioContent;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.CustomMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.PdfFileContent;
@@ -61,15 +62,15 @@ public final class ChatMessageConverter {
     }
 
     private static ChatMessageVO fromUser(UserMessage userMessage) {
-        List<ChatMessageVO.ContentVO> content = toContentVOs(userMessage.contents());
-        String plainText = content.stream()
-                .map(ChatMessageVO.ContentVO::getText)
+        List<Content> contents = toContents(userMessage.contents());
+        String plainText = contents.stream()
+                .map(Content::getText)
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining("\n"));
 
         return base(userMessage, "user")
                 .text(plainText.isEmpty() ? null : plainText)
-                .contents(content)
+                .contents(contents)
                 .attributes(safeMap(userMessage.attributes()))
                 .build();
     }
@@ -78,14 +79,14 @@ public final class ChatMessageConverter {
         return base(aiMessage, "assistant")
                 .text(aiMessage.text())
                 .thinking(aiMessage.thinking())
-                .toolExecutionRequests(toToolExecutionRequestVOs(aiMessage.toolExecutionRequests()))
+                .toolExecutionRequests(toToolExecutionRequests(aiMessage.toolExecutionRequests()))
                 .attributes(safeMap(aiMessage.attributes()))
                 .build();
     }
 
     private static ChatMessageVO fromToolExecutionResult(ToolExecutionResultMessage resultMessage) {
         return base(resultMessage, "tool")
-                .toolExecutionResult(ChatMessageVO.ToolExecutionResultVO.builder()
+                .toolExecutionResult(ToolExecutionResult.builder()
                         .id(resultMessage.id())
                         .toolName(resultMessage.toolName())
                         .text(resultMessage.text())
@@ -106,41 +107,41 @@ public final class ChatMessageConverter {
                 .role(role);
     }
 
-    private static List<ChatMessageVO.ContentVO> toContentVOs(List<Content> contents) {
+    private static List<Content> toContents(List<dev.langchain4j.data.message.Content> contents) {
         if (contents == null || contents.isEmpty()) {
             return Collections.emptyList();
         }
         return contents.stream()
-                .map(ChatMessageConverter::toContentVO)
+                .map(ChatMessageConverter::toContent)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
-    private static ChatMessageVO.ContentVO toContentVO(Content content) {
-        if (content == null) {
+    private static Content toContent(dev.langchain4j.data.message.Content messageContent) {
+        if (messageContent == null) {
             return null;
         }
-        ChatMessageVO.ContentVO.ContentVOBuilder builder = ChatMessageVO.ContentVO.builder()
-                .type(content.type().name());
+        Content.ContentBuilder builder = Content.builder()
+                .type(messageContent.type().name());
 
-        if (content instanceof TextContent textContent) {
+        if (messageContent instanceof TextContent textContent) {
             builder.text(textContent.text());
-        } else if (content instanceof ImageContent imageContent) {
+        } else if (messageContent instanceof ImageContent imageContent) {
             builder.detailLevel(Optional.ofNullable(imageContent.detailLevel()).map(Enum::name).orElse(null));
             Optional.ofNullable(imageContent.image()).ifPresent(image -> fillMedia(builder, image.url(), image.mimeType(), image.toString()));
-        } else if (content instanceof AudioContent audioContent) {
+        } else if (messageContent instanceof AudioContent audioContent) {
             Optional.ofNullable(audioContent.audio()).ifPresent(audio -> fillMedia(builder, audio.url(), audio.mimeType(), audio.toString()));
-        } else if (content instanceof VideoContent videoContent) {
+        } else if (messageContent instanceof VideoContent videoContent) {
             Optional.ofNullable(videoContent.video()).ifPresent(video -> fillMedia(builder, video.url(), video.mimeType(), video.toString()));
-        } else if (content instanceof PdfFileContent pdfFileContent) {
+        } else if (messageContent instanceof PdfFileContent pdfFileContent) {
             Optional.ofNullable(pdfFileContent.pdfFile()).ifPresent(pdf -> fillMedia(builder, pdf.url(), pdf.mimeType(), pdf.toString()));
         } else {
-            builder.text(String.valueOf(content));
+            builder.text(String.valueOf(messageContent));
         }
         return builder.build();
     }
 
-    private static void fillMedia(ChatMessageVO.ContentVO.ContentVOBuilder builder,
+    private static void fillMedia(Content.ContentBuilder builder,
                                   URI uri,
                                   String mimeType,
                                   String fallbackText) {
@@ -149,12 +150,12 @@ public final class ChatMessageConverter {
         builder.text(fallbackText);
     }
 
-    private static List<ChatMessageVO.ToolExecutionRequestVO> toToolExecutionRequestVOs(List<ToolExecutionRequest> requests) {
+    private static List<ToolExecutionRequest> toToolExecutionRequests(List<dev.langchain4j.agent.tool.ToolExecutionRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return Collections.emptyList();
         }
         return requests.stream()
-                .map(request -> ChatMessageVO.ToolExecutionRequestVO.builder()
+                .map(request -> ToolExecutionRequest.builder()
                         .id(request.id())
                         .name(request.name())
                         .arguments(safeMap(request.arguments()))

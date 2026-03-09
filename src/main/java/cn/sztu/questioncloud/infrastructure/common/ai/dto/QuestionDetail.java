@@ -1,6 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.dto;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import lombok.Builder;
 import lombok.Data;
