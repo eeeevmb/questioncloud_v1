@@ -4,6 +4,7 @@ import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.OldChatSessionVO;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -46,5 +47,15 @@ public interface AgentService {
      *
      * @return 会话视图对象
      */
-    ChatSessionVO createNewChatSession(Long userId, Long collectionId);
+    @Deprecated
+    OldChatSessionVO createNewChatSession(Long userId, Long collectionId);
+
+    /**
+     * 创建新智能体会话
+     *
+     * @param userId    用户ID
+     * @param agentName 智能体名称
+     * @return 会话视图
+     */
+    ChatSessionVO createNewChatSession(Long userId, String agentName);
 }

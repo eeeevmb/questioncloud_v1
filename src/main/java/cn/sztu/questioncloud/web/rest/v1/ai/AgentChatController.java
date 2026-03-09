@@ -5,8 +5,11 @@ import cn.sztu.questioncloud.application.ai.service.AgentService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatTestReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.CreateChatSessionReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.OldChatSessionVO;
+import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +47,7 @@ public class AgentChatController {
      * @param req          聊天请求
      * @return 流式响应
      */
+    @Deprecated
     @PostMapping(value = "/collection/{collectionId}/assistant/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatWithAssistant(@PathVariable Long collectionId,
                                           @RequestBody AssistantChatReq req) {
@@ -55,22 +59,26 @@ public class AgentChatController {
     /**
      * 获取会话历史
      *
-     * @param memoryId 会话记忆ID
+     * @param sessionId 会话ID
      * @return 会话记录
      */
-    @GetMapping("/chat/{memoryId}")
-    public ResultVO<List<ChatMessageVO>> getChatHistory(@PathVariable String memoryId) {
-        return ResultVO.success(agentService.getChatHistory(memoryId));
+    @GetMapping("/chat/{sessionId}")
+    public ResultVO<List<ChatMessageVO>> getChatHistory(@PathVariable String sessionId) {
+        return ResultVO.success(agentService.getChatHistory(sessionId));
+    }
+
+    @Deprecated
+    @PostMapping("/collection/{collectionId}/session")
+    public ResultVO<OldChatSessionVO> createNewAssistantSession(@PathVariable Long collectionId) {
+        return ResultVO.success(agentService.createNewChatSession(StpUtil.getLoginIdAsLong(), collectionId));
     }
 
     /**
-     * 创建新题集小助手会话
-     *
-     * @param collectionId 题集ID
-     * @return 会话视图
+     * 创建新Agent聊天会话
      */
-    @PostMapping("/collection/{collectionId}/session")
-    public ResultVO<ChatSessionVO> createNewAssistantSession(@PathVariable Long collectionId) {
-        return ResultVO.success(agentService.createNewChatSession(StpUtil.getLoginIdAsLong(), collectionId));
+    @PostMapping("/chat")
+    public ResultVO<ChatSessionVO> createNewChatSession(@Valid @RequestBody CreateChatSessionReq req) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(agentService.createNewChatSession(userId, req.getAgentName()));
     }
 }
