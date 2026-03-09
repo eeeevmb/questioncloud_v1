@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.ai.helper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.Content;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionRequest;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionResult;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatMessageEntity;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.AudioContent;
@@ -16,6 +17,7 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.VideoContent;
 
+import java.time.LocalDateTime;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -56,7 +58,7 @@ public final class ChatMessageConverter {
     }
 
     private static ChatMessageVO fromSystem(SystemMessage systemMessage) {
-        return base(systemMessage, "system")
+        return base(systemMessage)
                 .text(systemMessage.text())
                 .build();
     }
@@ -68,7 +70,7 @@ public final class ChatMessageConverter {
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining("\n"));
 
-        return base(userMessage, "user")
+        return base(userMessage)
                 .text(plainText.isEmpty() ? null : plainText)
                 .contents(contents)
                 .attributes(safeMap(userMessage.attributes()))
@@ -76,7 +78,7 @@ public final class ChatMessageConverter {
     }
 
     private static ChatMessageVO fromAi(AiMessage aiMessage) {
-        return base(aiMessage, "assistant")
+        return base(aiMessage)
                 .text(aiMessage.text())
                 .thinking(aiMessage.thinking())
                 .toolExecutionRequests(toToolExecutionRequests(aiMessage.toolExecutionRequests()))
@@ -85,7 +87,7 @@ public final class ChatMessageConverter {
     }
 
     private static ChatMessageVO fromToolExecutionResult(ToolExecutionResultMessage resultMessage) {
-        return base(resultMessage, "tool")
+        return base(resultMessage)
                 .toolExecutionResult(ToolExecutionResult.builder()
                         .id(resultMessage.id())
                         .toolName(resultMessage.toolName())
@@ -96,15 +98,81 @@ public final class ChatMessageConverter {
     }
 
     private static ChatMessageVO fromCustom(CustomMessage customMessage) {
-        return base(customMessage, "custom")
+        return base(customMessage)
                 .attributes(safeMap(customMessage.attributes()))
                 .build();
     }
 
-    private static ChatMessageVO.ChatMessageVOBuilder base(ChatMessage message, String role) {
+    public static ChatMessageEntity toEntity(ChatMessage message, Long sessionId) {
+        if (message == null) {
+            return null;
+        }
+        ChatMessageEntity entity = baseEntity(message, sessionId);
+        return switch (message.type()) {
+            case SYSTEM -> fromSystemEntity(entity, (SystemMessage) message);
+            case USER -> fromUserEntity(entity, (UserMessage) message);
+            case AI -> fromAiEntity(entity, (AiMessage) message);
+            case TOOL_EXECUTION_RESULT -> fromToolExecutionResultEntity(entity, (ToolExecutionResultMessage) message);
+            case CUSTOM -> fromCustomEntity(entity, (CustomMessage) message);
+        };
+    }
+
+    private static ChatMessageVO.ChatMessageVOBuilder base(ChatMessage message) {
         return ChatMessageVO.builder()
                 .type(message.type().name())
-                .role(role);
+                .role(resolveRole(message));
+    }
+
+    private static ChatMessageEntity baseEntity(ChatMessage message, Long sessionId) {
+        ChatMessageEntity entity = new ChatMessageEntity();
+        entity.setSessionId(sessionId);
+        entity.setType(message.type().name());
+        entity.setRole(resolveRole(message));
+        LocalDateTime now = LocalDateTime.now();
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+        return entity;
+    }
+
+    private static ChatMessageEntity fromSystemEntity(ChatMessageEntity entity, SystemMessage systemMessage) {
+        entity.setTextContent(systemMessage.text());
+        return entity;
+    }
+
+    private static ChatMessageEntity fromUserEntity(ChatMessageEntity entity, UserMessage userMessage) {
+        List<Content> contents = toContents(userMessage.contents());
+        String plainText = contents.stream()
+                .map(Content::getText)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
+        entity.setTextContent(plainText.isEmpty() ? null : plainText);
+        entity.setContent(contents);
+        entity.setAttributes(safeMap(userMessage.attributes()));
+        return entity;
+    }
+
+    private static ChatMessageEntity fromAiEntity(ChatMessageEntity entity, AiMessage aiMessage) {
+        entity.setTextContent(aiMessage.text());
+        entity.setThinkingContent(aiMessage.thinking());
+        entity.setToolExecutionRequest(toToolExecutionRequests(aiMessage.toolExecutionRequests()));
+        entity.setAttributes(safeMap(aiMessage.attributes()));
+        return entity;
+    }
+
+    private static ChatMessageEntity fromToolExecutionResultEntity(ChatMessageEntity entity,
+                                                                  ToolExecutionResultMessage resultMessage) {
+        entity.setToolExecutionResult(ToolExecutionResult.builder()
+                .id(resultMessage.id())
+                .toolName(resultMessage.toolName())
+                .text(resultMessage.text())
+                .build());
+        entity.setTextContent(resultMessage.text());
+        return entity;
+    }
+
+    private static ChatMessageEntity fromCustomEntity(ChatMessageEntity entity, CustomMessage customMessage) {
+        entity.setAttributes(safeMap(customMessage.attributes()));
+        return entity;
     }
 
     private static List<Content> toContents(List<dev.langchain4j.data.message.Content> contents) {
@@ -172,5 +240,15 @@ public final class ChatMessageConverter {
                         entry -> String.valueOf(entry.getKey()),
                         Map.Entry::getValue,
                         (left, right) -> right));
+    }
+
+    private static String resolveRole(ChatMessage message) {
+        return switch (message.type()) {
+            case SYSTEM -> "system";
+            case USER -> "user";
+            case AI -> "assistant";
+            case TOOL_EXECUTION_RESULT -> "tool";
+            case CUSTOM -> "custom";
+        };
     }
 }
