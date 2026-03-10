@@ -1,13 +1,18 @@
 package cn.sztu.questioncloud.application.ai.helper;
 
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatMessageEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.Content;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionRequest;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.dto.ToolExecutionResult;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatMessageEntity;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.AudioContent;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ChatMessageType;
+import dev.langchain4j.data.message.ContentType;
 import dev.langchain4j.data.message.CustomMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.PdfFileContent;
@@ -17,8 +22,10 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.VideoContent;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +37,9 @@ import java.util.stream.Collectors;
  * 将 LangChain4j {@link ChatMessage} 转换为对外展示的 {@link ChatMessageVO}。
  */
 public final class ChatMessageConverter {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private ChatMessageConverter() {
     }
@@ -101,6 +111,35 @@ public final class ChatMessageConverter {
         return base(customMessage)
                 .attributes(safeMap(customMessage.attributes()))
                 .build();
+    }
+
+    public static List<ChatMessage> toMessages(List<ChatMessageEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+        return entities.stream()
+                .map(ChatMessageConverter::toMessage)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public static ChatMessage toMessage(ChatMessageEntity entity) {
+        if (entity == null || entity.getType() == null) {
+            return null;
+        }
+        final ChatMessageType type;
+        try {
+            type = ChatMessageType.valueOf(entity.getType());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+        return switch (type) {
+            case SYSTEM -> toSystemMessage(entity);
+            case USER -> toUserMessage(entity);
+            case AI -> toAiMessage(entity);
+            case TOOL_EXECUTION_RESULT -> toToolExecutionResultMessage(entity);
+            case CUSTOM -> toCustomMessage(entity);
+        };
     }
 
     public static ChatMessageEntity toEntity(ChatMessage message, Long sessionId) {
@@ -175,6 +214,42 @@ public final class ChatMessageConverter {
         return entity;
     }
 
+    private static ChatMessage toSystemMessage(ChatMessageEntity entity) {
+        return SystemMessage.from(entity.getTextContent());
+    }
+
+    private static ChatMessage toUserMessage(ChatMessageEntity entity) {
+        List<dev.langchain4j.data.message.Content> contents = toMessageContents(entity.getContent());
+        if (contents.isEmpty() && entity.getTextContent() != null) {
+            contents = List.of(TextContent.from(entity.getTextContent()));
+        }
+        return UserMessage.builder()
+                .contents(contents)
+                .attributes(emptyIfNull(entity.getAttributes()))
+                .build();
+    }
+
+    private static ChatMessage toAiMessage(ChatMessageEntity entity) {
+        return AiMessage.builder()
+                .text(entity.getTextContent())
+                .thinking(entity.getThinkingContent())
+                .toolExecutionRequests(toLangChainToolRequests(entity.getToolExecutionRequest()))
+                .attributes(emptyIfNull(entity.getAttributes()))
+                .build();
+    }
+
+    private static ChatMessage toToolExecutionResultMessage(ChatMessageEntity entity) {
+        ToolExecutionResult result = entity.getToolExecutionResult();
+        if (result == null) {
+            return ToolExecutionResultMessage.from(null, null, entity.getTextContent());
+        }
+        return ToolExecutionResultMessage.from(result.getId(), result.getToolName(), result.getText());
+    }
+
+    private static ChatMessage toCustomMessage(ChatMessageEntity entity) {
+        return CustomMessage.from(emptyIfNull(entity.getAttributes()));
+    }
+
     private static List<Content> toContents(List<dev.langchain4j.data.message.Content> contents) {
         if (contents == null || contents.isEmpty()) {
             return Collections.emptyList();
@@ -209,6 +284,98 @@ public final class ChatMessageConverter {
         return builder.build();
     }
 
+    private static List<dev.langchain4j.data.message.Content> toMessageContents(List<Content> contents) {
+        if (contents == null || contents.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return contents.stream()
+                .map(ChatMessageConverter::toMessageContent)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private static dev.langchain4j.data.message.Content toMessageContent(Content content) {
+        if (content == null || content.getType() == null) {
+            return null;
+        }
+        final ContentType type;
+        try {
+            type = ContentType.valueOf(content.getType());
+        } catch (IllegalArgumentException ex) {
+            return toFallbackTextContent(content.getText());
+        }
+        return switch (type) {
+            case TEXT -> toFallbackTextContent(content.getText());
+            case IMAGE -> toImageContent(content);
+            case AUDIO -> toAudioContent(content);
+            case VIDEO -> toVideoContent(content);
+//            case PDF_FILE -> toPdfFileContent(content);
+            default -> toFallbackTextContent(content.getText());
+        };
+    }
+
+    private static dev.langchain4j.data.message.Content toFallbackTextContent(String text) {
+        return text == null ? null : TextContent.from(text);
+    }
+
+    private static dev.langchain4j.data.message.Content toImageContent(Content content) {
+        if (content.getUrl() == null) {
+            return null;
+        }
+        ImageContent.DetailLevel detailLevel = parseDetailLevel(content.getDetailLevel());
+        if (content.getMimeType() != null && detailLevel != null) {
+            return ImageContent.from(content.getUrl(), content.getMimeType(), detailLevel);
+        }
+        if (content.getMimeType() != null) {
+            return ImageContent.from(content.getUrl(), content.getMimeType());
+        }
+        if (detailLevel != null) {
+            return ImageContent.from(content.getUrl(), detailLevel);
+        }
+        return ImageContent.from(content.getUrl());
+    }
+
+    private static dev.langchain4j.data.message.Content toAudioContent(Content content) {
+        if (content.getUrl() == null) {
+            return null;
+        }
+        if (content.getMimeType() != null) {
+            return AudioContent.from(content.getUrl(), content.getMimeType());
+        }
+        return AudioContent.from(content.getUrl());
+    }
+
+    private static dev.langchain4j.data.message.Content toVideoContent(Content content) {
+        if (content.getUrl() == null) {
+            return null;
+        }
+        if (content.getMimeType() != null) {
+            return VideoContent.from(content.getUrl(), content.getMimeType());
+        }
+        return VideoContent.from(content.getUrl());
+    }
+
+    private static dev.langchain4j.data.message.Content toPdfFileContent(Content content) {
+        if (content.getUrl() == null) {
+            return null;
+        }
+        if (content.getMimeType() != null) {
+            return PdfFileContent.from(content.getUrl(), content.getMimeType());
+        }
+        return PdfFileContent.from(content.getUrl());
+    }
+
+    private static ImageContent.DetailLevel parseDetailLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return ImageContent.DetailLevel.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
     private static void fillMedia(Content.ContentBuilder builder,
                                   URI uri,
                                   String mimeType,
@@ -226,9 +393,56 @@ public final class ChatMessageConverter {
                 .map(request -> ToolExecutionRequest.builder()
                         .id(request.id())
                         .name(request.name())
-                        .arguments(safeMap(request.arguments()))
+                        .arguments(parseArguments(request.arguments()))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private static List<dev.langchain4j.agent.tool.ToolExecutionRequest> toLangChainToolRequests(List<ToolExecutionRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return requests.stream()
+                .map(ChatMessageConverter::toLangChainToolExecutionRequest)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private static dev.langchain4j.agent.tool.ToolExecutionRequest toLangChainToolExecutionRequest(ToolExecutionRequest request) {
+        if (request == null) {
+            return null;
+        }
+        return dev.langchain4j.agent.tool.ToolExecutionRequest.builder()
+                .id(request.getId())
+                .name(request.getName())
+                .arguments(toArgumentsJson(request.getArguments()))
+                .build();
+    }
+
+    private static String toArgumentsJson(Map<String, Object> arguments) {
+        if (arguments == null || arguments.isEmpty()) {
+            return "{}";
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(arguments);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize tool arguments", e);
+        }
+    }
+
+    private static Map<String, Object> parseArguments(String json) {
+        if (json == null || json.isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return OBJECT_MAPPER.readValue(json, MAP_TYPE);
+        } catch (IOException e) {
+            return Collections.emptyMap();
+        }
+    }
+
+    private static Map<String, Object> emptyIfNull(Map<String, Object> source) {
+        return source == null || source.isEmpty() ? Collections.emptyMap() : source;
     }
 
     private static Map<String, Object> safeMap(Object source) {
