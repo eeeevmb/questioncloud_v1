@@ -49,13 +49,4 @@ public interface AgentService {
      */
     @Deprecated
     OldChatSessionVO createNewChatSession(Long userId, Long collectionId);
-
-    /**
-     * 创建新智能体会话
-     *
-     * @param userId    用户ID
-     * @param agentName 智能体名称
-     * @return 会话视图
-     */
-    ChatSessionVO createNewChatSession(Long userId, String agentName);
 }

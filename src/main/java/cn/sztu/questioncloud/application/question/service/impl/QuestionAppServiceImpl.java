@@ -57,6 +57,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QuestionCreatedVO createQuestion(CreateQuestionReq req, Long userId) {
+        String normalizedTypeCode = req.getTypeCode() == null ? null : req.getTypeCode().trim().toLowerCase();
 
         // 2. 权限检验
         QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(req.getCollectionId())
@@ -67,7 +68,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         }
 
         // 3. 校验题型
-        if (!QuestionTypeEnum.ensureValid(req.getTypeCode())){
+        if (!QuestionTypeEnum.ensureValid(normalizedTypeCode)){
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
 
@@ -87,14 +88,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         QuestionVersionEntity versionEntity = QuestionVersionEntity.builder()
                 .id(questionVersionId)
-                .typeCode(req.getTypeCode())
+                .typeCode(normalizedTypeCode)
                 .questionId(questionId)
                 .versionNo(INITIAL_VERSION)
                 .title(req.getTitle())
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(QuestionUtils.getAnswerKey(req.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
+                .answerKey(QuestionUtils.getAnswerKey(normalizedTypeCode, req.getCorrectOptions(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)

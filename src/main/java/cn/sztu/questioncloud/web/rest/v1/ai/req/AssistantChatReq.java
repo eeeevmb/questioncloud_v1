@@ -7,14 +7,19 @@ import java.util.List;
 @Data
 public class AssistantChatReq {
     /**
-     * 会话记忆ID(由HuTool生成的雪花ID)
+     * 会话ID
      */
-    private String memoryId;
+    private Long sessionId;
 
     /**
-     * 消息ID
+     * 用户消息
      */
     private String message;
+
+    /**
+     * 智能体名称
+     */
+    private String agentName;
 
     /**
      * 上下文
@@ -23,6 +28,7 @@ public class AssistantChatReq {
 
     @Data
     public static class Context {
+        Long collectionId;
         List<Long> selectedQuestionIds;
     }
 }
