@@ -22,6 +22,8 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.VideoContent;
 
+import cn.hutool.core.util.IdUtil;
+
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -164,6 +166,7 @@ public final class ChatMessageConverter {
 
     private static ChatMessageEntity baseEntity(ChatMessage message, Long sessionId) {
         ChatMessageEntity entity = new ChatMessageEntity();
+        entity.setId(IdUtil.getSnowflakeNextId());
         entity.setSessionId(sessionId);
         entity.setType(message.type().name());
         entity.setRole(resolveRole(message));

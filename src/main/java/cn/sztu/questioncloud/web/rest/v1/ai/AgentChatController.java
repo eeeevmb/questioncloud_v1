@@ -40,21 +40,6 @@ public class AgentChatController {
                 .concatWithValues(ServerSentEvent.builder("[DONE]").event("done").build());
     }
 
-    /**
-     * 与题集小助手对话
-     *
-     * @param collectionId 题集ID
-     * @param req          聊天请求
-     * @return 流式响应
-     */
-    @Deprecated
-    @PostMapping(value = "/collection/{collectionId}/assistant/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chatWithAssistant(@PathVariable Long collectionId,
-                                          @RequestBody AssistantChatReq req) {
-        return agentService.chatWithAssistant(req.getMemoryId(), collectionId, req)
-                .map(data -> ServerSentEvent.<String>builder().data(data).event("message").build())
-                .concatWithValues(ServerSentEvent.builder("[DONE]").event("done").build());
-    }
 
     /**
      * 获取会话历史
@@ -71,14 +56,5 @@ public class AgentChatController {
     @PostMapping("/collection/{collectionId}/session")
     public ResultVO<OldChatSessionVO> createNewAssistantSession(@PathVariable Long collectionId) {
         return ResultVO.success(agentService.createNewChatSession(StpUtil.getLoginIdAsLong(), collectionId));
-    }
-
-    /**
-     * 创建新Agent聊天会话
-     */
-    @PostMapping("/chat")
-    public ResultVO<ChatSessionVO> createNewChatSession(@Valid @RequestBody CreateChatSessionReq req) {
-        Long userId = StpUtil.getLoginIdAsLong();
-        return ResultVO.success(agentService.createNewChatSession(userId, req.getAgentName()));
     }
 }

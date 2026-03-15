@@ -29,13 +29,14 @@ public class SearchServiceImpl implements SearchService {
      */
     @Override
     public List<QuestionHitDTO> RAGSearch(Long userId, Long collectionId, String query, RAGSearchParam ragSearchParam) {
+        RAGSearchParam safeParam = ragSearchParam == null ? new RAGSearchParam() : ragSearchParam;
         // 构建RAG检索请求
         SearchFilter filter = SearchFilter.builder()
                 .ownerId(userId)
                 .collectionId(collectionId)
-                .difficultyMin(ragSearchParam.getDifficultyMin())
-                .difficultyMax(ragSearchParam.getDifficultyMax())
-                .typeCode(ragSearchParam.getTypeCode())
+                .difficultyMin(safeParam.getDifficultyMin())
+                .difficultyMax(safeParam.getDifficultyMax())
+                .typeCode(safeParam.getTypeCode())
                 .build();
 
         return questionSearchPort.searchQuestions(query, filter);

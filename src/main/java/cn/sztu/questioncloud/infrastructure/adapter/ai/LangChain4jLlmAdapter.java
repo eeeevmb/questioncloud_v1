@@ -11,8 +11,11 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 
 import java.util.List;
 
@@ -22,22 +25,74 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class LangChain4jLlmAdapter implements LlmPort {
-
-    private final QwenChatModel chatModel;
-
+    private final ChatModel chatModel;
+    private final StreamingChatModel streamingChatModel;
+    /**
+     * 同步返回聊天响应（用于决定是否调用工具）
+     *
+     * @param definition         智能体定义
+     * @param messages           聊天记录
+     * @param toolSpecifications 工具介绍
+     * @return 聊天响应
+     */
     @Override
-    public ChatResponse chat(AgentDefinition agent, List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+    public ChatResponse chat(AgentDefinition definition, List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+
         ChatRequest request = ChatRequest.builder()
                 .messages(messages)
-                .parameters(ChatRequestParameters.builder() // 可以替换成qwen的param
-                        .modelName(agent.getChatOptions().getModelName())
-                        .temperature(agent.getChatOptions().getTemperature())
-                        .maxOutputTokens(agent.getChatOptions().getMaxTokens())
-                        .frequencyPenalty(agent.getChatOptions().getFrequencyPenalty())
+                .parameters(ChatRequestParameters.builder()
+                        .modelName(definition.getChatOptions().getModelName())
+                        .temperature(definition.getChatOptions().getTemperature())
+                        .maxOutputTokens(definition.getChatOptions().getMaxTokens())
+                        .frequencyPenalty(definition.getChatOptions().getFrequencyPenalty())
+                        .toolSpecifications(toolSpecifications)
+                        .build())
+                .build();
+        return chatModel.chat(request);
+    }
+
+    /**
+     * 流式返回聊天响应（用于生成最终回复）
+     *
+     * @param definition         智能体定义
+     * @param messages           聊天记录
+     * @param toolSpecifications 工具介绍
+     * @return 流式聊天响应
+     */
+    @Override
+    public Flux<String> StreamingChat(AgentDefinition definition, List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+        ChatRequest request = ChatRequest.builder()
+                .messages(messages)
+                .parameters(ChatRequestParameters.builder()
+                        .modelName(definition.getChatOptions().getModelName())
+                        .temperature(definition.getChatOptions().getTemperature())
+                        .maxOutputTokens(definition.getChatOptions().getMaxTokens())
+                        .frequencyPenalty(definition.getChatOptions().getFrequencyPenalty())
                         .toolSpecifications(toolSpecifications)
                         .build())
                 .build();
 
-        return chatModel.chat(request);
+        return Flux.create(emitter -> streamingChatModel.chat(request, new StreamingChatResponseHandler() {
+            @Override
+            public void onPartialResponse(String partialResponse) {
+                if (partialResponse != null && !partialResponse.isEmpty() && !emitter.isCancelled()) {
+                    emitter.next(partialResponse);
+                }
+            }
+
+            @Override
+            public void onCompleteResponse(ChatResponse completeResponse) {
+                if (!emitter.isCancelled()) {
+                    emitter.complete();
+                }
+            }
+
+            @Override
+            public void onError(Throwable error) {
+                if (!emitter.isCancelled()) {
+                    emitter.error(error);
+                }
+            }
+        }), FluxSink.OverflowStrategy.BUFFER);
     }
 }

@@ -112,53 +112,6 @@ public class AgentServiceImpl implements AgentService {
     }
 
     /**
-     * 创建新智能体会话
-     *
-     * @param userId    用户ID
-     * @param agentName 智能体名称
-     * @return 会话视图
-     */
-    @Override
-    public ChatSessionVO createNewChatSession(Long userId, String agentName) {
-        LocalDateTime now = LocalDateTime.now();
-
-        // 缓存取映射表
-        Map<String, Long> cache = cacheService.get(AGENT_NAME_ID_MAP_CACHE_KEY);
-        if (cache == null) {
-            Map<Long, AgentEntity> agentEntityMap = agentRepository.getEntityMap();
-            cache = agentEntityMap.values().stream()
-                    .collect(Collectors.toMap(AgentEntity::getName, AgentEntity::getId));
-            cacheService.set(AGENT_NAME_ID_MAP_CACHE_KEY, cache);
-        }
-
-        // 映射表中无对应Agent则抛异常
-        if (!cache.containsKey(agentName)) {
-            throw new ApplicationException(AgentErrorCodeEnum.AGENT_NOT_FOUND);
-        }
-        Long sessionId = HutoolSnowflakeIdGenerator.generateLongId();
-        ChatSessionEntity chatSessionEntity = ChatSessionEntity.builder()
-                .id(sessionId)
-                .agentId(cache.get(agentName))
-                .userId(userId)
-                .title(null)    // 等待ai生成
-                .metadata(null) // 预留扩展
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-        chatSessionRepository.save(chatSessionEntity);
-
-        return ChatSessionVO.builder()
-                .sessionId(chatSessionEntity.getId())
-                .agentName(agentName)
-                .userId(chatSessionEntity.getUserId())
-                .title(chatSessionEntity.getTitle())
-                .metadata(chatSessionEntity.getMetadata())
-                .createdAt(chatSessionEntity.getCreatedAt())
-                .updatedAt(chatSessionEntity.getUpdatedAt())
-                .build();
-    }
-
-    /**
      * 刷新所选题目
      *
      * @param memoryId 会话记忆ID
