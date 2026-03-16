@@ -4,17 +4,18 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
 import cn.sztu.questioncloud.application.ai.service.AgentChatService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
-import cn.sztu.questioncloud.web.rest.v1.ai.req.AssistantChatReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.CreateChatSessionReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.UpdateChatSessionTitleReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,7 +24,7 @@ public class AgentController {
     private final AgentChatService agentChatService;
 
     @PostMapping("/chat")
-    public Flux<ServerSentEvent<String>> chat(@Valid @RequestBody AssistantChatReq req) {
+    public Flux<ServerSentEvent<String>> chat(@Valid @RequestBody ChatReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
         ChatSessionContext context = ChatSessionContext.builder()
                 .userId(userId)
@@ -35,10 +36,64 @@ public class AgentController {
                 .concatWithValues(ServerSentEvent.builder("[DONE]").event("done").build());
     }
 
+    /**
+     * 创建新聊天会话
+     * @param req 创建会话请求
+     * @return 响应
+     */
     @PostMapping
     public ResultVO<ChatSessionVO> createNewSession(@Valid @RequestBody CreateChatSessionReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
         return ResultVO.success(agentChatService.createNewChatSession(userId, req.getAgentName()));
+    }
+
+    /**
+     * 获取当前用户聊天会话列表
+     * @return 响应
+     */
+    @GetMapping
+    public ResultVO<List<ChatSessionVO>> getChatSessions() {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(agentChatService.getChatSessions(userId));
+    }
+
+    /**
+     * 更新聊天会话标题
+     *
+     * @param sessionId 会话ID
+     * @param req 更新请求
+     * @return 响应
+     */
+    @PutMapping("/sessions/{sessionId}/title")
+    public ResultVO<Void> updateChatSessionTitle(@PathVariable Long sessionId,
+                                                 @Valid @RequestBody UpdateChatSessionTitleReq req) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        agentChatService.updateChatSessionTitle(userId, sessionId, req.getTitle());
+        return ResultVO.success();
+    }
+
+    /**
+     * 删除单个聊天会话
+     *
+     * @param sessionId 会话ID
+     * @return 响应
+     */
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResultVO<Void> deleteChatSession(@PathVariable Long sessionId) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        agentChatService.deleteChatSession(userId, sessionId);
+        return ResultVO.success();
+    }
+
+    /**
+     * 获取聊天会话历史
+     * @param sessionId 会话ID
+     * @return 响应
+     */
+    @GetMapping("/sessions/{sessionId}/message")
+    public ResultVO<List<ChatMessageVO>> getChatMessage(@PathVariable Long sessionId) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(agentChatService.getChatMessages(userId, sessionId));
     }
 
     // 获取所有可用agent

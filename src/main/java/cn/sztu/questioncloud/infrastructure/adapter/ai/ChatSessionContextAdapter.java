@@ -29,4 +29,14 @@ public class ChatSessionContextAdapter implements ChatSessionContextPort {
                 CACHE_TTL_MINUTES,
                 TimeUnit.MINUTES);
     }
+
+    /**
+     * 删除缓存中的业务上下文
+     *
+     * @param sessionId 会话ID
+     */
+    @Override
+    public void deleteContext(Long sessionId) {
+        cacheService.delete(CacheKeyUtil.chatContextKey(String.valueOf(sessionId)));
+    }
 }

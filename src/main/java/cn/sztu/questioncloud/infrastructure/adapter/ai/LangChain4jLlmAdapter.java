@@ -6,6 +6,8 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.community.model.dashscope.QwenChatModel;
 import dev.langchain4j.community.model.dashscope.QwenStreamingChatModel;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,6 +52,56 @@ public class LangChain4jLlmAdapter implements LlmPort {
                         .build())
                 .build();
         return chatModel.chat(request);
+    }
+
+    /**
+     * 生成会话标题
+     * @param userMessage 用户消息
+     * @return 会话标题
+     */
+    @Override
+    public String generateSessionTitle(UserMessage userMessage) {
+        try {
+            ChatRequest request = ChatRequest.builder()
+                    .messages(List.of(
+                            SystemMessage.from("""
+                                你是会话标题生成助手。
+                                请根据用户首条消息生成一个简洁的中文会话标题。
+                                要求：
+                                1. 只输出标题本身
+                                2. 不要加引号、句号、冒号、序号、解释
+                                3. 不要换行
+                                4. 长度控制在 8~15 个汉字
+                                5. 若内容偏技术，标题尽量概括主题，不要复述整句
+                                """),
+                            userMessage
+                    ))
+                    .parameters(ChatRequestParameters.builder()
+                            .temperature(0.2)
+                            .maxOutputTokens(30)
+                            .build())
+                    .build();
+
+            String title = chatModel.chat(request).aiMessage().text();
+            // 错误生成兜底
+            if (title == null || title.isBlank()) {
+                return "新会话";
+            }
+
+            title = title.trim()
+                    .replace("\n", "")
+                    .replace("\"", "")
+                    .replace("“", "")
+                    .replace("”", "");
+
+            if (title.length() > 20) {
+                title = title.substring(0, 20);
+            }
+
+            return title.isBlank() ? "新会话" : title;
+        } catch (Exception e) {
+            return "新会话";
+        }
     }
 
     /**

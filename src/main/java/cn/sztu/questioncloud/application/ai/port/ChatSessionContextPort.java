@@ -10,4 +10,11 @@ public interface ChatSessionContextPort {
      * @param chatSessionContext 上下文
      */
     void saveContext(Long sessionId, ChatSessionContext chatSessionContext);
+
+    /**
+     * 删除缓存中的业务上下文
+     *
+     * @param sessionId 会话ID
+     */
+    void deleteContext(Long sessionId);
 }
