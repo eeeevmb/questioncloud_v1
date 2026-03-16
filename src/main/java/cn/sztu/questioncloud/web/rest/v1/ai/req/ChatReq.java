@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class AssistantChatReq {
+public class ChatReq {
     /**
      * 会话ID
      */

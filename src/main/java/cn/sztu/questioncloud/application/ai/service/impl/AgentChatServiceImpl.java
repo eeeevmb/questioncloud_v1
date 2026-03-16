@@ -3,28 +3,35 @@ package cn.sztu.questioncloud.application.ai.service.impl;
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
 import cn.sztu.questioncloud.application.ai.enums.AgentErrorCodeEnum;
+import cn.sztu.questioncloud.application.ai.helper.ChatMessageConverter;
 import cn.sztu.questioncloud.application.ai.port.*;
+import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.application.ai.service.AgentChatService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.ai.memory.RedisChatMemoryStore;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.AgentEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatMessageEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.agent.ChatSessionEntity;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.service.tool.ToolExecutionResult;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.cache.spi.support.CacheUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,6 +53,10 @@ public class AgentChatServiceImpl implements AgentChatService {
 
     @Override
     public Flux<String> chat(ChatSessionContext context, Long sessionId, String agentName, String userInput) {
+        ChatSessionEntity sessionEntity = chatSessionRepository.findById(sessionId);
+        if (sessionEntity == null) {
+            throw new ApplicationException(AgentErrorCodeEnum.AGENT_CHAT_SESSION_NOT_FOUND);
+        }
         // 写入业务上下文供下游读取
         chatSessionContextPort.saveContext(sessionId, context);
         // 获取Agent定义
@@ -57,13 +68,18 @@ public class AgentChatServiceImpl implements AgentChatService {
         // 获取当前Agent的工具介绍
         List<ToolSpecification> toolSpecifications = toolSpecificationPort.getToolSpecifications(definition.getAllowedTools());
 
+
         // 构建聊天记录
         List<ChatMessage> messages = chatMemoryStore.getMessages(sessionId);
         if (messages == null || messages.isEmpty()) {
+            // 首次聊天，同时生成会话标题
             messages = new ArrayList<>();
-            // TODO 生成会话标题
+            String title = llmPort.generateSessionTitle(new UserMessage(userInput));
+            sessionEntity.setTitle(title);
+            chatSessionRepository.update(sessionEntity);
         }
-        // 更新上下文
+
+        // 更新系统提示词
         if (!messages.isEmpty()) {
             messages.removeFirst();
         }
@@ -160,6 +176,81 @@ public class AgentChatServiceImpl implements AgentChatService {
                 .build();
     }
 
+    /**
+     * 获取聊天会话列表
+     *
+     * @param userId 用户ID
+     * @return 会话视图列表
+     */
+    @Override
+    public List<ChatSessionVO> getChatSessions(Long userId) {
+        List<ChatSessionEntity> entities = chatSessionRepository.findByUserId(userId);
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, AgentEntity> agentEntityMap = agentRepository.getEntityMap();
+
+        return entities.stream()
+                .map( entity -> ChatSessionVO.builder()
+                        .sessionId(entity.getId())
+                        .agentName(agentEntityMap.get(entity.getAgentId()).getName())
+                        .userId(entity.getUserId())
+                        .title(entity.getTitle())
+                        .metadata(entity.getMetadata())
+                        .createdAt(entity.getCreatedAt())
+                        .updatedAt(entity.getUpdatedAt())
+                        .build())
+                .toList();
+    }
+
+    /**
+     * 更新会话标题
+     *
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     * @param title 新标题
+     */
+    @Override
+    public void updateChatSessionTitle(Long userId, Long sessionId, String title) {
+        ChatSessionEntity sessionEntity = getOwnedSession(userId, sessionId);
+        sessionEntity.setTitle(title == null ? null : title.trim());
+        sessionEntity.setUpdatedAt(LocalDateTime.now());
+        chatSessionRepository.update(sessionEntity);
+    }
+
+    /**
+     * 硬删除单个会话
+     *
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteChatSession(Long userId, Long sessionId) {
+        getOwnedSession(userId, sessionId);
+        // 清理聊天消息(数据库 + 缓存)
+        chatMemoryStore.deleteMessages(sessionId);
+        // 清理会话业务上下文缓存
+        chatSessionContextPort.deleteContext(sessionId);
+        // 硬删除会话记录
+        chatSessionRepository.deleteById(sessionId);
+    }
+
+    /**
+     * 获取会话的聊天记录
+     *
+     * @param userId    用户ID
+     * @param sessionId 会话ID
+     * @return 聊天记录视图
+     */
+    @Override
+    public List<ChatMessageVO> getChatMessages(Long userId, Long sessionId) {
+        getOwnedSession(userId, sessionId);
+        List<ChatMessage> messages = chatMemoryStore.getMessages(sessionId);
+        return ChatMessageConverter.toVOList(messages);
+    }
+
 
     private List<ChatMessage> buildThinkMessages(List<ChatMessage> messages, AgentDefinition definition, ChatSessionContext context) {
         List<ChatMessage> thinkMessages = new ArrayList<>();
@@ -174,6 +265,9 @@ public class AgentChatServiceImpl implements AgentChatService {
         return thinkMessages;
     }
 
+    /**
+     * 清理工具调用信息
+     */
     private List<ChatMessage> cleanToolExecutionMessage(List<ChatMessage> messages) {
         List<ChatMessage> cleaned = new ArrayList<>();
         for (ChatMessage message : messages) {
@@ -214,5 +308,16 @@ public class AgentChatServiceImpl implements AgentChatService {
                 selectedQuestionCount,
                 selectionHint
         );
+    }
+
+    private ChatSessionEntity getOwnedSession(Long userId, Long sessionId) {
+        ChatSessionEntity sessionEntity = chatSessionRepository.findById(sessionId);
+        if (sessionEntity == null) {
+            throw new ApplicationException(AgentErrorCodeEnum.AGENT_CHAT_SESSION_NOT_FOUND);
+        }
+        if (!Objects.equals(sessionEntity.getUserId(), userId)) {
+            throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
+        }
+        return sessionEntity;
     }
 }

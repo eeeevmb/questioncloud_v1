@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.ai.port;
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import reactor.core.publisher.Flux;
 
@@ -23,6 +24,13 @@ public interface LlmPort {
     ChatResponse chat(AgentDefinition definition,
                        List<ChatMessage> messages,
                        List<ToolSpecification> toolSpecifications);
+
+    /**
+     * 生成会话标题
+     * @param userMessage 用户消息
+     * @return 会话标题
+     */
+    String generateSessionTitle(UserMessage userMessage);
 
     // 流式接口
 
