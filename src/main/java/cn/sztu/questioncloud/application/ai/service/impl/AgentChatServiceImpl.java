@@ -196,7 +196,7 @@ public class AgentChatServiceImpl implements AgentChatService {
         """;
         }
 
-        boolean hasCollection = context.getCollectionId() != null;
+        boolean hasCollection = context.getCollectionIds() != null && !context.getCollectionIds().isEmpty();
         int selectedQuestionCount = context.getQuestionIds() == null ? 0 : context.getQuestionIds().size();
 
         String selectionHint = selectedQuestionCount > 0

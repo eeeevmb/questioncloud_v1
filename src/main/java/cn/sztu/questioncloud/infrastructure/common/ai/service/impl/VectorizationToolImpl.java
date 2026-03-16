@@ -15,6 +15,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.filter.Filter;
 import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
 import dev.langchain4j.store.embedding.filter.comparison.IsGreaterThanOrEqualTo;
+import dev.langchain4j.store.embedding.filter.comparison.IsIn;
 import dev.langchain4j.store.embedding.filter.comparison.IsLessThanOrEqualTo;
 import dev.langchain4j.store.embedding.filter.logical.And;
 import org.springframework.stereotype.Component;
@@ -104,8 +105,8 @@ public class VectorizationToolImpl implements VectorizationTool {
             filterList.add(new IsEqualTo("ownerId", filter.getOwnerId()));
         }
 
-        if (filter.getCollectionId() != null) {
-            filterList.add(new IsEqualTo("collectionId", filter.getCollectionId()));
+        if (filter.getCollectionIds() != null) {
+            filterList.add(new IsIn("collectionId", filter.getCollectionIds()));
         }
 
         if (filter.getDifficultyMin() != null) {

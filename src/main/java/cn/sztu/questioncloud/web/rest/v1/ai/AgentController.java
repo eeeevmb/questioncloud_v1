@@ -27,7 +27,7 @@ public class AgentController {
         Long userId = StpUtil.getLoginIdAsLong();
         ChatSessionContext context = ChatSessionContext.builder()
                 .userId(userId)
-                .collectionId(req.getContext().getCollectionId())
+                .collectionIds(req.getContext().getCollectionIds())
                 .questionIds(req.getContext().getSelectedQuestionIds())
                 .build();
         return agentChatService.chat(context, req.getSessionId(), req.getAgentName(), req.getMessage())

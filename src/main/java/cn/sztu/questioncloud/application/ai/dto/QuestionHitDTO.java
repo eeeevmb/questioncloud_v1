@@ -29,4 +29,9 @@ public class QuestionHitDTO {
      * 难度系数
      */
     private Double difficulty;
+
+    /**
+     * 题源题集
+     */
+    private String fromCollectionName;
 }

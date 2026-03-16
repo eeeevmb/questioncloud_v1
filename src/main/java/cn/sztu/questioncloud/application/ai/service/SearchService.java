@@ -13,10 +13,10 @@ public interface SearchService {
      * RAG检索题集内相关题目
      *
      * @param userId         用户ID
-     * @param collectionId   题集ID
+     * @param collectionIds  题集ID
      * @param query          用户的自然语言描述
      * @param ragSearchParam 筛选条件
      * @return 命中的题目列表
      */
-    List<QuestionHitDTO> RAGSearch(Long userId, Long collectionId, String query, RAGSearchParam ragSearchParam);
+    List<QuestionHitDTO> RAGSearch(Long userId, List<Long> collectionIds, String query, RAGSearchParam ragSearchParam);
 }
