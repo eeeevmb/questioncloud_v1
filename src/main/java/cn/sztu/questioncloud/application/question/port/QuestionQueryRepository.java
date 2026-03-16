@@ -2,12 +2,14 @@ package cn.sztu.questioncloud.application.question.port;
 
 import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -22,6 +24,13 @@ public interface QuestionQueryRepository {
      * @return 题集内题目总数
      */
     Integer CountCollectionItemsById(Long collectionId);
+
+    /**
+     * 查询题目ID-题集实体映射表
+     *
+     * @return 映射表
+     */
+    Map<Long, QuestionCollectionEntity> getQuestionIdToCollectionMap(List<Long> questionIds);
 
     /**
      * 查询题集内最大顺序值

@@ -7,32 +7,32 @@ import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.RepositoryUtils;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
+import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionCollectionMapper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionMapper;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Repository
+@RequiredArgsConstructor
 public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
     private final CollectionItemMapper collectionItemMapper;
     private final QuestionMapper questionMapper;
-
-    public QuestionQueryRepositoryImpl(CollectionItemMapper collectionItemMapper, QuestionMapper questionMapper) {
-        this.collectionItemMapper = collectionItemMapper;
-        this.questionMapper = questionMapper;
-    }
+    private final QuestionCollectionMapper questionCollectionMapper;
 
     /**
      * 查询题集内题目总数
@@ -45,6 +45,52 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
         return QueryChain.of(collectionItemMapper)
                 .eq(CollectionItem::getCollectionId, collectionId)
                 .count();
+    }
+
+    /**
+     * 查询题目ID-题集实体映射表
+     *
+     * @return 映射表
+     */
+    @Override
+    public Map<Long, QuestionCollectionEntity> getQuestionIdToCollectionMap(List<Long> questionIds) {
+        if (questionIds == null || questionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<CollectionItem> relationList = QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionId, CollectionItem::getCollectionId)
+                .in(CollectionItem::getQuestionId, questionIds)
+                // 保证同一题在多个题集时映射结果稳定（取最小 collection_id）
+                .orderBy(CollectionItem::getCollectionId)
+                .list();
+        if (relationList == null || relationList.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> collectionIds = relationList.stream()
+                .map(CollectionItem::getCollectionId)
+                .distinct()
+                .toList();
+
+        Map<Long, QuestionCollectionEntity> collectionById = QueryChain.of(questionCollectionMapper)
+                .in(QuestionCollectionEntity::getId, collectionIds)
+                .list()
+                .stream()
+                .collect(Collectors.toMap(
+                        QuestionCollectionEntity::getId,
+                        Function.identity(),
+                        (left, right) -> left
+                ));
+
+        Map<Long, QuestionCollectionEntity> result = new LinkedHashMap<>();
+        for (CollectionItem relation : relationList) {
+            QuestionCollectionEntity collection = collectionById.get(relation.getCollectionId());
+            if (collection != null) {
+                result.putIfAbsent(relation.getQuestionId(), collection);
+            }
+        }
+        return result;
     }
 
     /**

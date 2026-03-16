@@ -48,18 +48,25 @@ public class QuestionDomainTool {
             BigDecimal difficulty = args.getDifficulty() != null
                     ? args.getDifficulty()
                     : DEFAULT_DIFF;
-            questionAppService.createQuestion(CreateQuestionReq.builder()
-                    .typeCode(args.getTypeCode())
-                    .title(args.getTitle())
-                    .stem(args.getStem())
-                    .options(args.getOptions())
-                    .answer(args.getAnswer())
-                    .correctOptions(args.getCorrectOptions())
-                    .judgeAnswer(args.getJudgeAnswer())
-                    .solution(args.getSolution())
-                    .difficulty(difficulty)
-                    .collectionId(context.getCollectionId())
-                    .build(), context.getUserId());
+            List<Long> collectionIds = context.getCollectionIds();
+            if (collectionIds == null || collectionIds.isEmpty()) {
+                return new ToolResult<>(false, null, "当前未绑定题集，无法创建题目", null);
+            }
+            // 将题目添加进所有选中题集
+            for (Long collectionId : collectionIds) {
+                questionAppService.createQuestion(CreateQuestionReq.builder()
+                        .typeCode(args.getTypeCode())
+                        .title(args.getTitle())
+                        .stem(args.getStem())
+                        .options(args.getOptions())
+                        .answer(args.getAnswer())
+                        .correctOptions(args.getCorrectOptions())
+                        .judgeAnswer(args.getJudgeAnswer())
+                        .solution(args.getSolution())
+                        .difficulty(difficulty)
+                        .collectionId(collectionId)
+                        .build(), context.getUserId());
+            }
 
             return new ToolResult<>(true, null, "成功在绑定题集创建题目！", null);
         } catch (ApplicationException e) {
@@ -118,7 +125,7 @@ public class QuestionDomainTool {
 
             List<QuestionHitDTO> data = searchService.RAGSearch(
                     context.getUserId(),
-                    context.getCollectionId(),
+                    context.getCollectionIds(),
                     args.getQuery(),
                     args.getRagSearchParam());
             return new ToolResult<>(true, null, null, data);

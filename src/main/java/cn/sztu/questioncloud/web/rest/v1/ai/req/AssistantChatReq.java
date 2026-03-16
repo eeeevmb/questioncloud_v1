@@ -28,7 +28,7 @@ public class AssistantChatReq {
 
     @Data
     public static class Context {
-        Long collectionId;
+        List<Long> collectionIds;
         List<Long> selectedQuestionIds;
     }
 }
