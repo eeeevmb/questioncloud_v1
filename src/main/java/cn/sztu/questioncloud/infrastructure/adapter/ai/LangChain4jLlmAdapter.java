@@ -2,16 +2,19 @@ package cn.sztu.questioncloud.infrastructure.adapter.ai;
 
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
 import cn.sztu.questioncloud.application.ai.port.LlmPort;
+import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.community.model.dashscope.QwenChatModel;
-import dev.langchain4j.community.model.dashscope.QwenStreamingChatModel;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
+import dev.langchain4j.model.chat.request.ResponseFormat;
+import dev.langchain4j.model.chat.request.ResponseFormatType;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +34,9 @@ import java.util.List;
 public class LangChain4jLlmAdapter implements LlmPort {
     private final ChatModel chatModel;
     private final StreamingChatModel streamingChatModel;
+    private final ObjectMapper objectMapper;
+
+    private static final BigDecimal DEFAULT_DIFFICULTY = BigDecimal.valueOf(0.50);
     /**
      * 同步返回聊天响应（用于决定是否调用工具）
      *
@@ -101,6 +108,68 @@ public class LangChain4jLlmAdapter implements LlmPort {
             return title.isBlank() ? "新会话" : title;
         } catch (Exception e) {
             return "新会话";
+        }
+    }
+
+    /**
+     * 根据用户描述生成题目草稿
+     *
+     * @param userInput 用户输入
+     * @return 题目草稿
+     */
+    @Override
+    public QuestionDraft generateQuestionDraft(String userInput) {
+        try {
+            ResponseFormat responseFormat = ResponseFormat.builder()
+                    .type(ResponseFormatType.JSON)
+                    .build();
+
+            ChatRequest request = ChatRequest.builder()
+                    .messages(List.of(
+                            SystemMessage.from("""
+                                    你是题目草稿生成助手。
+                                    你必须严格输出 QuestionDraft 的 JSON 对象，不要输出 markdown 代码块，不要输出解释。
+                                    
+                                    字段规则（与创建题目参数一致）：
+                                    - typeCode: 必填，枚举为 single-choice/multiple-choice/true-false/fill-in/short-answer
+                                    - stem: 必填
+                                    - title: 必选
+                                    - difficulty: 可选；若用户未指定请输出 0.50
+                                    - solution: 必选
+                                    - answer: fill-in/short-answer 建议提供；true-false 也可提供
+                                    
+                                    题型专用字段：
+                                    - single-choice/multiple-choice:
+                                      必须提供 options（每项含 key 和 content）与 correctOptions
+                                    - true-false:
+                                      必须提供 judgeAnswer，且只能是 T 或 F
+                                    - fill-in/short-answer:
+                                      使用 answer，且不要提供 options/correctOptions/judgeAnswer
+                                    
+                                    输出必须可被 JSON 反序列化为 QuestionDraft。
+                                    """),
+                            UserMessage.from(userInput)
+                    ))
+                    .parameters(ChatRequestParameters.builder()
+                            .temperature(0.1)
+                            .maxOutputTokens(1024)
+                            .responseFormat(responseFormat)
+                            .build())
+                    .build();
+
+            ChatResponse response = chatModel.chat(request);
+            AiMessage aiMessage = response.aiMessage();
+            if (aiMessage == null || aiMessage.text() == null || aiMessage.text().isBlank()) {
+                throw new IllegalStateException("模型未返回可解析的题目草稿");
+            }
+
+            QuestionDraft draft = objectMapper.readValue(aiMessage.text(), QuestionDraft.class);
+            if (draft.getDifficulty() == null) {
+                draft.setDifficulty(DEFAULT_DIFFICULTY);
+            }
+            return draft;
+        } catch (Exception e) {
+            throw new RuntimeException("生成题目草稿失败", e);
         }
     }
 
