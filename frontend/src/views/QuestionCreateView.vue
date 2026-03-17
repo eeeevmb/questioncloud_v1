@@ -1,143 +1,128 @@
 <template>
-  <section class="card" v-if="collectionId">
-    <header class="create-header">
-      <div>
-        <h2>创建题目</h2>
-        <p>当前题集：{{ collectionName || '（名称未知）' }}</p>
+  <el-card v-if="collectionId">
+    <template #header>
+      <div class="create-header">
+        <div>
+          <h2>创建题目</h2>
+          <p>当前题集：{{ collectionName || '（名称未知）' }}</p>
+        </div>
+        <el-button @click="goBack">返回题集</el-button>
       </div>
-      <button class="secondary-btn" type="button" @click="goBack">返回题集</button>
-    </header>
+    </template>
 
-    <form class="create-form" @submit.prevent="handleSubmit">
+    <el-form label-position="top" class="create-form">
       <div class="form-grid">
-        <label>
-          题型
-          <select v-model="form.typeCode">
-            <option v-for="type in questionTypes" :key="type.code" :value="type.code">{{ type.label }}</option>
-          </select>
-        </label>
-        <label>
-          难度 (0 ~ 1)
-          <input v-model.number="form.difficulty" type="number" min="0" max="1" step="0.01" />
-        </label>
+        <el-form-item label="题型">
+          <el-select v-model="form.typeCode">
+            <el-option v-for="type in questionTypes" :key="type.code" :label="type.label" :value="type.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="难度 (0 ~ 1)">
+          <el-input-number v-model="form.difficulty" :min="0" :max="1" :step="0.01" :precision="2" controls-position="right" />
+        </el-form-item>
       </div>
 
-      <div class="field-pair single">
-        <div>
-          <label>标题</label>
-          <input v-model="form.title" placeholder="请输入标题" />
-        </div>
-      </div>
+      <el-form-item label="标题">
+        <el-input v-model="form.title" placeholder="请输入标题" />
+      </el-form-item>
 
-      <div class="field-pair with-preview">
-        <div>
-          <label>题干 <span class="required">*</span></label>
-          <textarea v-model="form.stem" rows="4" placeholder="请输入题干" required></textarea>
-          <label class="preview-toggle">
-            <input type="checkbox" v-model="showStemPreview" />
-            显示预览
-          </label>
-        </div>
-        <div class="preview-card" v-if="showStemPreview">
-          <p>题干预览</p>
+      <div class="preview-grid">
+        <el-form-item label="题干">
+          <el-input v-model="form.stem" type="textarea" :rows="4" placeholder="请输入题干" />
+          <el-checkbox v-model="showStemPreview" class="preview-toggle">显示预览</el-checkbox>
+        </el-form-item>
+        <el-card v-if="showStemPreview" shadow="never">
+          <template #header>题干预览</template>
           <MathView :content="form.stem" empty-text="暂无题干" :debounce="250" />
-        </div>
+        </el-card>
       </div>
 
-      <div class="field-pair with-preview">
-        <div>
-          <label>参考答案</label>
-          <textarea v-model="form.answer" rows="3" placeholder="可填写展示用答案"></textarea>
-        </div>
-        <div class="preview-card">
-          <p>答案预览</p>
+      <div class="preview-grid">
+        <el-form-item label="参考答案">
+          <el-input v-model="form.answer" type="textarea" :rows="3" placeholder="可填写展示用答案" />
+        </el-form-item>
+        <el-card shadow="never">
+          <template #header>答案预览</template>
           <MathView :content="form.answer" empty-text="暂无答案" :debounce="200" />
-        </div>
+        </el-card>
       </div>
 
-      <div class="field-pair with-preview">
-        <div>
-          <label>解析</label>
-          <textarea v-model="form.solution" rows="3" placeholder="可填写解析"></textarea>
-          <label class="preview-toggle">
-            <input type="checkbox" v-model="showSolutionPreview" />
-            显示预览
-          </label>
-        </div>
-        <div class="preview-card" v-if="showSolutionPreview">
-          <p>解析预览</p>
+      <div class="preview-grid">
+        <el-form-item label="解析">
+          <el-input v-model="form.solution" type="textarea" :rows="3" placeholder="可填写解析" />
+          <el-checkbox v-model="showSolutionPreview" class="preview-toggle">显示预览</el-checkbox>
+        </el-form-item>
+        <el-card v-if="showSolutionPreview" shadow="never">
+          <template #header>解析预览</template>
           <MathView :content="form.solution" empty-text="暂无解析" :debounce="250" />
-        </div>
+        </el-card>
       </div>
 
-      <section v-if="isChoiceType" class="type-section">
-        <header class="section-header">
-          <h3>选项内容</h3>
-          <button class="secondary-btn" type="button" @click="addOption">新增选项</button>
-        </header>
-        <div v-if="!form.options.length" class="hint">暂无选项，请添加。</div>
+      <el-card v-if="isChoiceType" shadow="never" class="sub-card">
+        <template #header>
+          <div class="section-header">
+            <h3>选项内容</h3>
+            <el-button @click="addOption">新增选项</el-button>
+          </div>
+        </template>
+        <el-empty v-if="!form.options.length" description="暂无选项，请添加。" />
         <div v-for="(option, index) in form.options" :key="index" class="option-editor">
           <div class="option-head">
-            <label class="option-key">
-              选项编号
-              <input v-model="option.key" placeholder="如 A/B/C" />
-            </label>
+            <el-form-item label="选项编号" class="option-key">
+              <el-input v-model="option.key" placeholder="如 A/B/C" />
+            </el-form-item>
             <div class="option-actions">
-              <label
-                class="answer-selector"
-                :class="{ active: isOptionCorrect(option.key) }"
-              >
-                <template v-if="isSingleChoice">
-                  <input type="radio" :value="option.key" v-model="singleCorrect" />
-                </template>
-                <template v-else>
-                  <input
-                    type="checkbox"
-                    :value="option.key"
-                    :checked="form.choiceCorrect.includes(option.key)"
-                    @change="toggleMultiple(option.key)"
-                  />
-                </template>
-                <span>设为正确答案</span>
-              </label>
-              <button class="danger-btn" type="button" v-if="form.options.length > 1" @click="removeOption(index)">删除</button>
+              <div class="answer-selector">
+                <el-radio v-if="isSingleChoice" :label="option.key" v-model="singleCorrect">设为正确答案</el-radio>
+                <el-checkbox
+                  v-else
+                  :model-value="form.choiceCorrect.includes(option.key)"
+                  @change="toggleMultiple(option.key)"
+                >
+                  设为正确答案
+                </el-checkbox>
+              </div>
+              <el-button v-if="form.options.length > 1" type="danger" plain @click="removeOption(index)">删除</el-button>
             </div>
           </div>
-          <div class="option-body">
-            <textarea v-model="option.content" rows="2" placeholder="请输入选项内容"></textarea>
-            <div class="preview-card">
-              <p>选项预览</p>
+          <div class="preview-grid">
+            <el-form-item label="选项内容">
+              <el-input v-model="option.content" type="textarea" :rows="2" placeholder="请输入选项内容" />
+            </el-form-item>
+            <el-card shadow="never">
+              <template #header>选项预览</template>
               <MathView :content="option.content || ''" empty-text="暂无内容" :debounce="250" />
-            </div>
+            </el-card>
           </div>
         </div>
-      </section>
+      </el-card>
 
-      <section v-if="form.typeCode === 'true-false'" class="type-section">
-        <h3>判断题答案</h3>
-        <select v-model="form.judgeAnswer">
-          <option value="T">正确</option>
-          <option value="F">错误</option>
-        </select>
-      </section>
+      <el-card v-if="form.typeCode === 'true-false'" shadow="never" class="sub-card">
+        <template #header>判断题答案</template>
+        <el-radio-group v-model="form.judgeAnswer">
+          <el-radio label="T">正确</el-radio>
+          <el-radio label="F">错误</el-radio>
+        </el-radio-group>
+      </el-card>
 
-      <section class="type-section">
-        <header class="section-header">
-          <div>
-            <h3>附件</h3>
-            <p class="hint">上传后即可预览，自动按照顺序提交。</p>
+      <el-card shadow="never" class="sub-card">
+        <template #header>
+          <div class="section-header">
+            <div>
+              <h3>附件</h3>
+              <p class="hint">上传后即可预览，自动按照顺序提交。</p>
+            </div>
+            <el-button @click="addAsset">新增附件</el-button>
           </div>
-          <button class="secondary-btn" type="button" @click="addAsset">新增附件</button>
-        </header>
-        <div v-if="!form.assets.length" class="hint">暂无附件</div>
+        </template>
+        <el-empty v-if="!form.assets.length" description="暂无附件" />
         <div class="asset-grid" v-for="(asset, index) in form.assets" :key="index">
-          <label>
-            区域
-            <select v-model="asset.section">
-              <option value="PRO">题干</option>
-              <option value="SOLU">解析</option>
-            </select>
-          </label>
+          <el-form-item label="区域">
+            <el-select v-model="asset.section">
+              <el-option label="题干" value="PRO" />
+              <el-option label="解析" value="SOLU" />
+            </el-select>
+          </el-form-item>
           <div class="asset-upload">
             <div class="thumb" v-if="asset.fileId && assetPreviewUrl(asset) && !assetHasError(asset)">
               <img :src="assetPreviewUrl(asset)" alt="附件预览" @error="() => markAssetError(index)" />
@@ -146,30 +131,26 @@
             <p v-else class="hint">尚未上传</p>
             <div class="asset-actions">
               <input type="file" @change="(event) => uploadAsset(event, index)" />
-              <button class="secondary-btn" type="button" @click="moveAsset(index, -1)" :disabled="index === 0">上移</button>
-              <button class="secondary-btn" type="button" @click="moveAsset(index, 1)" :disabled="index === form.assets.length - 1">下移</button>
-              <button class="secondary-btn" type="button" @click="openAsset(asset)" :disabled="!asset.fileId">预览</button>
-              <button class="danger-btn" type="button" @click="removeAsset(index)">移除</button>
+              <el-button @click="moveAsset(index, -1)" :disabled="index === 0">上移</el-button>
+              <el-button @click="moveAsset(index, 1)" :disabled="index === form.assets.length - 1">下移</el-button>
+              <el-button @click="openAsset(asset)" :disabled="!asset.fileId">预览</el-button>
+              <el-button type="danger" plain @click="removeAsset(index)">移除</el-button>
             </div>
           </div>
         </div>
-      </section>
+      </el-card>
 
-      <button class="primary-btn" type="submit" :disabled="submitting || !collectionId">
-        {{ submitting ? '提交中...' : '创建题目' }}
-      </button>
-    </form>
-  </section>
-  <section v-else class="card empty">
-    <h2>缺少题集信息</h2>
-    <p>请从题集题目列表页面点击“添加题目”。</p>
-    <RouterLink to="/collections" class="primary-btn">返回题集管理</RouterLink>
-  </section>
+      <el-button type="primary" :loading="submitting" :disabled="!collectionId" @click="handleSubmit">创建题目</el-button>
+    </el-form>
+  </el-card>
+  <el-empty v-else description="缺少题集信息，请从题集题目列表页面点击“添加题目”。">
+    <el-button type="primary" @click="router.push('/collections')">返回题集管理</el-button>
+  </el-empty>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import MathView from '../components/MathView.vue';
 import { createQuestion } from '../api/question';
 import { uploadAssetFile } from '../api/common';
@@ -177,7 +158,6 @@ import { showError, showSuccess } from '../utils/messages';
 import { buildFileViewUrl } from '../utils/file';
 import type { QuestionAsset, QuestionOption } from '../types/question';
 import type { QuestionCreatePayload } from '../api/question';
-import '../styles/question-form.css';
 
 const route = useRoute();
 const router = useRouter();
@@ -193,7 +173,7 @@ const form = reactive({
   difficulty: 0.5,
   options: createDefaultOptions(),
   choiceCorrect: [] as string[],
-  judgeAnswer: 'T',
+  judgeAnswer: 'T' as 'T' | 'F',
   assets: [] as QuestionAsset[]
 });
 
@@ -273,13 +253,6 @@ function removeOption(index: number) {
       form.choiceCorrect.splice(idx, 1);
     }
   }
-}
-
-function isOptionCorrect(key?: string) {
-  if (!key) {
-    return false;
-  }
-  return isSingleChoice.value ? singleCorrect.value === key : form.choiceCorrect.includes(key);
 }
 
 function toggleMultiple(key?: string) {
@@ -439,49 +412,103 @@ function goBack() {
 .create-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  align-items: flex-start;
+}
+
+.create-header h2 {
+  margin: 0;
+}
+
+.create-header p {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
 }
 
 .create-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 16px;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.preview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
 }
 
 .preview-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #475569;
   margin-top: 8px;
 }
 
-.form-grid select {
-  width: 100%;
-  border: 1px solid #cbd5f5;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.inline-row {
+.section-header h3 {
+  margin: 0;
+}
+
+.hint {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.sub-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-editor {
+  border-top: 1px solid var(--el-border-color-light);
+  padding-top: 12px;
+}
+
+.option-editor:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.option-head {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.option-key {
+  min-width: 140px;
+  margin-bottom: 0;
+}
+
+.option-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.answer-selector {
+  min-width: 150px;
 }
 
 .asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
 }
 
 .asset-upload {
@@ -490,15 +517,15 @@ function goBack() {
   gap: 8px;
 }
 
-.asset-upload .thumb {
+.thumb {
   width: 120px;
   height: 120px;
-  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
 }
 
-.asset-upload .thumb img {
+.thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -506,19 +533,13 @@ function goBack() {
 
 .asset-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.hint {
-  color: #94a3b8;
-  font-size: 13px;
-}
-
-.empty {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+@media (max-width: 768px) {
+  .create-header {
+    flex-direction: column;
+  }
 }
 </style>
