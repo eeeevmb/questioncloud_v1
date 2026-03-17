@@ -8,9 +8,12 @@ services:
       MYSQL_USER: questioncloud
       MYSQL_PASSWORD: ${QC_MYSQL_PASSWORD}
     volumes:
-      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
-      - ./src/main/resources/sql/agent_domain.sql:/docker-entrypoint-initdb.d/02_agent_domain.sql:ro
-      - ./src/main/resources/sql/init_agent.sql:/docker-entrypoint-initdb.d/03_init_agent.sql:ro
+      - ./src/main/resources/sql/question_domain.sql:/docker-entrypoint-initdb.d/01_question_domain.sql:ro
+      - ./src/main/resources/sql/exam_domain.sql:/docker-entrypoint-initdb.d/02_exam_domain.sql:ro
+      - ./src/main/resources/sql/infra_file.sql:/docker-entrypoint-initdb.d/03_infra_file.sql:ro
+      - ./src/main/resources/sql/user.sql:/docker-entrypoint-initdb.d/04_user.sql:ro
+      - ./src/main/resources/sql/agent_domain.sql:/docker-entrypoint-initdb.d/05_agent_domain.sql:ro
+      - ./src/main/resources/sql/init_agent.sql:/docker-entrypoint-initdb.d/06_init_agent.sql:ro
       - qc_mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
