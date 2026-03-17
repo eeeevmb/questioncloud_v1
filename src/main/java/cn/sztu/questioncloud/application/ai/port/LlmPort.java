@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.ai.port;
 
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
+import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -31,6 +32,13 @@ public interface LlmPort {
      * @return 会话标题
      */
     String generateSessionTitle(UserMessage userMessage);
+
+    /**
+     * 根据用户描述生成题目草稿
+     * @param userInput 用户输入
+     * @return 题目草稿
+     */
+    QuestionDraft generateQuestionDraft(String userInput);
 
     // 流式接口
 

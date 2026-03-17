@@ -3,9 +3,12 @@ package cn.sztu.questioncloud.web.rest.v1.ai;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
 import cn.sztu.questioncloud.application.ai.service.AgentChatService;
+import cn.sztu.questioncloud.application.ai.service.AiGenerateService;
+import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.CreateChatSessionReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.GenerateQuestionDraftReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.UpdateChatSessionTitleReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
@@ -22,6 +25,7 @@ import java.util.List;
 @RequestMapping("/api/v1/agent")
 public class AgentController {
     private final AgentChatService agentChatService;
+    private final AiGenerateService aiGenerateService;
 
     @PostMapping("/chat")
     public Flux<ServerSentEvent<String>> chat(@Valid @RequestBody ChatReq req) {
@@ -94,6 +98,16 @@ public class AgentController {
     public ResultVO<List<ChatMessageVO>> getChatMessage(@PathVariable Long sessionId) {
         Long userId = StpUtil.getLoginIdAsLong();
         return ResultVO.success(agentChatService.getChatMessages(userId, sessionId));
+    }
+
+    /**
+     * 根据用户描述生成题目草稿
+     * @return 题目草稿
+     */
+    @PostMapping("question-draft/generate")
+    public ResultVO<QuestionDraft> generateQuestionDraft(@Valid @RequestBody GenerateQuestionDraftReq req) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(aiGenerateService.generateQuestionDraft(req.toString()));
     }
 
     // 获取所有可用agent
