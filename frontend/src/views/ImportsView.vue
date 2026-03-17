@@ -42,6 +42,12 @@
           <el-progress :percentage="toProgressPercent(row.progress)" :stroke-width="10" />
         </template>
       </el-table-column>
+      <el-table-column label="创建时间" min-width="180">
+        <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+      </el-table-column>
+      <el-table-column label="更新时间" min-width="180">
+        <template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
+      </el-table-column>
       <el-table-column label="操作" width="140" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link @click="goDetail(row.importId)">查看详情</el-button>
@@ -295,6 +301,17 @@ function sessionStatusTagType(status: ImportSessionStatus): 'success' | 'warning
 function toProgressPercent(progress: number) {
   const value = Number.isFinite(progress) ? progress : 0;
   return Math.max(0, Math.min(100, Math.round(value * 100)));
+}
+
+function formatDate(value?: string | null) {
+  if (!value) {
+    return '—';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }
 </script>
 

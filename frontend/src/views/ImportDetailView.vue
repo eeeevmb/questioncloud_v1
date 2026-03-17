@@ -53,10 +53,9 @@
         <el-descriptions-item label="无效条数">
           <el-tag type="danger" effect="plain">{{ session?.invalidCnt ?? 0 }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="创建时间">后端 VO 未提供</el-descriptions-item>
-        <el-descriptions-item label="更新时间">后端 VO 未提供</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDate(session?.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatDate(session?.updatedAt) }}</el-descriptions-item>
       </el-descriptions>
-      <p class="session-tip">说明：当前后端 `ImportSessionVO` 未返回创建/更新时间字段，页面按实际可用字段展示。</p>
     </el-card>
 
     <el-card shadow="never">
@@ -861,12 +860,6 @@ function typeLabel(typeCode?: string) {
 
 .session-card {
   border: 1px solid var(--el-border-color-light);
-}
-
-.session-tip {
-  margin: 12px 0 0;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
 }
 
 .items-header {

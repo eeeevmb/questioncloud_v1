@@ -12,6 +12,8 @@ export interface ImportSessionVO {
   validCnt: number;
   invalidCnt: number;
   progress: number;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface ImportCreateVO {
