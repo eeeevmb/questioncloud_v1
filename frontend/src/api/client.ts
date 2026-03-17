@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { showError } from '../utils/messages';
 import { triggerUnauthorized } from '../utils/auth-events';
 
@@ -10,7 +10,7 @@ interface ResultVO<T> {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
 
-const apiClient = axios.create({
+const rawClient = axios.create({
   baseURL: apiBaseUrl,
   withCredentials: true,
   timeout: 15000
@@ -30,7 +30,7 @@ const handledErrorCodes = new Set([
   '500001'
 ]);
 
-apiClient.interceptors.response.use(
+rawClient.interceptors.response.use(
   (response) => {
     const payload = response.data as ResultVO<unknown>;
     if (!payload) {
@@ -63,5 +63,21 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+interface ApiClient {
+  get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>;
+  delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
+}
+
+const apiClient: ApiClient = {
+  get: <T>(url: string, config?: AxiosRequestConfig) => rawClient.get(url, config) as Promise<T>,
+  post: <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+    rawClient.post(url, data, config) as Promise<T>,
+  put: <T>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
+    rawClient.put(url, data, config) as Promise<T>,
+  delete: <T>(url: string, config?: AxiosRequestConfig) => rawClient.delete(url, config) as Promise<T>
+};
 
 export default apiClient;

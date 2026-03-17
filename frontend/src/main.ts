@@ -1,8 +1,11 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
+import ElementPlus from 'element-plus';
+import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import App from './App.vue';
 import router from './router';
 import './assets/main.css';
+import 'element-plus/dist/index.css';
 import { setUnauthorizedHandler } from './utils/auth-events';
 import { useAuthStore } from './stores/auth';
 import { loadMathJax } from './plugins/mathjax';
@@ -23,5 +26,8 @@ setUnauthorizedHandler(() => {
 });
 
 app.use(pinia);
+app.use(ElementPlus, {
+  locale: zhCn
+});
 app.use(router);
 app.mount('#app');

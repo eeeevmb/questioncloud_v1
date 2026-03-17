@@ -2,12 +2,12 @@
   <section v-if="normalizedAssets.length" class="attachment-gallery">
     <p v-if="title" class="gallery-title">{{ title }}</p>
     <div class="asset-grid">
-      <article v-for="asset in normalizedAssets" :key="assetKey(asset)" class="asset-card">
+      <el-card v-for="asset in normalizedAssets" :key="assetKey(asset)" shadow="never" class="asset-card">
         <div class="preview" @click="openPreview(asset)">
-          <img
+          <el-image
             v-if="isImage(asset) && !hasError(asset)"
             :src="assetUrl(asset)"
-            :alt="title || '附件'"
+            fit="contain"
             @error="markError(asset)"
           />
           <video v-else-if="isVideo(asset) && !hasError(asset)" controls>
@@ -19,26 +19,24 @@
         </div>
         <div class="meta">
           <span class="hint">附件 {{ asset.ordinal ?? '-' }}</span>
-          <button class="secondary-btn" type="button" :disabled="!assetUrl(asset)" @click.stop="openInNewTab(asset)">
-            查看原图
-          </button>
+          <el-button size="small" @click.stop="openInNewTab(asset)" :disabled="!assetUrl(asset)">查看原图</el-button>
           <p v-if="hasError(asset)" class="error-text">加载失败，请稍后再试</p>
         </div>
-      </article>
+      </el-card>
     </div>
 
-    <div v-if="previewAsset" class="lightbox" @click.self="closePreview">
-      <div class="lightbox-content">
-        <button class="close-btn" type="button" @click="closePreview">×</button>
-        <div class="preview full">
-          <img v-if="previewType === 'IMAGE'" :src="assetUrl(previewAsset)" alt="附件预览" />
-          <video v-else-if="previewType === 'VIDEO'" controls autoplay>
-            <source :src="assetUrl(previewAsset)" type="video/mp4" />
-          </video>
-          <div v-else class="file-fallback">暂不支持预览，请使用“查看原图”。</div>
-        </div>
+    <el-dialog v-model="previewVisible" width="70%" destroy-on-close>
+      <template #header>
+        <span>附件预览</span>
+      </template>
+      <div class="dialog-preview">
+        <el-image v-if="previewType === 'IMAGE'" :src="assetUrl(previewAsset)" fit="contain" />
+        <video v-else-if="previewType === 'VIDEO'" controls autoplay>
+          <source :src="assetUrl(previewAsset)" type="video/mp4" />
+        </video>
+        <div v-else class="file-fallback">暂不支持预览，请使用“查看原图”。</div>
       </div>
-    </div>
+    </el-dialog>
   </section>
 </template>
 
@@ -54,6 +52,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const previewAsset = ref<QuestionAsset | null>(null);
+const previewVisible = ref(false);
 const loadErrorSet = ref(new Set<string>());
 
 const normalizedAssets = computed(() => {
@@ -126,10 +125,7 @@ function openPreview(asset: QuestionAsset) {
     return;
   }
   previewAsset.value = asset;
-}
-
-function closePreview() {
-  previewAsset.value = null;
+  previewVisible.value = true;
 }
 
 function openInNewTab(asset: QuestionAsset) {
@@ -148,20 +144,17 @@ function openInNewTab(asset: QuestionAsset) {
 }
 
 .gallery-title {
+  margin: 0;
   font-weight: 600;
-  color: #0f172a;
 }
 
 .asset-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
-.asset-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
+.asset-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -169,15 +162,20 @@ function openInNewTab(asset: QuestionAsset) {
 
 .preview {
   width: 100%;
-  max-height: 220px;
   min-height: 140px;
+  max-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
-  border-radius: 10px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
   overflow: hidden;
   cursor: pointer;
+}
+
+.preview :deep(.el-image) {
+  width: 100%;
+  height: 100%;
 }
 
 .preview img,
@@ -187,64 +185,37 @@ function openInNewTab(asset: QuestionAsset) {
   object-fit: contain;
 }
 
-.preview.full {
-  max-height: none;
-  min-height: auto;
-  background: transparent;
-  cursor: default;
-}
-
-.file-fallback {
-  font-size: 13px;
-  color: #475569;
-}
-
 .meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .hint {
   font-size: 13px;
-  color: #64748b;
+  color: var(--el-text-color-secondary);
 }
 
 .error-text {
   width: 100%;
-  color: #dc2626;
+  margin: 0;
+  color: var(--el-color-danger);
   font-size: 12px;
 }
 
-.lightbox {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.8);
+.dialog-preview {
+  min-height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
 }
 
-.lightbox-content {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  padding: 24px;
-  background: #fff;
-  border-radius: 16px;
+.dialog-preview :deep(.el-image) {
+  width: 100%;
 }
 
-.close-btn {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  border: none;
-  background: transparent;
-  color: #0f172a;
-  font-size: 24px;
-  cursor: pointer;
+.file-fallback {
+  color: var(--el-text-color-secondary);
 }
 </style>
