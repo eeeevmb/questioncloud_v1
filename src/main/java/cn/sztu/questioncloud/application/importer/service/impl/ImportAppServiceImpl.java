@@ -286,6 +286,8 @@ public class ImportAppServiceImpl implements ImportAppService {
                 .validCnt(session.getValidCnt())
                 .invalidCnt(session.getInvalidCnt())
                 .progress(progress)
+                .createdAt(session.getCreatedAt())
+                .updatedAt(session.getUpdatedAt())
                 .build();
     }
 
