@@ -2,11 +2,11 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY pnpm-lock.yaml package.json ./
-RUN npm i -g pnpm && pnpm i --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
-RUN pnpm run build
+RUN npm run build
 
 ######################  Stage-2：Nginx  #####################
 FROM nginx:1.27-alpine

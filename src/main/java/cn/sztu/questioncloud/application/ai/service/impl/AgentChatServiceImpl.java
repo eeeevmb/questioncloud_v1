@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -142,7 +143,7 @@ public class AgentChatServiceImpl implements AgentChatService {
             Map<Long, AgentEntity> agentEntityMap = agentRepository.getEntityMap();
             cache = agentEntityMap.values().stream()
                     .collect(Collectors.toMap(AgentEntity::getName, AgentEntity::getId));
-            cacheService.set(AGENT_NAME_ID_MAP_CACHE_KEY, cache);
+            cacheService.set(AGENT_NAME_ID_MAP_CACHE_KEY, cache, 1, TimeUnit.MINUTES);
         }
 
         // 映射表中无对应Agent则抛异常

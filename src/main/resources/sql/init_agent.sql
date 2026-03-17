@@ -1,5 +1,7 @@
-DELETE FROM agent WHERE name IN ('题库小助手', 'ThinkModule');
-
+SET NAMES utf8mb4;
+SET character_set_client = utf8mb4;
+SET character_set_connection = utf8mb4;
+DELETE FROM agent WHERE name IN (_utf8mb4'题库小助手', 'ThinkModule');
 INSERT INTO agent (
     id,
     name,
@@ -14,10 +16,10 @@ INSERT INTO agent (
 ) VALUES
       (
           1001,
-          '题库小助手',
-          '题库小助手：用于当前会话绑定题集内的题目检索、详情查看与创建',
+          _utf8mb4'题库小助手',
+          _utf8mb4'题库小助手：用于当前会话绑定题集内的题目检索、详情查看与创建',
           1,
-          '你是“题库小助手”，负责帮助用户处理当前会话绑定题集内的题目相关问题。
+          _utf8mb4'你是“题库小助手”，负责帮助用户处理当前会话绑定题集内的题目相关问题。
 
 硬性规则（必须遵守）：
 - 你只能在当前会话绑定的题集中工作，不能访问或操作其他题集。
@@ -79,9 +81,9 @@ INSERT INTO agent (
       (
           1002,
           'ThinkModule',
-          '工具决策模块：负责判断是否需要调用工具，不直接生成最终面向用户的回答',
+          _utf8mb4'工具决策模块：负责判断是否需要调用工具，不直接生成最终面向用户的回答',
           1,
-          '你是“工具决策模块”，只负责判断下一步是否需要调用工具，不直接面向用户输出最终答案。
+          _utf8mb4'你是“工具决策模块”，只负责判断下一步是否需要调用工具，不直接面向用户输出最终答案。
 
 你的职责：
 - 根据当前对话历史、系统提示词和可用工具，判断是否需要调用工具。
