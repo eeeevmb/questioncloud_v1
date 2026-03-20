@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.AvatarVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
@@ -42,12 +43,13 @@ public class UserController {
      * @return 用户id
      */
     @PostMapping("/register")
-    public ResultVO<Long> registerUser(@Valid @RequestBody RegisterReq request) {
+    public ResultVO<RegisterVO> registerUser(@Valid @RequestBody RegisterReq request) {
         return ResultVO.success(userAccountService.register(request));
     }
 
     /**
      * 用户登陆
+     *
      * @param request 登陆请求
      * @return 登陆响应
      */
@@ -73,7 +75,7 @@ public class UserController {
      * @param file 头像文件
      * @return 头像存储相对路径
      */
-    @PostMapping(value = "/upload-avatar", consumes = {"multipart/form-data"})
+    @PostMapping(value = "/avatar", consumes = {"multipart/form-data"})
     public ResultVO<AvatarVO> uploadAvatar(@RequestParam("file") MultipartFile file) {
         String url = userAccountService.uploadAvatar(file);
         AvatarVO vo = new AvatarVO(url);

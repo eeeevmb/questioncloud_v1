@@ -1,115 +1,114 @@
 <template>
-  <section class="card" v-if="detail">
-    <h2>更新题目（当前版本 {{ detail.versionNo }}）</h2>
-    <p>题目类型：{{ detail.typeCode }}，更新会生成新版本。</p>
-    <form class="form" @submit.prevent="handleSubmit">
-      <section class="field-pair single">
+  <el-card v-if="detail">
+    <template #header>
+      <div class="page-header">
         <div>
-          <label>标题</label>
-          <input v-model="form.title" required />
+          <h2>更新题目（当前版本 {{ detail.versionNo }}）</h2>
+          <p>题目类型：{{ detail.typeCode }}，更新会生成新版本。</p>
         </div>
-      </section>
+      </div>
+    </template>
 
-      <section class="field-pair with-preview">
-        <div>
-          <label>题干</label>
-          <textarea v-model="form.stem" rows="4" required></textarea>
-        </div>
-        <div class="preview-card">
-          <p>题干预览</p>
+    <el-form label-position="top" class="form">
+      <el-form-item label="标题">
+        <el-input v-model="form.title" />
+      </el-form-item>
+
+      <div class="preview-grid">
+        <el-form-item label="题干">
+          <el-input v-model="form.stem" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-card shadow="never">
+          <template #header>题干预览</template>
           <MathView :content="form.stem" empty-text="暂无题干" :debounce="250" />
-        </div>
-      </section>
-
-      <section class="field-pair with-preview">
-        <div>
-          <label>展示答案</label>
-          <textarea v-model="form.answer" rows="3"></textarea>
-        </div>
-        <div class="preview-card">
-          <p>答案预览</p>
-          <MathView :content="form.answer" empty-text="暂无答案" :debounce="250" />
-        </div>
-      </section>
-
-      <section class="field-pair with-preview">
-        <div>
-          <label>解析</label>
-          <textarea v-model="form.solution" rows="3"></textarea>
-        </div>
-        <div class="preview-card">
-          <p>解析预览</p>
-          <MathView :content="form.solution" empty-text="尚未提供解析" :debounce="250" />
-        </div>
-      </section>
-
-      <div v-if="detail.typeCode === 'true-false'" class="type-section">
-        <h3>判断题答案</h3>
-        <select v-model="form.judgeAnswer">
-          <option value="T">正确</option>
-          <option value="F">错误</option>
-        </select>
+        </el-card>
       </div>
 
-      <section class="type-section" v-if="isChoiceType">
-        <header class="section-header">
-          <h3>选项内容</h3>
-          <div class="choice-actions">
-            <button class="secondary-btn" type="button" @click="addOption">新增选项</button>
+      <div class="preview-grid">
+        <el-form-item label="展示答案">
+          <el-input v-model="form.answer" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-card shadow="never">
+          <template #header>答案预览</template>
+          <MathView :content="form.answer" empty-text="暂无答案" :debounce="250" />
+        </el-card>
+      </div>
+
+      <div class="preview-grid">
+        <el-form-item label="解析">
+          <el-input v-model="form.solution" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-card shadow="never">
+          <template #header>解析预览</template>
+          <MathView :content="form.solution" empty-text="尚未提供解析" :debounce="250" />
+        </el-card>
+      </div>
+
+      <el-card v-if="detail.typeCode === 'true-false'" shadow="never" class="sub-card">
+        <template #header>判断题答案</template>
+        <el-radio-group v-model="form.judgeAnswer">
+          <el-radio label="T">正确</el-radio>
+          <el-radio label="F">错误</el-radio>
+        </el-radio-group>
+      </el-card>
+
+      <el-card v-if="isChoiceType" shadow="never" class="sub-card">
+        <template #header>
+          <div class="section-header">
+            <h3>选项内容</h3>
+            <el-button @click="addOption">新增选项</el-button>
           </div>
-        </header>
-        <div v-if="!form.options.length" class="hint">暂无选项</div>
+        </template>
+        <el-empty v-if="!form.options.length" description="暂无选项" />
         <div v-for="(option, index) in form.options" :key="index" class="option-editor">
           <div class="option-head">
-            <label class="option-key">
-              选项编号
-              <input v-model="option.key" placeholder="如 A/B/C" />
-            </label>
+            <el-form-item label="选项编号" class="option-key">
+              <el-input v-model="option.key" placeholder="如 A/B/C" />
+            </el-form-item>
             <div class="option-actions">
-              <label class="answer-selector" :class="{ active: isOptionCorrect(option.key) }">
-                <template v-if="isSingleChoice">
-                  <input type="radio" :value="option.key" v-model="singleCorrect" />
-                </template>
-                <template v-else>
-                  <input
-                    type="checkbox"
-                    :value="option.key"
-                    :checked="form.choiceCorrect.includes(option.key)"
-                    @change="toggleMultiple(option.key)"
-                  />
-                </template>
-                <span>设为正确答案</span>
-              </label>
-              <button class="danger-btn" type="button" @click="removeOption(index)" v-if="form.options.length > 1">移除</button>
+              <div class="answer-selector">
+                <el-radio v-if="isSingleChoice" :label="option.key" v-model="singleCorrect">设为正确答案</el-radio>
+                <el-checkbox
+                  v-else
+                  :model-value="form.choiceCorrect.includes(option.key)"
+                  @change="toggleMultiple(option.key)"
+                >
+                  设为正确答案
+                </el-checkbox>
+              </div>
+              <el-button v-if="form.options.length > 1" type="danger" plain @click="removeOption(index)">移除</el-button>
             </div>
           </div>
-          <div class="option-body">
-            <textarea v-model="option.content" rows="2" placeholder="请输入选项内容"></textarea>
-            <div class="preview-card">
-              <p>选项预览</p>
+          <div class="preview-grid">
+            <el-form-item label="选项内容">
+              <el-input v-model="option.content" type="textarea" :rows="2" placeholder="请输入选项内容" />
+            </el-form-item>
+            <el-card shadow="never">
+              <template #header>选项预览</template>
               <MathView :content="option.content || ''" empty-text="暂无内容" :debounce="250" />
-            </div>
+            </el-card>
           </div>
         </div>
-      </section>
+      </el-card>
 
-      <section class="type-section">
-        <header class="section-header">
-          <div>
-            <h3>附件</h3>
-            <p class="hint">上传后即可预览，支持调整顺序。</p>
+      <el-card shadow="never" class="sub-card">
+        <template #header>
+          <div class="section-header">
+            <div>
+              <h3>附件</h3>
+              <p class="hint">上传后即可预览，支持调整顺序。</p>
+            </div>
+            <el-button @click="addAsset">新增附件</el-button>
           </div>
-          <button class="secondary-btn" type="button" @click="addAsset">新增附件</button>
-        </header>
-        <div v-if="!form.assets.length" class="hint">暂无附件</div>
+        </template>
+        <el-empty v-if="!form.assets.length" description="暂无附件" />
         <div class="asset-grid" v-for="(asset, index) in form.assets" :key="index">
-          <label>
-            区域
-            <select v-model="asset.section">
-              <option value="PRO">题干</option>
-              <option value="SOLU">解析</option>
-            </select>
-          </label>
+          <el-form-item label="区域">
+            <el-select v-model="asset.section">
+              <el-option label="题干" value="PRO" />
+              <el-option label="解析" value="SOLU" />
+            </el-select>
+          </el-form-item>
           <div class="asset-upload">
             <div class="thumb" v-if="asset.fileId && assetPreviewUrl(asset) && !assetHasError(asset)">
               <img :src="assetPreviewUrl(asset)" alt="附件预览" @error="() => markAssetError(index)" />
@@ -118,21 +117,21 @@
             <p v-else class="hint">尚未上传</p>
             <div class="asset-actions">
               <input type="file" @change="(event) => uploadAsset(event, index)" />
-              <button class="secondary-btn" type="button" @click="moveAsset(index, -1)" :disabled="index === 0">上移</button>
-              <button class="secondary-btn" type="button" @click="moveAsset(index, 1)" :disabled="index === form.assets.length - 1">下移</button>
-              <button class="secondary-btn" type="button" @click="openAsset(asset)" :disabled="!asset.fileId">预览</button>
-              <button class="danger-btn" type="button" @click="removeAsset(index)">移除</button>
+              <el-button @click="moveAsset(index, -1)" :disabled="index === 0">上移</el-button>
+              <el-button @click="moveAsset(index, 1)" :disabled="index === form.assets.length - 1">下移</el-button>
+              <el-button @click="openAsset(asset)" :disabled="!asset.fileId">预览</el-button>
+              <el-button type="danger" plain @click="removeAsset(index)">移除</el-button>
             </div>
           </div>
         </div>
-      </section>
+      </el-card>
 
-      <button class="primary-btn" type="submit" :disabled="saving">
-        {{ saving ? '保存中...' : '提交更新' }}
-      </button>
-    </form>
-  </section>
-  <div v-else>加载中...</div>
+      <el-button type="primary" :loading="saving" @click="handleSubmit">提交更新</el-button>
+    </el-form>
+  </el-card>
+  <el-card v-else>
+    <el-skeleton :rows="6" animated />
+  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -145,7 +144,6 @@ import { uploadAssetFile } from '../api/common';
 import { showSuccess } from '../utils/messages';
 import { buildFileViewUrl } from '../utils/file';
 import MathView from '../components/MathView.vue';
-import '../styles/question-form.css';
 
 const route = useRoute();
 const router = useRouter();
@@ -156,7 +154,7 @@ const form = reactive({
   stem: '',
   answer: '',
   solution: '',
-  judgeAnswer: 'T',
+  judgeAnswer: 'T' as 'T' | 'F',
   assets: [] as QuestionAsset[],
   options: [] as QuestionOption[],
   choiceCorrect: [] as string[]
@@ -176,28 +174,29 @@ async function loadDetail() {
     return;
   }
   try {
-    detail.value = await fetchQuestionDetail(questionId.value);
-    form.title = detail.value.title;
-    form.stem = detail.value.stem;
-    form.answer = detail.value.answer ?? '';
-    form.solution = detail.value.solution ?? '';
-    form.assets = detail.value.assets
-      ? detail.value.assets.map((asset) => ({ ...asset, fileId: asset.fileId?.toString() ?? '' }))
+    const detailData = await fetchQuestionDetail(questionId.value);
+    detail.value = detailData;
+    form.title = detailData.title;
+    form.stem = detailData.stem;
+    form.answer = detailData.answer ?? '';
+    form.solution = detailData.solution ?? '';
+    form.assets = detailData.assets
+      ? detailData.assets.map((asset) => ({ ...asset, fileId: asset.fileId?.toString() ?? '' }))
       : [];
     assetPreviewErrors.clear();
-    form.options = detail.value.options
-      ? detail.value.options.map((opt) => ({ ...opt }))
+    form.options = detailData.options
+      ? detailData.options.map((opt) => ({ ...opt }))
       : [];
-    if (isChoiceType.value && form.options.length === 0) {
+    if ((detailData.typeCode === 'single-choice' || detailData.typeCode === 'multiple-choice') && form.options.length === 0) {
       form.options = [{ key: 'A', content: '' }];
     }
 
-    const parsedCorrect = getCorrectKeys(detail.value);
+    const parsedCorrect = getCorrectKeys(detailData);
     form.choiceCorrect = parsedCorrect;
     singleCorrect.value = parsedCorrect[0] ?? '';
 
-    if (detail.value.typeCode === 'true-false') {
-      form.judgeAnswer = (detail.value.answerKey as 'T' | 'F') || 'T';
+    if (detailData.typeCode === 'true-false') {
+      form.judgeAnswer = (detailData.answerKey as 'T' | 'F') || 'T';
     }
   } catch (error) {
     // 统一提示
@@ -256,13 +255,6 @@ function removeOption(index: number) {
       form.choiceCorrect.splice(idx, 1);
     }
   }
-}
-
-function isOptionCorrect(key?: string) {
-  if (!key) {
-    return false;
-  }
-  return isSingleChoice.value ? singleCorrect.value === key : form.choiceCorrect.includes(key);
 }
 
 function toggleMultiple(key?: string) {
@@ -396,17 +388,89 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+.page-header h2 {
+  margin: 0;
+}
+
+.page-header p {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
+}
+
 .form {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+.preview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+}
+
+.sub-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.hint {
+  margin: 4px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.option-editor {
+  border-top: 1px solid var(--el-border-color-light);
+  padding-top: 12px;
+}
+
+.option-editor:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.option-head {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.option-key {
+  min-width: 140px;
+  margin-bottom: 0;
+}
+
+.option-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.answer-selector {
+  min-width: 150px;
+}
+
 .asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
 }
 
 .asset-upload {
@@ -415,15 +479,15 @@ async function handleSubmit() {
   gap: 8px;
 }
 
-.asset-upload .thumb {
+.thumb {
   width: 120px;
   height: 120px;
-  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
 }
 
-.asset-upload .thumb img {
+.thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -433,10 +497,5 @@ async function handleSubmit() {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.hint {
-  color: #94a3b8;
-  font-size: 13px;
 }
 </style>

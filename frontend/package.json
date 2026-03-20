@@ -11,12 +11,17 @@
   "dependencies": {
     "axios": "^1.6.8",
     "cropperjs": "1.5.13",
+    "element-plus": "^2.11.4",
+    "katex": "^0.16.38",
+    "markdown-it": "^14.1.1",
+    "markdown-it-texmath": "^1.0.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
     "vue-router": "^4.3.2"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.4",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^18.19.39",
     "@vitejs/plugin-vue": "^5.0.4",
     "typescript": "^5.4.5",

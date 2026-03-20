@@ -43,12 +43,12 @@ CREATE TABLE question_collection (
      id           BIGINT UNSIGNED NOT NULL COMMENT 'PK',
      name         VARCHAR(128)    NOT NULL,
      description  VARCHAR(255)    NULL,
-     owner_id     BIGINT UNSIGNED NULL,
+     owner_id     BIGINT UNSIGNED NOT NULL,
      source       TINYINT         NOT NULL COMMENT '0=用户自建，1=系统默认',
      created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
      PRIMARY KEY (id),
-     KEY idx_qc_owner (owner_id)
+     UNIQUE KEY uk_qc_owner_name (owner_id, name)
 );
 
 
@@ -87,3 +87,35 @@ CREATE TABLE question_stats (
         KEY idx_qs_last_exposed (last_exposed_at),
         KEY idx_qs_updated (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='题目统计与曝光读模型';
+
+-- 题目批量导入会话
+DROP TABLE IF EXISTS import_session;
+CREATE TABLE import_session (
+        id              BIGINT UNSIGNED  NOT NULL           COMMENT '主键',
+        user_id         BIGINT UNSIGNED  NOT NULL           COMMENT '用户ID',
+        status          TINYINT          NOT NULL DEFAULT 0 COMMENT '会话状态:0=PARSING, 1=READY, 2=COMMITTING, 3=COMMITTED, 4=CANCELED, 5=FAILED',
+        file_id         BIGINT UNSIGNED  NOT NULL           COMMENT '导入文件ID',
+        format          TINYINT          NOT NULL DEFAULT 0 COMMENT '文件格式:0=EXCEL, 1=LATEX, 2=WORD',
+        total           INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '批量导入题目总数',
+        valid_cnt       INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '合法题目总数',
+        invalid_cnt     INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '非法题目总数',
+        created_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        version         INT UNSIGNED     NOT NULL DEFAULT 1 COMMENT '版本号,用于实现乐观锁/幂等',
+        PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='批量导入会话模型';
+
+DROP TABLE IF EXISTS import_item;
+CREATE TABLE import_item (
+         id              BIGINT UNSIGNED  NOT NULL           COMMENT '主键',
+         import_id       BIGINT UNSIGNED  NOT NULL           COMMENT '导入会话id',
+         collection_name VARCHAR(128)     NOT NULL           COMMENT '导入题集名',
+         index_no        INT UNSIGNED     NOT NULL           COMMENT '批量导入题目序号',
+         draft           JSON             NOT NULL           COMMENT '结构化题目草稿',
+         status          TINYINT          NOT NULL DEFAULT 0 COMMENT '题目草稿状态, 0=VALID, 1=INVALID',
+         errors          JSON                                COMMENT '错误报告, JSON:[{field, code, message, location}]',
+         updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+         PRIMARY KEY (id),
+         UNIQUE KEY uk_import_index (import_id, index_no),
+         KEY idx_import_status_index (import_id, status, index_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='批量导入草稿题目';

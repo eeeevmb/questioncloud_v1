@@ -1,50 +1,40 @@
 <template>
-  <section class="card detail-card" v-if="detail">
-    <header class="detail-header">
+  <el-card v-if="detail" class="detail-card">
+    <div class="detail-header">
       <div class="title-block">
-        <button class="link-btn" type="button" v-if="fromCollectionId" @click="goBack">
-          ← 返回题集
-        </button>
+        <el-button v-if="fromCollectionId" link type="primary" @click="goBack">返回题集</el-button>
         <h1>{{ detail.title }}</h1>
         <p class="subtitle">{{ typeLabel }} · 当前版本 {{ detail.versionNo }}</p>
-        <details class="meta-details">
-          <summary>更多信息</summary>
-          <ul>
-            <li>
-              题目 ID
-              <span>{{ detail.id }}</span>
-              <button type="button" @click="copyValue(detail.id, '题目ID已复制')">复制</button>
-            </li>
-            <li>
-              当前版本 ID
-              <span>{{ detail.currentVersionId }}</span>
-              <button type="button" @click="copyValue(detail.currentVersionId, '版本ID已复制')">复制</button>
-            </li>
-            <li>
-              题型编码
-              <span>{{ detail.typeCode }}</span>
-              <button type="button" @click="copyValue(detail.typeCode, '题型编码已复制')">复制</button>
-            </li>
-          </ul>
-        </details>
       </div>
       <div class="action-group">
-        <button class="primary-btn" type="button" @click="goToEdit">
-          修改并生成新版本
-        </button>
-        <button class="danger-link" type="button" @click="confirmDelete">
-          删除题目
-        </button>
+        <el-button type="primary" @click="goToEdit">修改并生成新版本</el-button>
+        <el-button type="danger" plain @click="confirmDelete">删除题目</el-button>
       </div>
-    </header>
+    </div>
 
-    <section class="stats-section">
-      <div class="stat-card" v-for="stat in statCards" :key="stat.label">
-        <p class="label">{{ stat.label }}</p>
-        <p class="value" :class="{ placeholder: stat.placeholder }">{{ stat.value }}</p>
-        <p class="hint" v-if="stat.hint">{{ stat.hint }}</p>
-      </div>
-    </section>
+    <el-descriptions border :column="2">
+      <el-descriptions-item label="题目 ID">
+        <span class="mono">{{ detail.id }}</span>
+        <el-button link type="primary" @click="copyValue(detail.id, '题目ID已复制')">复制</el-button>
+      </el-descriptions-item>
+      <el-descriptions-item label="当前版本 ID">
+        <span class="mono">{{ detail.currentVersionId }}</span>
+        <el-button link type="primary" @click="copyValue(detail.currentVersionId, '版本ID已复制')">复制</el-button>
+      </el-descriptions-item>
+      <el-descriptions-item label="题型编码">
+        <span class="mono">{{ detail.typeCode }}</span>
+        <el-button link type="primary" @click="copyValue(detail.typeCode, '题型编码已复制')">复制</el-button>
+      </el-descriptions-item>
+      <el-descriptions-item label="更新时间">{{ detail.updatedAt ? formatDate(detail.updatedAt) : '暂无' }}</el-descriptions-item>
+    </el-descriptions>
+
+    <div class="stats-section">
+      <el-card v-for="stat in statCards" :key="stat.label" shadow="never">
+        <p class="stat-label">{{ stat.label }}</p>
+        <p class="stat-value" :class="{ placeholder: stat.placeholder }">{{ stat.value }}</p>
+        <p class="stat-hint" v-if="stat.hint">{{ stat.hint }}</p>
+      </el-card>
+    </div>
 
     <section class="content-section">
       <h3>题干</h3>
@@ -54,38 +44,32 @@
 
     <section v-if="isChoiceType" class="content-section">
       <h3>选项</h3>
-      <template v-if="hasOptions">
-        <table class="options-table">
-          <thead>
-            <tr>
-              <th>选项</th>
-              <th>内容</th>
-              <th>结果</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="option in detail.options" :key="option.key">
-              <td class="option-key">{{ option.key }}</td>
-              <td class="option-content">
-                <MathView :content="option.content || ''" empty-text="暂无内容" />
-              </td>
-              <td class="result-cell">
-                <span v-if="isCorrectOption(option.key)" class="badge success">正确</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </template>
-      <p v-else class="muted">
-        该题为选择题，但详情接口未返回 options，请后端在 QuestionDetailVO 增加 options 映射。
-      </p>
+      <el-table v-if="hasOptions" :data="detail.options || []" border>
+        <el-table-column prop="key" label="选项" width="90" />
+        <el-table-column label="内容" min-width="260">
+          <template #default="{ row }">
+            <MathView :content="row.content || ''" empty-text="暂无内容" />
+          </template>
+        </el-table-column>
+        <el-table-column label="结果" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="isCorrectOption(row.key)" type="success">正确</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-alert
+        v-else
+        title="该题为选择题，但详情接口未返回 options，请后端在 QuestionDetailVO 增加 options 映射。"
+        type="warning"
+        :closable="false"
+      />
     </section>
 
     <section class="content-section">
       <h3>{{ answerSectionTitle }}</h3>
       <template v-if="isTrueFalseType">
-        <p class="badge success" v-if="booleanAnswer">{{ booleanAnswer }}</p>
-        <p class="muted" v-else>尚未提供答案</p>
+        <el-tag v-if="booleanAnswer" type="success">{{ booleanAnswer }}</el-tag>
+        <span v-else class="muted">尚未提供答案</span>
       </template>
       <template v-else>
         <MathView :content="detail.answer || ''" empty-text="暂无答案" />
@@ -97,18 +81,29 @@
       <MathView :content="detail.solution || ''" empty-text="尚未提供解析" />
       <AttachmentGallery v-if="solutionAssets.length" :assets="solutionAssets" title="解析附件" />
     </section>
-  </section>
-  <div v-else class="card">加载中...</div>
+  </el-card>
+
+  <el-card v-else>
+    <el-skeleton :rows="6" animated />
+  </el-card>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessageBox } from 'element-plus';
 import { fetchQuestionDetail, deleteQuestion } from '../api/question';
 import type { QuestionDetail } from '../types/question';
 import { showSuccess } from '../utils/messages';
 import MathView from '../components/MathView.vue';
 import AttachmentGallery from '../components/AttachmentGallery.vue';
+
+interface StatCard {
+  label: string;
+  value: string;
+  placeholder: boolean;
+  hint?: string;
+}
 
 const choiceTypes = ['single-choice', 'multiple-choice'];
 const route = useRoute();
@@ -144,7 +139,7 @@ const typeLabel = computed(() => {
   return typeLabelMap[detail.value.typeCode] ?? detail.value.typeCode;
 });
 
-const statCards = computed(() => {
+const statCards = computed<StatCard[]>(() => {
   if (!detail.value) {
     return [];
   }
@@ -154,11 +149,6 @@ const statCards = computed(() => {
     buildStat('曝光系数', detail.value.exposureFactor, '暂无数据'),
     buildStat('尝试次数', detail.value.attempts, '暂无'),
     {
-      label: '更新时间',
-      value: detail.value.updatedAt ? formatDate(detail.value.updatedAt) : '暂无',
-      placeholder: !detail.value.updatedAt
-    },
-    {
       label: '最后曝光',
       value: detail.value.lastExposedAt ? formatDate(detail.value.lastExposedAt) : '尚未曝光',
       placeholder: !detail.value.lastExposedAt
@@ -166,7 +156,12 @@ const statCards = computed(() => {
   ];
 });
 
-function buildStat(label: string, value?: number | null, fallback = '暂无数据', formatter?: (value: number) => string) {
+function buildStat(
+  label: string,
+  value?: number | null,
+  fallback = '暂无数据',
+  formatter?: (value: number) => string
+): StatCard {
   if (value === undefined || value === null) {
     return { label, value: fallback, placeholder: true };
   }
@@ -257,8 +252,19 @@ async function confirmDelete() {
   if (!questionId.value || !detail.value) {
     return;
   }
-  const input = window.prompt(`将删除题目「${detail.value.title}」，输入“删除”确认`);
-  if (input !== '删除') {
+  let value = '';
+  try {
+    const result = await ElMessageBox.prompt(`将删除题目「${detail.value.title}」，输入“删除”确认`, '删除确认', {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      inputPattern: /^删除$/,
+      inputErrorMessage: '请输入“删除”'
+    });
+    value = result.value;
+  } catch {
+    return;
+  }
+  if (value !== '删除') {
     return;
   }
   await deleteQuestion(questionId.value);
@@ -283,160 +289,83 @@ function formatDate(date: string) {
 </script>
 
 <style scoped>
-.detail-card {
+.detail-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .detail-header {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.title-block {
-  flex: 1;
+.title-block h1 {
+  margin: 0;
 }
 
 .subtitle {
-  margin: 4px 0;
-  color: #475569;
-}
-
-.meta-details {
-  margin-top: 8px;
-}
-
-.meta-details ul {
-  list-style: none;
-  padding: 0;
   margin: 8px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.meta-details li {
-  font-size: 13px;
-  color: #475569;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.meta-details span {
-  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
-}
-
-.meta-details button {
-  border: 1px solid #94a3b8;
-  background: transparent;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-.link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #2563eb;
-  cursor: pointer;
-  margin-bottom: 8px;
+  color: var(--el-text-color-secondary);
 }
 
 .action-group {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
-.danger-link {
-  background: none;
-  border: none;
-  color: #dc2626;
-  text-decoration: underline;
-  font-weight: 600;
+.mono {
+  font-family: Menlo, Consolas, monospace;
 }
 
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
-.stat-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.stat-card .label {
+.stat-label {
+  margin: 0;
   font-size: 13px;
-  color: #475569;
-  margin-bottom: 6px;
+  color: var(--el-text-color-secondary);
 }
 
-.stat-card .value {
+.stat-value {
+  margin: 8px 0 0;
   font-size: 20px;
   font-weight: 600;
 }
 
-.stat-card .value.placeholder {
-  color: #94a3b8;
+.stat-value.placeholder {
+  color: var(--el-text-color-secondary);
+}
+
+.stat-hint {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 
 .content-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.options-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.options-table th,
-.options-table td {
-  border: 1px solid #e2e8f0;
-  padding: 8px;
-  vertical-align: top;
-}
-
-.options-table .option-key {
-  width: 80px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.option-content :deep(.math-view) {
-  background: transparent;
-  padding: 0;
-}
-
-.result-cell {
-  width: 120px;
-  text-align: center;
-}
-
-.badge {
-  display: inline-flex;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge.success {
-  background: rgba(34, 197, 94, 0.15);
-  color: #047857;
+.content-section h3 {
+  margin: 0;
 }
 
 .muted {
-  color: #94a3b8;
-  font-size: 14px;
+  color: var(--el-text-color-secondary);
+}
+
+@media (max-width: 768px) {
+  .detail-header {
+    flex-direction: column;
+  }
 }
 </style>

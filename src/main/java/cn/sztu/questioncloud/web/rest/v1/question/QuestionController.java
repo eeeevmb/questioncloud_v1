@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.web.rest.v1.question;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
@@ -25,19 +26,22 @@ public class QuestionController {
 
     /**
      * 创建单题
-     * @return 题目ID
+     *
+     * @param req 创建题目请求
+     * @return 创建结果响应
      */
     @PostMapping
     public ResultVO<QuestionCreatedVO> createQuestion(@Valid @RequestBody CreateQuestionReq req) {
-        return ResultVO.success(questionAppService.createQuestion(req));
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(questionAppService.createQuestion(req, userId));
     }
 
     /**
      * 更新单题
      *
-     * @param req 更新题目请求
+     * @param req        更新题目请求
      * @param questionId 题目ID
-     * @return 无
+     * @return 更新结果响应
      */
     @PutMapping("{questionId}")
     public ResultVO<Void> updateQuestion(@Valid @RequestBody UpdateQuestionReq req,
@@ -50,7 +54,7 @@ public class QuestionController {
      * 删除题目
      *
      * @param questionId 题目ID
-     * @return 无
+     * @return 删除结果响应
      */
     @DeleteMapping("{questionId}")
     public ResultVO<Void> deleteQuestion(@PathVariable Long questionId) {
@@ -60,11 +64,13 @@ public class QuestionController {
 
     /**
      * 查询单题详情
+     *
      * @return 题目详情视图
      */
     @GetMapping("{questionId}")
     public ResultVO<QuestionDetailVO> getQuestionDetail(@PathVariable Long questionId) {
-        return ResultVO.success(questionAppService.getQuestionDetailById(questionId));
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(questionAppService.getQuestionDetailById(questionId, userId));
     }
 
 }

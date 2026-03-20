@@ -1,0 +1,56 @@
+package cn.sztu.questioncloud.infrastructure.common.ai.constant;
+
+/**
+ * 供大模型在工具调用时阅读的说明文档。
+ *
+ * <p>用于向模型解释各工具的用途、触发时机、返回值语义与注意事项，帮助模型在合适的场景下正确调用工具。</p>
+ */
+public class QuestionToolDocs {
+    public static final String CREATE_QUESTION = """
+    【createQuestion】在题集中添加题目。
+    何时调用：用户明确提出“新增/创建题目”或你需要把用户给出的题目落库时。
+    返回：ToolResult<Void>
+      - success=true: data 为 null
+      - success=false: code/message 给出失败原因（必须把 message 反馈给用户，并提示补充/修正参数后重试）
+    注意：
+    - 不要臆造 typeCode/options 等；缺信息就先追问或让用户选择。
+    - difficulty 可省略；省略时系统默认 0.50（不要传 null）。
+    """;
+
+    public static final String GET_QUESTION_DETAIL = """
+    【getQuestionDetail】获取“当前会话上下文中已选题目”的详情列表（题干、选项、答案、解析、难度等）。
+    入参：
+    - memoryId：会话记忆ID（由 @ToolMemoryId 自动注入；调用时无需手动传）
+    
+    何时调用：
+    - 用户说“讲解这道题/这题答案是什么/给这几道题解析”，且前端已通过 UI 选择题目作为上下文
+    
+    返回：ToolResult<List<QuestionDetail>>
+    - success=true：data 为题目详情列表（可能为空列表）
+    - success=false：code/message 说明原因（例如上下文不存在/已过期、题目不存在、无权限）
+    
+    注意：
+    - 调用该工具不需要手动注入任何参数，工具内部自动从上下文中获取
+    - 回答必须以返回的题干/选项为准，不要自行改写题干或选项文本。
+    - 若 data 为空列表，应提示用户先在 UI 选择题目或先进行搜索。
+    """;
+
+    public static final String RAG_SEARCH = """
+    【searchQuestion】根据用户的模糊描述，在“当前题集”内检索，返回候选题列表（用于定位题目）。
+    何时调用：用户说“找一下类似的题/我记得有道题大概是…/讲解一下这道题”但无法定位具体哪道题。
+    
+    返回：ToolResult<List<QuestionHitDTO>>
+    - success=true：data 为候选题列表（最多 topK 条）
+    - 每条候选题包含：
+      - matchRank：候选序号（从 1 开始），仅用于让用户选择“第几条候选题”
+      - stemPreview：题干预览（截断）
+      - typeCode / difficulty：辅助信息
+    
+    使用方式：
+    1) 你必须把候选题按 matchRank=1..K 列给用户（输出序号 + 题干预览 + 题型/难度）。
+    2) 让用户回复“选第N条/就是第N条”或补充更多关键词，再继续检索或获取详情。
+    
+    注意：
+    - 候选题仅用于定位，不代表最终答案；用户选中后再调用 getQuestionDetail。
+    """;
+}

@@ -1,128 +1,94 @@
 <template>
-  <section class="card">
-    <header class="section-header">
-      <div>
-        <h2 v-if="collectionName">题集「{{ collectionName }}」</h2>
-        <h2 v-else>题集</h2>
-        <p>筛选条件将直接翻译为查询参数。</p>
+  <el-card>
+    <template #header>
+      <div class="section-header">
+        <div>
+          <h2 v-if="collectionName">题集「{{ collectionName }}」</h2>
+          <h2 v-else>题集</h2>
+          <p>筛选条件将直接翻译为查询参数。</p>
+        </div>
+        <el-button type="primary" @click="goToCreate">添加题目</el-button>
       </div>
-      <button class="primary-btn" type="button" @click="goToCreate">
-        添加题目
-      </button>
-    </header>
-    <form class="form-grid filter-form" @submit.prevent="loadQuestions">
-      <label>
-        关键词
-        <input v-model="filters.keyword" placeholder="标题关键字" />
-      </label>
-      <label>
-        题型
-        <select v-model="filters.typeCode">
-          <option value="">全部</option>
-          <option v-for="type in questionTypes" :key="type.code" :value="type.code">
-            {{ type.label }}
-          </option>
-        </select>
-      </label>
-      <label>
-        难度下限
-        <input
-          v-model.number="filters.levelMin"
-          type="number"
-          step="0.01"
-          min="0"
-          max="1"
-          inputmode="decimal"
-          placeholder="0.00"
-        />
-      </label>
-      <label>
-        难度上限
-        <input
-          v-model.number="filters.levelMax"
-          type="number"
-          step="0.01"
-          min="0"
-          max="1"
-          inputmode="decimal"
-          placeholder="1.00"
-        />
-      </label>
-      <label>
-        排序字段
-        <select v-model="filters.sortField">
-          <option value="updatedAt">更新时间</option>
-          <option value="createdAt">创建时间</option>
-          <option value="difficulty">难度</option>
-          <option value="correctRate">正确率</option>
-        </select>
-      </label>
-      <label>
-        排序方向
-        <select v-model="filters.sortDirection">
-          <option value="DESC">降序</option>
-          <option value="ASC">升序</option>
-        </select>
-      </label>
-      <div class="filter-actions">
-        <span class="error" v-if="levelError">{{ levelError }}</span>
-        <button class="primary-btn" type="submit" :disabled="loading || Boolean(levelError)">
-          {{ loading ? '筛选中...' : '应用筛选' }}
-        </button>
-      </div>
-    </form>
+    </template>
 
-    <div v-if="loading">加载中...</div>
-    <div v-else>
-      <table class="table" v-if="page">
-        <thead>
-          <tr>
-            <th>题目</th>
-            <th>题型</th>
-            <th>版本</th>
-            <th>难度</th>
-            <th>正确率</th>
-            <th>更新时间</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        <tr v-for="row in page.records" :key="row.id">
-            <td>
-              <div class="title-cell">
-                <div>{{ row.title }}</div>
-              </div>
-            </td>
-            <td>
-              <span :title="row.typeCode">{{ getTypeLabel(row.typeCode) }}</span>
-            </td>
-            <td>{{ row.versionNo }}</td>
-            <td>
-              <span :title="row.difficulty == null ? '暂无难度数据' : ''">
-                {{ formatDifficulty(row.difficulty) }}
-              </span>
-            </td>
-            <td>
-              <span :title="row.correctRate == null ? '暂无作答数据' : ''">
-                {{ formatPercent(row.correctRate) }}
-              </span>
-            </td>
-            <td>{{ formatDate(row.updatedAt) }}</td>
-            <td>
-              <button class="primary-btn" type="button" @click="openDetail(row.id)">
-                查看
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="pagination" v-if="page">
-        <button class="secondary-btn" type="button" :disabled="filters.pageNum === 1" @click="changePage(filters.pageNum - 1)">上一页</button>
-        <span>第 {{ filters.pageNum }} / {{ page.pages || 1 }} 页，共 {{ page.total }} 条</span>
-        <button class="secondary-btn" type="button" :disabled="!page.hasNext" @click="changePage(filters.pageNum + 1)">下一页</button>
+    <el-form label-position="top" class="filter-form">
+      <div class="filter-grid">
+        <el-form-item label="关键词">
+          <el-input v-model="filters.keyword" placeholder="标题关键字" clearable />
+        </el-form-item>
+        <el-form-item label="题型">
+          <el-select v-model="filters.typeCode" placeholder="全部" clearable>
+            <el-option v-for="type in questionTypes" :key="type.code" :label="type.label" :value="type.code" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="难度下限">
+          <el-input-number v-model="filters.levelMin" :min="0" :max="1" :step="0.01" :precision="2" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="难度上限">
+          <el-input-number v-model="filters.levelMax" :min="0" :max="1" :step="0.01" :precision="2" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="排序字段">
+          <el-select v-model="filters.sortField">
+            <el-option label="更新时间" value="updatedAt" />
+            <el-option label="创建时间" value="createdAt" />
+            <el-option label="难度" value="difficulty" />
+            <el-option label="正确率" value="correctRate" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="排序方向">
+          <el-select v-model="filters.sortDirection">
+            <el-option label="降序" value="DESC" />
+            <el-option label="升序" value="ASC" />
+          </el-select>
+        </el-form-item>
       </div>
+      <el-alert v-if="levelError" :title="levelError" type="error" :closable="false" class="level-error" />
+      <div class="filter-actions">
+        <el-button type="primary" :loading="loading" :disabled="Boolean(levelError)" @click="loadQuestions">应用筛选</el-button>
+        <el-button @click="resetFilters">重置</el-button>
+      </div>
+    </el-form>
+
+    <el-table v-loading="loading" :data="page?.records ?? []" border>
+      <el-table-column prop="title" label="题目" min-width="260" />
+      <el-table-column prop="typeCode" label="题型" min-width="110">
+        <template #default="{ row }">
+          <el-tag>{{ getTypeLabel(row.typeCode) }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="versionNo" label="版本" width="80" />
+      <el-table-column prop="difficulty" label="难度" width="110">
+        <template #default="{ row }">{{ formatDifficulty(row.difficulty) }}</template>
+      </el-table-column>
+      <el-table-column prop="correctRate" label="正确率" width="110">
+        <template #default="{ row }">{{ formatPercent(row.correctRate) }}</template>
+      </el-table-column>
+      <el-table-column prop="updatedAt" label="更新时间" min-width="180">
+        <template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="100" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link @click="openDetail(row.id)">查看</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-empty v-if="!loading && page && !page.records.length" description="暂无题目" />
+
+    <div class="pagination-wrap" v-if="page">
+      <span class="page-summary">{{ pageSummary }}</span>
+      <el-pagination
+        v-model:current-page="filters.pageNum"
+        v-model:page-size="filters.pageSize"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        :total="page.total"
+        :hide-on-single-page="false"
+        :disabled="loading"
+        @current-change="onPageChange"
+        @size-change="onSizeChange"
+      />
     </div>
-  </section>
+  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -178,6 +144,18 @@ const levelError = computed(() => {
   return '';
 });
 
+const pageSummary = computed(() => {
+  const currentPage = page.value;
+  if (!currentPage) {
+    return '';
+  }
+  const total = Number.isFinite(currentPage.total) ? currentPage.total : 0;
+  const pageSize = currentPage.pageSize || filters.pageSize || 10;
+  const pageNum = currentPage.pageNum || filters.pageNum || 1;
+  const pages = Math.max(currentPage.pages || Math.ceil(total / Math.max(pageSize, 1)) || 1, 1);
+  return `共 ${total} 条 · 第 ${Math.min(pageNum, pages)} / ${pages} 页`;
+});
+
 watch(() => route.params.collectionId, () => {
   filters.pageNum = 1;
   loadQuestions();
@@ -200,7 +178,7 @@ async function loadQuestions() {
   }
   loading.value = true;
   try {
-    page.value = await fetchCollectionQuestions(collectionId.value, {
+    const response = await fetchCollectionQuestions(collectionId.value, {
       pageNum: filters.pageNum,
       pageSize: filters.pageSize,
       keyword: filters.keyword || undefined,
@@ -210,6 +188,9 @@ async function loadQuestions() {
       levelMin: filters.levelMin ?? undefined,
       levelMax: filters.levelMax ?? undefined
     });
+    page.value = normalizeQuestionPage(response);
+    filters.pageNum = page.value.pageNum || filters.pageNum;
+    filters.pageSize = page.value.pageSize || filters.pageSize;
   } catch (error) {
     // 统一拦截
   } finally {
@@ -217,8 +198,59 @@ async function loadQuestions() {
   }
 }
 
-function changePage(pageNum: number) {
+function normalizeInteger(value: unknown, fallback: number, min = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  const normalized = Math.trunc(parsed);
+  return normalized < min ? min : normalized;
+}
+
+function normalizeQuestionPage(raw: unknown): QuestionSummaryPage {
+  const payload = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const recordsRaw = payload.records ?? payload.list ?? payload.items ?? [];
+  const records = Array.isArray(recordsRaw) ? recordsRaw : [];
+  const pageSize = normalizeInteger(payload.pageSize ?? payload.size, filters.pageSize || 10, 1);
+  const total = normalizeInteger(payload.total, records.length, 0);
+  const pageNum = normalizeInteger(payload.pageNum ?? payload.current ?? payload.page, filters.pageNum || 1, 1);
+  const pages = normalizeInteger(payload.pages ?? payload.pageCount, Math.max(Math.ceil(total / pageSize), 1), 1);
+  return {
+    records: records as QuestionSummaryPage['records'],
+    total,
+    pageNum,
+    pageSize,
+    pages,
+    hasPrevious: Boolean(payload.hasPrevious ?? pageNum > 1),
+    hasNext: Boolean(payload.hasNext ?? pageNum < pages)
+  };
+}
+
+function onPageChange(pageNum: number) {
+  if (loading.value) {
+    return;
+  }
   filters.pageNum = pageNum;
+  void loadQuestions();
+}
+
+function onSizeChange(pageSize: number) {
+  if (loading.value) {
+    return;
+  }
+  filters.pageSize = pageSize;
+  filters.pageNum = 1;
+  void loadQuestions();
+}
+
+function resetFilters() {
+  filters.keyword = '';
+  filters.typeCode = '';
+  filters.sortField = 'updatedAt';
+  filters.sortDirection = 'DESC';
+  filters.levelMin = undefined;
+  filters.levelMax = undefined;
+  filters.pageNum = 1;
   loadQuestions();
 }
 
@@ -264,7 +296,7 @@ async function resolveCollectionName() {
   nameLoading.value = true;
   try {
     const allCollections: CollectionView[] = await fetchCollections();
-    const match = allCollections.find((item) => item.id === collectionId.value);
+    const match = allCollections.find((item) => item.collectionId === collectionId.value);
     collectionName.value = match?.name ?? '';
   } finally {
     nameLoading.value = false;
@@ -276,45 +308,59 @@ async function resolveCollectionName() {
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.section-header p {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
 }
 
 .filter-form {
-  border-top: 1px solid #e2e8f0;
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-bottom: 16px;
+}
+
+.filter-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.level-error {
+  margin-bottom: 12px;
 }
 
 .filter-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   gap: 8px;
 }
 
-.filter-actions .error {
-  color: #dc2626;
-  font-size: 13px;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.pagination-wrap {
   margin-top: 16px;
-}
-
-.secondary-btn:disabled,
-.primary-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-
-.title-cell {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
+.page-summary {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+  }
+
+  .pagination-wrap {
+    align-items: flex-start;
+  }
+}
 </style>

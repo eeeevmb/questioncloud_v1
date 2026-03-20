@@ -24,6 +24,12 @@ public class CommonFileController {
         this.mediaTypeResolver = mediaTypeResolver;
     }
 
+    /**
+     * 上传文件
+     *
+     * @param file 文件
+     * @return     上传结果响应
+     */
     @PostMapping(value = "/file", consumes = {"multipart/form-data"})
     public ResultVO<FileUploadVO> uploadFile(@RequestParam("file") MultipartFile file) {
         return ResultVO.success(commonAppService.uploadFile(file));

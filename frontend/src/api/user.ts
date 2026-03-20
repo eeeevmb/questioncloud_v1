@@ -35,7 +35,7 @@ export function fetchBasicInfo() {
 export function uploadAvatar(file: File) {
   const formData = new FormData();
   formData.append('file', file);
-  return apiClient.post<AvatarResponse>('/api/v1/user/upload-avatar', formData, {
+  return apiClient.post<AvatarResponse>('/api/v1/user/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 }

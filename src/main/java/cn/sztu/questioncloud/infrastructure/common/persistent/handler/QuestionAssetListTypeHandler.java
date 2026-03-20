@@ -1,6 +1,6 @@
 package cn.sztu.questioncloud.infrastructure.common.persistent.handler;
 
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionAsset;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionAsset;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

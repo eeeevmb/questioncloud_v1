@@ -9,7 +9,9 @@ import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class QuestionStatRepositoryImpl implements QuestionStatRepository {
@@ -33,6 +35,19 @@ public class QuestionStatRepositoryImpl implements QuestionStatRepository {
                 .eq(QuestionStat::getQuestionId, questionId)
                 .limit(1)
                 .get();
+    }
+
+    /**
+     * 根据题目ID列表批量查询统计数据
+     *
+     * @param questionIds 题目ID列表
+     * @return 统计数据表
+     */
+    @Override
+    public Map<Long, QuestionStat> getByQuestionIds(Collection<Long> questionIds) {
+        return QueryChain.of(questionStatMapper)
+                .in(QuestionStat::getQuestionId, questionIds)
+                .mapWithKey(QuestionStat::getQuestionId);
     }
 
     /**
