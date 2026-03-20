@@ -31,6 +31,15 @@ public interface QuestionCollectionService {
     CollectionVO createCollection(CreateCollectionReq req);
 
     /**
+     * 批量创建题集
+     *
+     * @param reqs 批量创建请求
+     * @return 题集视图列表
+     */
+    List<CollectionVO> createCollections(List<CreateCollectionReq> reqs);
+
+
+    /**
      * 更新题集
      *
      * @param req 更新题集请求

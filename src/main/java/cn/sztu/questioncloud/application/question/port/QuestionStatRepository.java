@@ -2,7 +2,9 @@ package cn.sztu.questioncloud.application.question.port;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface QuestionStatRepository {
     /**
@@ -12,6 +14,14 @@ public interface QuestionStatRepository {
      * @return 统计数据
      */
     QuestionStat getByQuestionId(Long questionId);
+
+    /**
+     * 根据题目ID列表批量查询统计数据
+     *
+     * @param questionIds 题目ID列表
+     * @return            统计数据表
+     */
+    Map<Long, QuestionStat> getByQuestionIds(Collection<Long> questionIds);
 
     /**
      * 根据实体更新统计数据

@@ -8,6 +8,7 @@ import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.application.user.enums.UserStatusEnum;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
@@ -58,11 +59,11 @@ public class UserAccountServiceImpl implements UserAccountService {
      * 用户注册
      *
      * @param request 注册请求
-     * @return 用户id
+     * @return 注册响应
      */
     @Override
     @Transactional
-    public Long register(RegisterReq request) {
+    public RegisterVO register(RegisterReq request) {
         if (userPresenceCheckerPort.existsByUsername(request.username())) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该用户名已被使用");
         }
@@ -80,7 +81,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
         userEventPublisher.publishUserRegistered(newUser.getId());
 
-        return newUser.getId();
+        return new RegisterVO(newUser.getId());
     }
 
     /**

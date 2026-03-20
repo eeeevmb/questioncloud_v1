@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.user.service;
 
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
+import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
 import cn.sztu.questioncloud.web.rest.v1.user.req.LoginReq;
 import cn.sztu.questioncloud.web.rest.v1.user.req.RegisterReq;
@@ -10,9 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
 public interface UserAccountService {
     /**
      * 注册新用户
-     * @return 用户id
+     * @return 注册响应
      */
-    Long register(RegisterReq request);
+    RegisterVO register(RegisterReq request);
 
     /**
      * 用户登录

@@ -1,5 +1,5 @@
 <template>
-  <section class="card">
+  <el-card>
     <h2>MathView 渲染示例</h2>
     <p>以下示例涵盖行内公式、块级公式和 align* 环境。</p>
     <div class="sample-block">
@@ -14,7 +14,7 @@
       <h3>Align 环境</h3>
       <MathView :content="alignContent" />
     </div>
-  </section>
+  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -31,5 +31,9 @@ const alignContent = `\\begin{align*}
 <style scoped>
 .sample-block {
   margin-top: 16px;
+}
+
+.sample-block h3 {
+  margin: 0 0 8px;
 }
 </style>

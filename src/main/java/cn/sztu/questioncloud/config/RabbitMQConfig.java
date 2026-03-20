@@ -16,8 +16,15 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 @Configuration
 public class RabbitMQConfig {
     public static final String USER_EXCHANGE_NAME = "user.topic";
-    public static final String USER_QUEUE_NAME = "user.registered.topic";
+    public static final String USER_QUEUE_NAME = "user.registered.queue";
     public static final String USER_REGISTERED_KEY = "user.registered";
+
+    public static final String QUESTION_EXCHANGE_NAME = "question.topic";
+    public static final String QUESTION_QUEUE_NAME = "question.vector.queue";
+    public static final String QUESTION_ALL_KEY = "question.*";
+    public static final String QUESTION_CREATED_KEY = "question.created";
+    public static final String QUESTION_DELETED_KEY = "question.deleted";
+    public static final String QUESTION_UPDATED_KEY = "question.updated";
 
     /**
      * 配置JacksonConverter
@@ -53,6 +60,11 @@ public class RabbitMQConfig {
         return new TopicExchange(USER_EXCHANGE_NAME, true, false);
     }
 
+    @Bean
+    public TopicExchange questionEventExchange() {
+        return new TopicExchange(QUESTION_EXCHANGE_NAME, true, false);
+    }
+
     /**
      * 声明注册事件队列
      * durable:持久化，默认false
@@ -62,6 +74,11 @@ public class RabbitMQConfig {
     @Bean
     public Queue userRegisteredQueue() {
         return new Queue(USER_QUEUE_NAME, true, false, false);
+    }
+
+    @Bean
+    public Queue questionVectorQueue() {
+        return new Queue(QUESTION_QUEUE_NAME, true, false, false);
     }
 
     /**
@@ -76,5 +93,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(userRegisteredQueue)
                 .to(userEventExchange)
                 .with(USER_REGISTERED_KEY);
+    }
+
+    @Bean
+    public Binding questionQueueBinding(TopicExchange questionEventExchange,
+                                        Queue questionVectorQueue) {
+        return BindingBuilder.bind(questionVectorQueue)
+                .to(questionEventExchange)
+                .with(QUESTION_ALL_KEY);
     }
 }

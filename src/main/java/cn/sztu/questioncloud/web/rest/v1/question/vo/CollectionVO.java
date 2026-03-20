@@ -1,7 +1,9 @@
 package cn.sztu.questioncloud.web.rest.v1.question.vo;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.xbatis.db.annotations.ResultEntity;
+import cn.xbatis.db.annotations.ResultEntityField;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,7 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @ResultEntity(QuestionCollectionEntity.class)
 public class CollectionVO {
-    private Long id;
+    @ResultEntityField(property = "id")
+    private Long collectionId;
     private String name;
     private String description;
 

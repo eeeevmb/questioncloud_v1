@@ -58,6 +58,24 @@ const router = createRouter({
       name: 'avatar-edit',
       component: () => import('../views/AvatarCropView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/agent-demo',
+      name: 'agent-demo',
+      component: () => import('../views/AgentDemoView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/imports',
+      name: 'imports',
+      component: () => import('../views/ImportsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/imports/:importId',
+      name: 'import-detail',
+      component: () => import('../views/ImportDetailView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 });

@@ -8,7 +8,12 @@ services:
       MYSQL_USER: questioncloud
       MYSQL_PASSWORD: ${QC_MYSQL_PASSWORD}
     volumes:
-      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./src/main/resources/sql/question_domain.sql:/docker-entrypoint-initdb.d/01_question_domain.sql:ro
+      - ./src/main/resources/sql/exam_domain.sql:/docker-entrypoint-initdb.d/02_exam_domain.sql:ro
+      - ./src/main/resources/sql/infra_file.sql:/docker-entrypoint-initdb.d/03_infra_file.sql:ro
+      - ./src/main/resources/sql/user.sql:/docker-entrypoint-initdb.d/04_user.sql:ro
+      - ./src/main/resources/sql/agent_domain.sql:/docker-entrypoint-initdb.d/05_agent_domain.sql:ro
+      - ./src/main/resources/sql/init_agent.sql:/docker-entrypoint-initdb.d/06_init_agent.sql:ro
       - qc_mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
@@ -29,6 +34,17 @@ services:
       RABBITMQ_DEFAULT_USER: ${QC_RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${QC_RABBITMQ_PASS}
 
+  chroma:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    volumes:
+      - qc_chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/api/v1/heartbeat >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
   backend:
     build:
       context: .
@@ -41,11 +57,15 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_started
+      chroma:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       MYSQL_PASSWORD: ${QC_MYSQL_PASSWORD}
       RABBITMQ_DEFAULT_USER: ${QC_RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${QC_RABBITMQ_PASS}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
+      CHROMA_BASE_URL: http://chroma:8000
     ports:
       - "${QC_BACKEND_PORT}:8080"
     volumes:
@@ -65,3 +85,4 @@ volumes:
   qc_mysql_data:
   qc_redis_data:
   qc_storage:
+  qc_chroma_data:

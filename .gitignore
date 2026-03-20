@@ -1,4 +1,6 @@
 HELP.md
+AGENTS.md
+identifier.sqlite
 target/
 src/main/resources/application-local.yml
 .mvn/wrapper/maven-wrapper.jar

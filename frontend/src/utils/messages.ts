@@ -1,11 +1,15 @@
 export type MessageType = 'info' | 'success' | 'error';
+import { ElMessage } from 'element-plus';
 
 function emit(type: MessageType, message: string) {
   if (!message) {
     return;
   }
-  const prefix = type === 'error' ? '错误' : type === 'success' ? '成功' : '提示';
-  window.alert(`${prefix}: ${message}`);
+  ElMessage({
+    type,
+    message,
+    showClose: true
+  });
 }
 
 export function showError(message: string) {

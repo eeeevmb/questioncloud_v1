@@ -27,6 +27,26 @@ spring:
       port: 6379
       timeout: 3s
 
+langchain4j:
+  community:
+    dashscope:
+      chat-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: qwen-plus
+      streaming-chat-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: qwen-plus
+      embedding-model:
+        api-key: ${DASHSCOPE_API_KEY:}
+        model-name: text-embedding-v4
+
+chroma:
+  base-url: ${CHROMA_BASE_URL:http://chroma:8000}
+  collection: questions
+  api-version: V2
+  log-requests: true
+  log-responses: true
+
 server:
   port: 8080
 

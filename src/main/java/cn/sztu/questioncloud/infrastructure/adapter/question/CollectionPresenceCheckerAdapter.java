@@ -6,6 +6,8 @@ import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.Qu
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class CollectionPresenceCheckerAdapter implements CollectionPresenceCheckerPort {
     private final QuestionCollectionMapper questionCollectionMapper;
@@ -40,5 +42,28 @@ public class CollectionPresenceCheckerAdapter implements CollectionPresenceCheck
         return QueryChain.of(questionCollectionMapper)
                 .eq(QuestionCollectionEntity::getId, collectionId)
                 .exists();
+    }
+
+    @Override
+    public boolean existsByOwnerIdAndName(Long ownerId, String name) {
+        return QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getOwnerId, ownerId)
+                .eq(QuestionCollectionEntity::getName, name)
+                .exists();
+    }
+
+    @Override
+    public List<String> findExistingNames(Long ownerId, List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return List.of();
+        }
+        return QueryChain.of(questionCollectionMapper)
+                .eq(QuestionCollectionEntity::getOwnerId, ownerId)
+                .in(QuestionCollectionEntity::getName, names)
+                .select(QuestionCollectionEntity::getName)
+                .list()
+                .stream()
+                .map(QuestionCollectionEntity::getName)
+                .toList();
     }
 }

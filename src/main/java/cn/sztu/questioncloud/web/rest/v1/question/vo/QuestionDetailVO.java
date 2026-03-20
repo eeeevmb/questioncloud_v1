@@ -1,14 +1,12 @@
 package cn.sztu.questioncloud.web.rest.v1.question.vo;
 
 import cn.sztu.questioncloud.common.json.TwoDecimalDoubleSerializer;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.xbatis.db.annotations.ResultEntity;
 import cn.xbatis.db.annotations.ResultEntityField;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Data;
 

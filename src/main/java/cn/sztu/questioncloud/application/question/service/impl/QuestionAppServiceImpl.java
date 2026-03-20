@@ -4,12 +4,15 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventMessage;
+import cn.sztu.questioncloud.application.question.messaging.QuestionEventPublisher;
 import cn.sztu.questioncloud.application.question.port.*;
 import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
+import cn.sztu.questioncloud.infrastructure.adapter.utils.QuestionUtils;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
@@ -19,6 +22,7 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionRepository questionRepository;
     private final QuestionVersionRepository questionVersionRepository;
@@ -38,19 +43,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionQueryRepository queryRepository;
     private final QuestionStatRepository questionStatRepository;
     private final CollectionItemRepository collectionItemRepository;
+    private final QuestionEventPublisher questionEventPublisher;
     public static final Integer INITIAL_VERSION = 1;
     public static final Integer INITIAL_COUNT = 0;
     public static final Double INITIAL_EXP = 1.00;
-
-
-    public QuestionAppServiceImpl(QuestionRepository questionRepository, QuestionVersionRepository questionVersionRepository, QuestionCollectionRepository questionCollectionRepository, QuestionQueryRepository queryRepository, CollectionItemRepository collectionItemRepository, QuestionStatRepository questionStatRepository) {
-        this.questionRepository = questionRepository;
-        this.questionVersionRepository = questionVersionRepository;
-        this.questionCollectionRepository = questionCollectionRepository;
-        this.queryRepository = queryRepository;
-        this.collectionItemRepository = collectionItemRepository;
-        this.questionStatRepository = questionStatRepository;
-    }
 
     /**
      * 创建题目
@@ -60,9 +56,8 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public QuestionCreatedVO createQuestion(CreateQuestionReq req) {
-        // 1. 获取用户ID
-        Long userId = StpUtil.getLoginIdAsLong();
+    public QuestionCreatedVO createQuestion(CreateQuestionReq req, Long userId) {
+        String normalizedTypeCode = req.getTypeCode() == null ? null : req.getTypeCode().trim().toLowerCase();
 
         // 2. 权限检验
         QuestionCollectionEntity collectionEntity = questionCollectionRepository.findById(req.getCollectionId())
@@ -73,7 +68,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         }
 
         // 3. 校验题型
-        if (!QuestionTypeEnum.ensureValid(req.getTypeCode())){
+        if (!QuestionTypeEnum.ensureValid(normalizedTypeCode)){
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
 
@@ -93,14 +88,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         QuestionVersionEntity versionEntity = QuestionVersionEntity.builder()
                 .id(questionVersionId)
-                .typeCode(req.getTypeCode())
+                .typeCode(normalizedTypeCode)
                 .questionId(questionId)
                 .versionNo(INITIAL_VERSION)
                 .title(req.getTitle())
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(getAnswerKey(req.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
+                .answerKey(QuestionUtils.getAnswerKey(normalizedTypeCode, req.getCorrectOptions(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)
@@ -136,7 +131,15 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         questionStatRepository.save(stat);
 
-        // 7. 返回题目创建视图
+        // 7. 异步向量化入库
+        questionEventPublisher.publishCreated(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .versionId(questionVersionId)
+                        .collectionId(req.getCollectionId())
+                        .ownerId(userId)
+                        .occurredAt(now).build());
+
+        // 8. 返回题目创建视图
         return QuestionCreatedVO.builder()
                 .questionId(questionId)
                 .questionVersionId(questionVersionId)
@@ -148,11 +151,11 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      * 根据题目ID查询题目详情
      *
      * @param questionId 题目ID
+     * @param userId     用户ID
      * @return 题目详情视图
      */
     @Override
-    public QuestionDetailVO getQuestionDetailById(Long questionId) {
-        Long userId = StpUtil.getLoginIdAsLong();
+    public QuestionDetailVO getQuestionDetailById(Long questionId, Long userId) {
         Optional<QuestionDetailVO> detailVO = queryRepository.getQuestionDetailById(questionId);
 
         // 1. 校验结果以及权限验证
@@ -212,7 +215,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                 .stem(req.getStem())
                 .options(req.getOptions())
                 .answer(req.getAnswer())
-                .answerKey(getAnswerKey(versionEntity.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
+                .answerKey(QuestionUtils.getAnswerKey(versionEntity.getTypeCode(), req.getCorrectOptions(), req.getJudgeAnswer()))
                 .solution(req.getSolution())
                 .assets(req.getAssets())
                 .createdBy(userId)
@@ -234,6 +237,16 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         questionVersionRepository.save(newVersionEntity);
         questionRepository.update(questionEntity);
         questionStatRepository.update(questionStat);
+
+        // 9. 发布题目领域事件
+        Long collectionId = collectionItemRepository.findByQuestionIdAndVersionId(questionId, newVersionId).getCollectionId();
+        questionEventPublisher.publishUpdated(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .versionId(newVersionId)
+                        .collectionId(collectionId)
+                        .ownerId(userId)
+                        .occurredAt(now)
+                        .build());
     }
 
     /**
@@ -258,7 +271,13 @@ public class QuestionAppServiceImpl implements QuestionAppService {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
 
-        // 3. 删除实体
+        // 3. 发布题库领域事件
+        questionEventPublisher.publishDeleted(QuestionEventMessage.builder()
+                        .questionId(questionId)
+                        .occurredAt(LocalDateTime.now())
+                        .build());
+
+        // 4. 删除实体
         collectionItemRepository.deleteByQuestionId(questionId);
         questionStatRepository.deleteByQuestionId(questionId);
         questionVersionRepository.deleteByQuestionId(questionId);
@@ -289,61 +308,5 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         Pager<QuestionSummaryVO> paging = queryRepository.findPageByCollectionId(collectionId, query);
 
         return PageResult.of(paging.getResults(), paging.getTotal(), query);
-    }
-
-    private static String getAnswerKey(String typeCode,
-                                       List<String> correctOptions,
-                                       String judgeAnswer) {
-        // 单选
-        if (QuestionTypeEnum.SINGLE_CHOICE.getCode().equals(typeCode)) {
-            if (correctOptions == null || correctOptions.size() != 1) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
-                        "单选题只能有一个正确选项");
-            }
-            return normalizeOption(correctOptions.getFirst());
-        }
-
-        // 多选
-        if (QuestionTypeEnum.MULTIPLE_CHOICE.getCode().equals(typeCode)) {
-            if (correctOptions == null || correctOptions.isEmpty()) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
-                        "多选题至少要有一个正确选项");
-            }
-            return correctOptions.stream()
-                    .filter(Objects::nonNull)
-                    .map(QuestionAppServiceImpl::normalizeOption)
-                    .distinct()
-                    .sorted()
-                    .collect(Collectors.joining());
-        }
-
-//        // 填空
-//        if (QuestionTypeEnum.FILL_IN_BLANK.getCode().equals(typeCode)) {
-//            return (answer == null) ? "" : answer;
-//        }
-
-        // 判断
-        if (QuestionTypeEnum.TRUE_FALSE.getCode().equals(typeCode)) {
-            if (judgeAnswer == null) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
-                        "判断题答案不能为空");
-            }
-            String ans = judgeAnswer.trim().toUpperCase();
-            if (!"T".equals(ans) && !"F".equals(ans)) {
-                throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED,
-                        "判断题答案必须为 T 或者 F");
-            }
-            return ans;
-        }
-
-        // 其它题型目前不参与机器判分
-        return "";
-    }
-
-    private static String normalizeOption(String option) {
-        if (option == null) {
-            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_SAVE_FAILED ,"选项值不能为空");
-        }
-        return option.trim().toUpperCase();
     }
 }

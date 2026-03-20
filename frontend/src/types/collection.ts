@@ -4,7 +4,7 @@ export interface CollectionPayload {
 }
 
 export interface CollectionView {
-  id: string;
+  collectionId: string;
   name: string;
   description: string | null;
 }

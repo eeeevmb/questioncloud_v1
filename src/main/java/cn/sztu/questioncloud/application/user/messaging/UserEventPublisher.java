@@ -1,8 +1,6 @@
 package cn.sztu.questioncloud.application.user.messaging;
 
 import cn.sztu.questioncloud.config.RabbitMQConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
