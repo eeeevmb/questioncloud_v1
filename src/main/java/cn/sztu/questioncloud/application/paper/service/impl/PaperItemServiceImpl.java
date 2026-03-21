@@ -146,7 +146,7 @@ public class PaperItemServiceImpl implements PaperItemService {
             if (!QuestionTypeEnum.ensureValid(rule.getTypeCode())) {
                 throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
             }
-
+            Double targetDiff = rule.getExpectedDifficulty();
             List<QuestionDetailVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
                     req.getCollectionIds(), rule.getTypeCode());
 
@@ -163,7 +163,8 @@ public class PaperItemServiceImpl implements PaperItemService {
                         if (u <= 0) u = 1e-10;
                         double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
                                 vo.getExposureFactor(), vo.getLastExposedAt(), LocalDateTime.now());
-                        double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(effectiveExp);
+                        double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(
+                                effectiveExp, vo.getDifficulty(), targetDiff);
                         double key = PaperWeightAlgorithmUtil.calcGumbelKey(weight, u);
                         return new AbstractMap.SimpleEntry<>(key, vo);
                     })
@@ -183,6 +184,9 @@ public class PaperItemServiceImpl implements PaperItemService {
                         .typeCode(vo.getTypeCode())
                         .difficulty(vo.getDifficulty())
                         .correctRate(vo.getCorrectRate())
+                        .options(vo.getOptions())
+                        .assets(vo.getAssets())
+                        .versionNo(vo.getVersionNo())
                         .build();
 
                 finalItems.add(itemVO);
@@ -208,7 +212,7 @@ public class PaperItemServiceImpl implements PaperItemService {
         if (!QuestionTypeEnum.ensureValid(req.getTypeCode())) {
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_TYPE_ERROR);
         }
-
+        Double targetDiff = req.getExpectedDifficulty();
         // 2. 获取候选并过滤
         List<QuestionDetailVO> candidates = questionQueryRepository.findIdsByCollectionsAndType(
                 req.getCollectionIds(), req.getTypeCode());
@@ -232,7 +236,8 @@ public class PaperItemServiceImpl implements PaperItemService {
                     if (ran <= 0) ran = 1e-10;
                     double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
                             p.getExposureFactor(), p.getLastExposedAt(), LocalDateTime.now());
-                    double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(effectiveExp);
+                    double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(
+                            effectiveExp, p.getDifficulty(), targetDiff);
                     double key = PaperWeightAlgorithmUtil.calcGumbelKey(weight, ran);
                     return new AbstractMap.SimpleEntry<>(key, p);
                 })
@@ -247,6 +252,9 @@ public class PaperItemServiceImpl implements PaperItemService {
                 .typeCode(selected.getTypeCode())
                 .difficulty(selected.getDifficulty())
                 .correctRate(selected.getCorrectRate())
+                .versionNo(selected.getVersionNo())
+                .options(selected.getOptions())
+                .assets(selected.getAssets())
                 .build();
     }
 
