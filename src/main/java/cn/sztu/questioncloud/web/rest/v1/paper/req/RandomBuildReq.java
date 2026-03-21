@@ -1,5 +1,7 @@
 package cn.sztu.questioncloud.web.rest.v1.paper.req;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -26,5 +28,10 @@ public class RandomBuildReq {
 
         @NotNull(message = "题目数量不能为空")
         private Integer count;   // 例如: 5道
+
+        @Schema(description = "目标难度 0~1，可为空，为空则不进行难度加权")
+        @DecimalMin(value = "0.00", inclusive = true, message = "难度不能小于 0.00")
+        @DecimalMax(value = "1.00", inclusive = true, message = "难度不能大于 1.00")
+        private Double expectedDifficulty;
     }
 }

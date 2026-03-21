@@ -19,11 +19,7 @@ import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -207,11 +203,11 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
     @Override
     public List<QuestionDetailVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode) {
         if (collectionIds == null || collectionIds.isEmpty()) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
 
-        return QueryChain.of(questionMapper)
-                .select(QuestionSummaryVO.class)
+        List<QuestionDetailVO> rawList = QueryChain.of(questionMapper)
+                .select(QuestionDetailVO.class)
                 .from(QuestionEntity.class)
                 .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
@@ -220,10 +216,25 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
                 .in(CollectionItem::getCollectionId, collectionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
-                .groupBy(QuestionEntity::getId)
                 // 暂定按照难度升序排序
                 .orderBy(QuestionStat::getDifficulty)
                 .returnType(QuestionDetailVO.class)
                 .list();
+        /**
+         * 本查询涉及多表 JOIN (question_version, question_stats)。
+         * 使用 GROUP BY 会导致严格模式下抛出 BadSqlGrammarException。
+         */
+
+        // 去重 (应对一道题同时属于多个题集的情况)
+        List<QuestionDetailVO> distinctList = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
+
+        for (QuestionDetailVO vo : rawList) {
+            if (seenIds.add(vo.getId())) {
+                distinctList.add(vo);
+            }
+        }
+
+        return distinctList;
     }
 }
