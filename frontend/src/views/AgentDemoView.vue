@@ -49,87 +49,22 @@
 
       <el-main class="chat-main">
         <el-card shadow="never" class="toolbar-card">
-          <div class="context-board">
-            <div class="context-strip">
-              <div class="strip-section collection">
-                <span class="strip-label">当前题集</span>
-                <el-tag v-if="currentCollectionName" type="success" effect="plain">{{ currentCollectionName }}</el-tag>
-                <el-tag v-else type="warning" effect="plain">未选择题集</el-tag>
-                <el-button text size="small" :loading="collectionLoading" @click="openCollectionSwitchDialog">切换</el-button>
-              </div>
-
-              <div class="strip-section selected">
-                <span class="strip-label">已选题目</span>
-                <el-tag size="small" :type="selectedQuestionCount ? 'success' : 'info'" effect="plain">
-                  {{ selectedQuestionCount ? `已选 ${selectedQuestionCount} 道` : '无选题' }}
-                </el-tag>
-                <div v-if="selectedQuestionPreview.length" class="strip-tags">
-                  <el-tag v-for="item in selectedQuestionPreview" :key="item" size="small" effect="plain">{{ item }}</el-tag>
-                  <el-tag v-if="selectedQuestionCount > selectedQuestionPreview.length" size="small" effect="plain">
-                    +{{ selectedQuestionCount - selectedQuestionPreview.length }}
-                  </el-tag>
-                </div>
-                <span v-else class="strip-hint">先选择题目，再开始讲解</span>
-              </div>
-            </div>
-
-            <div class="tool-strip">
-              <div class="strip-actions">
-                <el-button size="small" :disabled="!hasCollectionContext" @click="openCreateQuestionDrawer">AI 出题</el-button>
-                <el-button
-                  size="small"
-                  :type="selectedQuestionCount ? 'default' : 'primary'"
-                  :disabled="!canOpenQuestionPicker"
-                  @click="openQuestionPicker('select')"
-                >
-                  选择题目
-                </el-button>
-                <el-button v-if="selectedQuestionCount" size="small" :disabled="!canOpenQuestionPicker" @click="openQuestionPicker('manage')">
-                  查看已选
-                </el-button>
-                <el-button
-                  size="small"
-                  :type="selectedQuestionCount ? 'primary' : 'default'"
-                  :plain="!selectedQuestionCount"
-                  :disabled="!canExplainSelected"
-                  @click="handleExplainSelectedQuestions"
-                >
-                  讲解已选题
-                </el-button>
-                <el-button size="small" @click="clearContext">清空选题</el-button>
-              </div>
+          <div class="workspace-toolbar">
+            <div class="toolbar-actions">
+              <el-button class="tool-btn" type="primary" :disabled="streaming" @click="handleToolbarSelectQuestions">选题学习</el-button>
+              <el-button class="tool-btn-secondary" :disabled="streaming" @click="handleToolbarCreateQuestion">AI 出题</el-button>
+              <el-button class="tool-btn-secondary" :disabled="streaming" @click="handleToolbarGeneratePaperDraft">AI 组卷</el-button>
             </div>
           </div>
-
-          <p v-if="!canExplainSelected && explainDisabledReason" class="action-tip">{{ explainDisabledReason }}</p>
         </el-card>
 
         <div ref="messageScrollRef" class="message-scroll">
-          <div class="result-head">
-            <div class="result-head-left">
-              <p class="result-head-title">学习内容区</p>
-              <p class="result-head-subtitle">这里展示题目讲解、检索结果与 AI 生成内容</p>
-            </div>
-            <div class="result-head-tags">
-              <el-tag size="small" effect="plain">{{ selectedQuestionCount ? `已选 ${selectedQuestionCount} 题` : '无选题' }}</el-tag>
-            </div>
-          </div>
-
           <div v-if="messageLoading" class="loading-wrap">
             <el-skeleton :rows="6" animated />
           </div>
           <div v-else-if="!activeMessages.length" class="empty-wrap">
             <el-empty description="开始你的题库学习">
-              <div class="quick-actions">
-                <el-button type="primary" :disabled="!canOpenQuestionPicker" @click="openQuestionPicker('select')">
-                  选择题目后讲解
-                </el-button>
-                <el-button type="success" plain :disabled="!canExplainSelected" @click="handleExplainSelectedQuestions">
-                  讲解当前已选题
-                </el-button>
-                <el-button plain :disabled="!hasCollectionContext" @click="openCreateQuestionDrawer">让 AI 出题</el-button>
-              </div>
-              <p class="empty-tip">你可以先选题一键讲解，也可以直接在下方输入你的需求。</p>
+              <p class="empty-tip">你可以先选题学习并直接讲解，或直接输入问题开始学习交流。</p>
               <div class="quick-prompts">
                 <el-button
                   v-for="prompt in quickPrompts"
@@ -159,12 +94,7 @@
         <footer class="composer-wrap">
           <el-card shadow="never" class="composer-card">
             <div class="composer-head">
-              <span class="composer-title">在当前题集中提问</span>
-              <div class="composer-shortcuts">
-                <el-button text size="small" @click="applyQuickPrompt('帮我在当前题集检索 5 道同主题题目')">搜索题目</el-button>
-                <el-button text size="small" :disabled="!canExplainSelected" @click="handleExplainSelectedQuestions">讲解已选题</el-button>
-                <el-button text size="small" :disabled="!hasCollectionContext" @click="openCreateQuestionDrawer">生成练习题</el-button>
-              </div>
+              <span class="composer-title">学习提问</span>
             </div>
             <el-input
               v-model="composerMessage"
@@ -172,11 +102,10 @@
               :rows="2"
               resize="none"
               :disabled="!activeSessionId || streaming"
-              placeholder="输入问题，搜索题目或发起讲解"
+              placeholder="输入问题，直接开始学习交流"
               @keydown.enter.exact.prevent="handleSend"
             />
             <div class="composer-footer">
-              <span class="hint">例如：找几道导数题、讲解已选题、生成同主题练习题</span>
               <div class="action-group">
                 <el-button :disabled="!streaming" @click="abortStreaming">停止生成</el-button>
                 <el-button type="primary" :loading="streaming" :disabled="!canSend" @click="handleSend">发送</el-button>
@@ -187,37 +116,37 @@
       </el-main>
     </el-container>
 
-    <el-dialog v-model="collectionSwitchVisible" title="切换题集" width="520px">
-      <el-form label-position="top">
-        <el-form-item label="当前题集">
-          <el-select v-model="collectionDraftId" filterable placeholder="请选择题集" style="width: 100%" :loading="collectionLoading">
-            <el-option
-              v-for="collection in collectionOptions"
-              :key="collection.collectionId"
-              :label="collection.name"
-              :value="collection.collectionId"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="collectionSwitchVisible = false">取消</el-button>
-        <el-button type="primary" @click="applyCollectionSwitch">确认切换</el-button>
-      </template>
-    </el-dialog>
-
     <el-drawer v-model="questionPickerVisible" size="980px" :with-header="false">
       <section class="picker-drawer">
         <div class="picker-header">
           <div>
-            <h3>选择题目</h3>
-            <p>当前题集：{{ currentCollectionName || '未选择' }}</p>
+            <h3>选题学习</h3>
+            <p>先选择题集，再检索并勾选题目。</p>
           </div>
-          <el-button text @click="questionPickerVisible = false">关闭</el-button>
+          <div class="picker-header-actions">
+            <el-button text @click="questionPickerVisible = false">关闭</el-button>
+          </div>
         </div>
 
         <el-form label-position="top" class="picker-filter-form">
           <div class="picker-filter-grid">
+            <el-form-item label="题集">
+              <el-select
+                v-model="questionPickerCollectionId"
+                filterable
+                clearable
+                placeholder="请选择题集"
+                :loading="collectionLoading"
+                @change="onQuestionPickerCollectionChange"
+              >
+                <el-option
+                  v-for="collection in collectionOptions"
+                  :key="collection.collectionId"
+                  :label="collection.name"
+                  :value="collection.collectionId"
+                />
+              </el-select>
+            </el-form-item>
             <el-form-item label="关键词">
               <el-input
                 v-model="questionPickerQuery.keyword"
@@ -262,15 +191,23 @@
             :closable="false"
           />
           <div class="picker-filter-actions">
-            <el-button type="primary" :loading="questionPickerLoading" @click="loadQuestionCandidates">搜索</el-button>
-            <el-button @click="handleResetQuestionPickerFilters">重置</el-button>
+            <el-button
+              type="primary"
+              :loading="questionPickerLoading"
+              :disabled="!questionPickerCollectionId"
+              @click="loadQuestionCandidates"
+            >
+              搜索
+            </el-button>
+            <el-button :disabled="!questionPickerCollectionId" @click="handleResetQuestionPickerFilters">重置</el-button>
           </div>
         </el-form>
 
         <div class="picker-content">
           <div class="picker-list-panel">
             <div class="picker-list" v-loading="questionPickerLoading">
-              <el-empty v-if="!questionPickerRecords.length" description="暂无可选题目" />
+              <el-empty v-if="!questionPickerCollectionId" description="请先选择题集" />
+              <el-empty v-else-if="!questionPickerRecords.length" description="暂无可选题目" />
               <div
                 v-for="(question, index) in questionPickerRecords"
                 :key="question.id"
@@ -345,7 +282,7 @@
           </div>
         </div>
 
-        <div ref="pickerPaginationRef" class="picker-pagination" v-if="questionPickerPage">
+        <div class="picker-pagination" v-if="questionPickerPage">
           <span class="picker-page-summary">{{ pickerPageSummary }}</span>
           <el-pagination
             v-model:current-page="questionPickerQuery.pageNum"
@@ -371,10 +308,9 @@
             </div>
           </div>
           <div class="footer-actions">
-            <el-button :disabled="!drawerSelectedQuestionIds.length" @click="applyDrawerSelection(true)">加入当前对话</el-button>
             <el-button
               type="primary"
-              :disabled="!drawerSelectedQuestionIds.length || !canExplainBase"
+              :disabled="!canApplyDrawerSelection || !canExplainBase"
               @click="applyAndExplainFromDrawer"
             >
               直接讲解
@@ -389,9 +325,11 @@
         <div class="create-header">
           <div>
             <h3>创建题目</h3>
-            <p>将题目录入当前题集：{{ currentCollectionName || '未选择题集' }}</p>
+            <p>先选择题集，再生成并确认题目草稿。</p>
           </div>
-          <el-button text @click="createQuestionDrawerVisible = false">关闭</el-button>
+          <div class="picker-header-actions">
+            <el-button text @click="createQuestionDrawerVisible = false">关闭</el-button>
+          </div>
         </div>
 
         <div class="create-mode-switch">
@@ -408,6 +346,23 @@
 
           <div class="ai-step-content">
             <el-form v-if="aiCreateStep === 1" label-position="top" class="create-form ai-requirement-form">
+              <el-form-item label="题集">
+                <el-select
+                  v-model="createQuestionCollectionId"
+                  filterable
+                  clearable
+                  placeholder="请选择题集"
+                  :loading="collectionLoading"
+                >
+                  <el-option
+                    v-for="collection in collectionOptions"
+                    :key="collection.collectionId"
+                    :label="collection.name"
+                    :value="collection.collectionId"
+                  />
+                </el-select>
+              </el-form-item>
+
               <el-form-item label="知识点 / 出题方向">
                 <el-input
                   v-model="aiCreateForm.topic"
@@ -597,20 +552,20 @@
               <el-button
                 type="primary"
                 :loading="createAiDraftLoading"
-                :disabled="!hasCollectionContext"
+                :disabled="!hasCreateCollectionContext"
                 @click="handleGenerateAiDraft"
               >
                 生成题目草稿
               </el-button>
             </template>
             <template v-else>
-              <el-button :loading="createAiDraftLoading" :disabled="!hasCollectionContext" @click="handleGenerateAiDraft">
+              <el-button :loading="createAiDraftLoading" :disabled="!hasCreateCollectionContext" @click="handleGenerateAiDraft">
                 重新生成
               </el-button>
               <el-button @click="backToAiRequirementForm">返回修改需求</el-button>
               <el-button
                 type="primary"
-                :disabled="!hasCollectionContext"
+                :disabled="!hasCreateCollectionContext"
                 :loading="createSubmitting"
                 @click="handleCreateQuestionFromAiDraft"
               >
@@ -719,11 +674,191 @@
 
           <div class="create-footer">
             <el-button @click="createQuestionDrawerVisible = false">取消</el-button>
-            <el-button type="primary" :loading="createSubmitting" :disabled="!hasCollectionContext" @click="handleCreateQuestion">
+            <el-button type="primary" :loading="createSubmitting" :disabled="!hasCreateCollectionContext" @click="handleCreateQuestion">
               直接创建
             </el-button>
           </div>
         </template>
+      </section>
+    </el-drawer>
+
+    <el-drawer v-model="paperDraftDrawerVisible" size="980px" :with-header="false">
+      <section class="create-drawer paper-drawer">
+        <div class="create-header">
+          <div>
+            <h3>AI 组卷</h3>
+            <p>先填写组卷需求，再查看候选题目草稿。</p>
+          </div>
+          <div class="picker-header-actions">
+            <el-button text @click="paperDraftDrawerVisible = false">关闭</el-button>
+          </div>
+        </div>
+
+        <el-alert
+          type="info"
+          :closable="false"
+          class="create-tip"
+          title="按题型与难度要求生成组卷草稿，确认后可用于后续流程。"
+        />
+
+        <el-steps :active="paperDraftStep - 1" finish-status="success" simple class="create-steps">
+          <el-step title="填写组卷需求" />
+          <el-step title="查看草稿结果" />
+        </el-steps>
+
+        <div class="ai-step-content">
+          <el-form v-if="paperDraftStep === 1" label-position="top" class="create-form paper-requirement-form">
+            <el-form-item label="组卷需求">
+              <el-input
+                v-model="paperDraftForm.message"
+                type="textarea"
+                :rows="4"
+                maxlength="2000"
+                show-word-limit
+                placeholder="例如：生成一套基础难度的函数与导数小测，覆盖单选、多选和判断题"
+              />
+            </el-form-item>
+
+            <el-form-item label="题集（可多选）">
+              <el-select
+                v-model="paperDraftForm.collectionIds"
+                multiple
+                filterable
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="请选择至少一个题集"
+                :loading="collectionLoading"
+              >
+                <el-option
+                  v-for="collection in collectionOptions"
+                  :key="collection.collectionId"
+                  :label="collection.name"
+                  :value="collection.collectionId"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="题型约束">
+              <div class="paper-constrain-list">
+                <div class="paper-constrain-head" aria-hidden="true">
+                  <span>题型</span>
+                  <span>题数</span>
+                  <span>难度下限</span>
+                  <span>难度上限</span>
+                  <span>操作</span>
+                </div>
+                <div
+                  v-for="(constrain, index) in paperDraftForm.constrains"
+                  :key="`paper_constrain_${index}`"
+                  class="paper-constrain-row"
+                >
+                  <div class="paper-constrain-cell">
+                    <span class="paper-constrain-label">题型</span>
+                    <el-select v-model="constrain.typeCode" placeholder="题型">
+                      <el-option v-for="type in questionTypeOptions" :key="type.code" :label="type.label" :value="type.code" />
+                    </el-select>
+                  </div>
+                  <div class="paper-constrain-cell">
+                    <span class="paper-constrain-label">题数</span>
+                    <el-input-number v-model="constrain.count" :min="1" :step="1" controls-position="right" placeholder="题数" />
+                  </div>
+                  <div class="paper-constrain-cell">
+                    <span class="paper-constrain-label">难度下限</span>
+                    <el-input-number
+                      v-model="constrain.difficultyMin"
+                      :min="0"
+                      :max="1"
+                      :step="0.01"
+                      :precision="2"
+                      controls-position="right"
+                      placeholder="难度下限"
+                    />
+                  </div>
+                  <div class="paper-constrain-cell">
+                    <span class="paper-constrain-label">难度上限</span>
+                    <el-input-number
+                      v-model="constrain.difficultyMax"
+                      :min="0"
+                      :max="1"
+                      :step="0.01"
+                      :precision="2"
+                      controls-position="right"
+                      placeholder="难度上限"
+                    />
+                  </div>
+                  <div class="paper-constrain-cell paper-constrain-cell-action">
+                    <span class="paper-constrain-label">操作</span>
+                    <el-button
+                      type="danger"
+                      plain
+                      :disabled="paperDraftForm.constrains.length <= 1"
+                      @click="removePaperDraftConstrain(index)"
+                    >
+                      删除
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+              <div class="paper-constrain-actions">
+                <el-button @click="addPaperDraftConstrain">新增约束</el-button>
+              </div>
+            </el-form-item>
+
+            <el-alert
+              v-if="paperDraftConstraintLevelError"
+              class="picker-level-error"
+              :title="paperDraftConstraintLevelError"
+              type="error"
+              :closable="false"
+            />
+          </el-form>
+
+          <div v-else class="paper-result-wrap">
+            <div v-if="generatePaperDraftLoading" class="loading-wrap">
+              <el-skeleton :rows="8" animated />
+            </div>
+            <template v-else-if="paperDraftErrorMessage">
+              <el-alert :title="paperDraftErrorMessage" type="error" :closable="false" />
+            </template>
+            <template v-else-if="paperDraftResult">
+              <el-card shadow="never" class="paper-reason-card">
+                <template #header>生成说明</template>
+                <p class="paper-reason-text">{{ paperDraftResult.reason || '暂无说明' }}</p>
+              </el-card>
+
+              <el-empty v-if="!paperDraftCandidateQuestions.length" description="暂无候选题目" />
+
+              <el-table
+                v-else
+                :data="paperDraftCandidateQuestions"
+                border
+                stripe
+                class="paper-result-table"
+                max-height="460"
+              >
+                <el-table-column prop="questionId" label="questionId" min-width="160" />
+                <el-table-column prop="questionVersionId" label="questionVersionId" min-width="180" />
+                <el-table-column prop="title" label="title" min-width="280" show-overflow-tooltip />
+                <el-table-column prop="typeCode" label="typeCode" min-width="130" />
+                <el-table-column prop="difficulty" label="difficulty" min-width="100" />
+              </el-table>
+            </template>
+            <el-empty v-else description="请先生成组卷草稿" />
+          </div>
+        </div>
+
+        <div class="create-footer">
+          <template v-if="paperDraftStep === 1">
+            <el-button @click="paperDraftDrawerVisible = false">取消</el-button>
+            <el-button type="primary" :loading="generatePaperDraftLoading" @click="handleGenerateAgentPaperDraft">
+              生成草稿
+            </el-button>
+          </template>
+          <template v-else>
+            <el-button :loading="generatePaperDraftLoading" @click="handleGenerateAgentPaperDraft">重新生成</el-button>
+            <el-button @click="backToPaperRequirementForm">返回修改需求</el-button>
+          </template>
+        </div>
       </section>
     </el-drawer>
 
@@ -745,16 +880,29 @@ import {
   type AgentSessionVO
 } from '../api/agent';
 import { createQuestion, fetchQuestionDetail, type QuestionCreatePayload } from '../api/question';
-import { generateQuestionDraft } from '../api/ai';
+import { generateAgentPaperDraft, generateQuestionDraft } from '../api/ai';
 import { fetchCollections, fetchCollectionQuestions } from '../api/collection';
 import type { CollectionView } from '../types/collection';
 import type { QuestionDetail, QuestionOption, QuestionSummary, QuestionSummaryPage } from '../types/question';
-import type { GenerateQuestionDraftReq, QuestionDraft } from '../types/ai';
+import type {
+  AgentPaperDraftVO,
+  GeneratePaperDraftBucketConstrain,
+  GeneratePaperDraftReq,
+  GenerateQuestionDraftReq,
+  QuestionDraft
+} from '../types/ai';
 import { showError, showInfo, showSuccess } from '../utils/messages';
 import AssistantMessageContent from '../components/AssistantMessageContent.vue';
 
 type MessageRole = 'user' | 'assistant' | 'system';
 type ResultType = 'explain' | 'search' | 'generate' | 'general';
+
+interface SendMessageOptions {
+  toolContext?: {
+    collectionId?: string;
+    selectedQuestionIds?: string[];
+  };
+}
 
 interface MessageItem {
   id: string;
@@ -812,7 +960,7 @@ interface AiDraftFormState {
 }
 
 const AGENT_NAME = '题库小助手';
-const quickPrompts = ['帮我出 3 道 Redis 题', '检索并发相关题目', '找几道导数题'];
+const quickPrompts = ['找几道基础练习题', '搜索某个知识点题目', '讲解一道我不会的题'];
 
 const questionTypeOptions = [
   { code: 'single-choice', label: '单选题' },
@@ -825,8 +973,7 @@ const questionTypeOptions = [
 const typeLabelMap = Object.fromEntries(questionTypeOptions.map((item) => [item.code, item.label])) as Record<string, string>;
 
 const contextState = reactive({
-  collectionIdValues: [] as string[],
-  selectedQuestionIdsText: ''
+  collectionIdValues: [] as string[]
 });
 const composerMessage = ref('');
 
@@ -840,10 +987,6 @@ const sessionLoading = ref(false);
 const messageLoading = ref(false);
 const collectionOptions = ref<CollectionView[]>([]);
 const messageScrollRef = ref<HTMLElement | null>(null);
-const pickerPaginationRef = ref<HTMLElement | null>(null);
-
-const collectionSwitchVisible = ref(false);
-const collectionDraftId = ref('');
 
 const questionPickerVisible = ref(false);
 const questionPickerLoading = ref(false);
@@ -866,10 +1009,21 @@ const selectedQuestionMetaMap = reactive<Record<string, QuestionMeta>>({});
 const questionDetailMap = reactive<Record<string, QuestionDetail>>({});
 
 const createQuestionDrawerVisible = ref(false);
+const createQuestionCollectionId = ref('');
 const createSubmitting = ref(false);
 const createAiDraftLoading = ref(false);
 const createMode = ref<'ai' | 'manual'>('ai');
 const aiCreateStep = ref<1 | 2>(1);
+const paperDraftDrawerVisible = ref(false);
+const paperDraftStep = ref<1 | 2>(1);
+const generatePaperDraftLoading = ref(false);
+const paperDraftErrorMessage = ref('');
+const paperDraftResult = ref<AgentPaperDraftVO | null>(null);
+const paperDraftForm = reactive<GeneratePaperDraftReq>({
+  message: '',
+  collectionIds: [],
+  constrains: [defaultPaperDraftConstrain()]
+});
 const createForm = reactive<CreateQuestionFormState>({
   questionType: 'single-choice',
   title: '',
@@ -891,23 +1045,7 @@ const aiDraftPreview = ref<QuestionDraft | null>(null);
 const aiDraftForm = reactive<AiDraftFormState>(defaultAiDraftForm());
 
 const currentCollectionId = computed(() => contextState.collectionIdValues[0] ?? '');
-
-const currentCollectionName = computed(() => {
-  const current = collectionOptions.value.find((item) => item.collectionId === currentCollectionId.value);
-  return current?.name ?? '';
-});
-
-const hasCollectionContext = computed(() => normalizeLongIdList(contextState.collectionIdValues).length > 0);
-
-const selectedQuestionIds = computed(() => parseIdList(contextState.selectedQuestionIdsText));
-const selectedQuestionCount = computed(() => selectedQuestionIds.value.length);
-
-const selectedQuestionPreview = computed(() =>
-  selectedQuestionIds.value.slice(0, 3).map((id, index) => {
-    const meta = selectedQuestionMetaMap[id];
-    return meta?.title ? clipText(meta.title, 14) : `第${index + 1}题`;
-  })
-);
+const hasCreateCollectionContext = computed(() => Boolean(createQuestionCollectionId.value));
 
 const activeMessages = computed(() => {
   if (!activeSessionId.value) {
@@ -921,10 +1059,8 @@ const canSend = computed(() => {
     return false;
   }
   const hasMessage = Boolean(composerMessage.value.trim());
-  return hasMessage && hasCollectionContext.value;
+  return hasMessage;
 });
-
-const canOpenQuestionPicker = computed(() => Boolean(currentCollectionId.value) && !streaming.value);
 
 const canExplainBase = computed(() => {
   if (streaming.value) {
@@ -933,26 +1069,10 @@ const canExplainBase = computed(() => {
   if (!activeSessionId.value) {
     return false;
   }
-  return hasCollectionContext.value;
+  return true;
 });
 
-const canExplainSelected = computed(() => canExplainBase.value && selectedQuestionCount.value > 0);
-
-const explainDisabledReason = computed(() => {
-  if (streaming.value) {
-    return '当前正在生成回复，请稍后再试。';
-  }
-  if (!activeSessionId.value) {
-    return '请先创建或选择一个会话。';
-  }
-  if (!hasCollectionContext.value) {
-    return '请先选择题集。';
-  }
-  if (!selectedQuestionCount.value) {
-    return '请先选择题目，再开始讲解。';
-  }
-  return '';
-});
+const canApplyDrawerSelection = computed(() => Boolean(questionPickerCollectionId.value) && drawerSelectedQuestionIds.value.length > 0);
 
 const questionPickerRecords = computed(() => questionPickerPage.value?.records ?? []);
 const pickerPageSummary = computed(() => {
@@ -1079,6 +1199,20 @@ const draftPreviewSolution = computed(() => normalizeText(aiDraftForm.solution))
 const draftPreviewOptions = computed(() => normalizeDraftOptions(aiDraftForm.options));
 const draftPreviewCorrectAnswer = computed(() => formatDraftCorrectAnswerFromForm());
 const draftPreviewAssumptions = computed(() => normalizeText(aiDraftForm.assumptions));
+const paperDraftCandidateQuestions = computed(() => paperDraftResult.value?.candidateQuestions ?? []);
+const paperDraftConstraintLevelError = computed(() => {
+  for (let i = 0; i < paperDraftForm.constrains.length; i += 1) {
+    const item = paperDraftForm.constrains[i];
+    if (
+      typeof item?.difficultyMin === 'number' &&
+      typeof item?.difficultyMax === 'number' &&
+      item.difficultyMin > item.difficultyMax
+    ) {
+      return `第 ${i + 1} 条约束的难度下限不能大于上限`;
+    }
+  }
+  return '';
+});
 
 onMounted(async () => {
   await Promise.all([loadCollections(), loadSessions()]);
@@ -1095,14 +1229,20 @@ async function loadCollections() {
     const list = await fetchCollections();
     collectionOptions.value = list;
 
-    if (!currentCollectionId.value && list.length) {
-      contextState.collectionIdValues = [list[0].collectionId];
-      return;
-    }
-
     if (currentCollectionId.value && !list.some((item) => item.collectionId === currentCollectionId.value)) {
-      contextState.collectionIdValues = list.length ? [list[0].collectionId] : [];
-      clearSelectedQuestions();
+      contextState.collectionIdValues = [];
+    }
+    if (questionPickerCollectionId.value && !list.some((item) => item.collectionId === questionPickerCollectionId.value)) {
+      questionPickerCollectionId.value = '';
+      resetQuestionPickerState();
+    }
+    if (createQuestionCollectionId.value && !list.some((item) => item.collectionId === createQuestionCollectionId.value)) {
+      createQuestionCollectionId.value = '';
+    }
+    if (paperDraftForm.collectionIds.length) {
+      paperDraftForm.collectionIds = paperDraftForm.collectionIds.filter((id) =>
+        list.some((item) => item.collectionId === id)
+      );
     }
   } catch (error) {
     showError(error instanceof Error ? error.message : '加载题集失败');
@@ -1251,35 +1391,29 @@ function onSessionCommand(command: string | number | object, session: AgentSessi
   void handleSessionCommand(String(command), session);
 }
 
-function openCollectionSwitchDialog() {
-  collectionDraftId.value = currentCollectionId.value;
-  collectionSwitchVisible.value = true;
+function ensureCollectionsLoaded() {
+  if (!collectionOptions.value.length && !collectionLoading.value) {
+    void loadCollections();
+  }
 }
 
-function applyCollectionSwitch() {
-  const nextCollectionId = collectionDraftId.value;
-  if (!nextCollectionId) {
-    showInfo('请选择题集');
-    return;
-  }
+function handleToolbarSelectQuestions() {
+  ensureCollectionsLoaded();
+  openQuestionPicker();
+}
 
-  if (nextCollectionId === currentCollectionId.value) {
-    collectionSwitchVisible.value = false;
-    return;
-  }
+function handleToolbarCreateQuestion() {
+  ensureCollectionsLoaded();
+  openCreateQuestionDrawer();
+}
 
-  contextState.collectionIdValues = [nextCollectionId];
-  clearSelectedQuestions();
-  resetQuestionPickerState();
-  collectionSwitchVisible.value = false;
-  showSuccess('题集已切换，已清空已选题目');
+function handleToolbarGeneratePaperDraft() {
+  ensureCollectionsLoaded();
+  openPaperDraftDrawer();
 }
 
 function openCreateQuestionDrawer() {
-  if (!hasCollectionContext.value || !currentCollectionId.value) {
-    showInfo('请先选择题集');
-    return;
-  }
+  createQuestionCollectionId.value = currentCollectionId.value;
   createMode.value = 'ai';
   aiCreateStep.value = 1;
   resetAiCreateForm();
@@ -1289,9 +1423,27 @@ function openCreateQuestionDrawer() {
   createQuestionDrawerVisible.value = true;
 }
 
+function openPaperDraftDrawer() {
+  resetPaperDraftForm();
+  paperDraftResult.value = null;
+  paperDraftErrorMessage.value = '';
+  generatePaperDraftLoading.value = false;
+  paperDraftStep.value = 1;
+  paperDraftDrawerVisible.value = true;
+}
+
 function activateAiMode() {
   createMode.value = 'ai';
   aiCreateStep.value = aiDraftPreview.value ? 2 : 1;
+}
+
+function defaultPaperDraftConstrain(): GeneratePaperDraftBucketConstrain {
+  return {
+    typeCode: 'single-choice',
+    count: 5,
+    difficultyMin: 0,
+    difficultyMax: 1
+  };
 }
 
 function defaultCreateOptions(): QuestionOption[] {
@@ -1347,6 +1499,20 @@ function resetAiDraftForm() {
   aiDraftForm.answer = next.answer;
   aiDraftForm.solution = next.solution;
   aiDraftForm.assumptions = next.assumptions;
+}
+
+function resetPaperDraftForm() {
+  paperDraftForm.message = '';
+  paperDraftForm.collectionIds = currentCollectionId.value ? [currentCollectionId.value] : [];
+  paperDraftForm.constrains = [defaultPaperDraftConstrain()];
+}
+
+function addPaperDraftConstrain() {
+  paperDraftForm.constrains.push(defaultPaperDraftConstrain());
+}
+
+function removePaperDraftConstrain(index: number) {
+  paperDraftForm.constrains.splice(index, 1);
 }
 
 function onCreateTypeChange() {
@@ -1421,7 +1587,7 @@ function buildCreatePayload(): QuestionCreatePayload {
   if (!stem) {
     throw new Error('请先填写题干');
   }
-  if (!currentCollectionId.value) {
+  if (!createQuestionCollectionId.value) {
     throw new Error('请先选择题集');
   }
 
@@ -1432,7 +1598,7 @@ function buildCreatePayload(): QuestionCreatePayload {
     answer: null,
     solution: createForm.solution.trim() || null,
     difficulty: createForm.difficulty,
-    collectionId: currentCollectionId.value,
+    collectionId: createQuestionCollectionId.value,
     assets: []
   };
 
@@ -1457,7 +1623,7 @@ function buildCreatePayload(): QuestionCreatePayload {
 }
 
 async function handleCreateQuestion() {
-  if (!hasCollectionContext.value || !currentCollectionId.value) {
+  if (!hasCreateCollectionContext.value || !createQuestionCollectionId.value) {
     showInfo('请先选择题集');
     return;
   }
@@ -1471,9 +1637,9 @@ async function handleCreateQuestion() {
       typeCode: payload.typeCode,
       difficulty: payload.difficulty ?? null
     };
-    appendSelectedQuestionToContext(created.questionId);
+    contextState.collectionIdValues = [createQuestionCollectionId.value];
     createQuestionDrawerVisible.value = false;
-    showSuccess('题目已创建，并加入已选题目');
+    showSuccess('题目已创建');
   } catch (error: any) {
     showError(error?.message ?? '创建题目失败');
   } finally {
@@ -1618,8 +1784,102 @@ function buildGenerateDraftRequest(): GenerateQuestionDraftReq {
   return payload;
 }
 
+function buildGeneratePaperDraftRequest(): GeneratePaperDraftReq {
+  const message = paperDraftForm.message.trim();
+  if (!message) {
+    throw new Error('请先填写组卷需求');
+  }
+
+  const collectionIds = paperDraftForm.collectionIds.map((item) => normalizeText(item)).filter(Boolean);
+  if (!collectionIds.length) {
+    throw new Error('请至少选择一个题集');
+  }
+
+  if (!paperDraftForm.constrains.length) {
+    throw new Error('请至少添加一条题型约束');
+  }
+
+  const constrains = paperDraftForm.constrains.map((item, index) => {
+    const typeCode = normalizeText(item?.typeCode);
+    const count = Number(item?.count);
+    const difficultyMin = Number(item?.difficultyMin);
+    const difficultyMax = Number(item?.difficultyMax);
+    const rowText = `第 ${index + 1} 条约束`;
+
+    if (!typeCode) {
+      throw new Error(`${rowText}缺少题型`);
+    }
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new Error(`${rowText}题数必须是大于 0 的整数`);
+    }
+    if (!Number.isFinite(difficultyMin) || !Number.isFinite(difficultyMax)) {
+      throw new Error(`${rowText}缺少难度范围`);
+    }
+    if (difficultyMin > difficultyMax) {
+      throw new Error(`${rowText}的难度下限不能大于上限`);
+    }
+
+    return {
+      typeCode,
+      count,
+      difficultyMin,
+      difficultyMax
+    };
+  });
+
+  return {
+    message,
+    collectionIds: [...new Set(collectionIds)],
+    constrains
+  };
+}
+
+function normalizeAgentPaperDraftResult(payload: AgentPaperDraftVO): AgentPaperDraftVO {
+  const candidateQuestions = Array.isArray(payload?.candidateQuestions)
+    ? payload.candidateQuestions.map((item) => ({
+        questionId: normalizeText(item?.questionId),
+        questionVersionId: normalizeText(item?.questionVersionId),
+        title: normalizeText(item?.title),
+        typeCode: normalizeText(item?.typeCode),
+        difficulty: Number.isFinite(item?.difficulty) ? Number(item.difficulty) : 0
+      }))
+    : [];
+
+  return {
+    reason: normalizeText(payload?.reason),
+    candidateQuestions
+  };
+}
+
+async function handleGenerateAgentPaperDraft() {
+  let requestPayload: GeneratePaperDraftReq;
+  try {
+    requestPayload = buildGeneratePaperDraftRequest();
+  } catch (error: any) {
+    const message = error?.message ?? '组卷需求参数校验失败';
+    paperDraftErrorMessage.value = '';
+    showError(message);
+    return;
+  }
+
+  paperDraftStep.value = 2;
+  paperDraftErrorMessage.value = '';
+  paperDraftResult.value = null;
+  generatePaperDraftLoading.value = true;
+  try {
+    const result = await generateAgentPaperDraft(requestPayload);
+    paperDraftResult.value = normalizeAgentPaperDraftResult(result);
+  } catch (error: any) {
+    const message = error?.message ?? '组卷草稿生成失败，请重试';
+    paperDraftErrorMessage.value = message;
+    showError(message);
+  } finally {
+    generatePaperDraftLoading.value = false;
+  }
+}
+
 async function handleGenerateAiDraft() {
-  if (!hasCollectionContext.value || !currentCollectionId.value) {
+  if (!hasCreateCollectionContext.value || !createQuestionCollectionId.value) {
     showInfo('请先选择题集');
     return;
   }
@@ -1648,11 +1908,15 @@ function backToAiRequirementForm() {
   resetAiDraftForm();
 }
 
+function backToPaperRequirementForm() {
+  paperDraftStep.value = 1;
+}
+
 function buildAiDraftPayload(): QuestionCreatePayload {
   if (!aiDraftPreview.value) {
     throw new Error('请先生成题目草稿');
   }
-  if (!currentCollectionId.value) {
+  if (!createQuestionCollectionId.value) {
     throw new Error('请先选择题集');
   }
 
@@ -1669,7 +1933,7 @@ function buildAiDraftPayload(): QuestionCreatePayload {
     answer: null,
     solution: normalizeText(aiDraftForm.solution) || null,
     difficulty: aiDraftForm.difficulty,
-    collectionId: currentCollectionId.value,
+    collectionId: createQuestionCollectionId.value,
     assets: []
   };
 
@@ -1707,7 +1971,7 @@ function buildAiDraftPayload(): QuestionCreatePayload {
 }
 
 async function handleCreateQuestionFromAiDraft() {
-  if (!hasCollectionContext.value || !currentCollectionId.value) {
+  if (!hasCreateCollectionContext.value || !createQuestionCollectionId.value) {
     showInfo('请先选择题集');
     return;
   }
@@ -1725,9 +1989,9 @@ async function handleCreateQuestionFromAiDraft() {
       typeCode: payload.typeCode,
       difficulty: payload.difficulty ?? null
     };
-    appendSelectedQuestionToContext(created.questionId);
+    contextState.collectionIdValues = [createQuestionCollectionId.value];
     createQuestionDrawerVisible.value = false;
-    showSuccess('题目已写入题库，并加入已选题目');
+    showSuccess('题目已写入题库');
   } catch (error: any) {
     showError(error?.message ?? '写入题库失败');
   } finally {
@@ -1735,29 +1999,21 @@ async function handleCreateQuestionFromAiDraft() {
   }
 }
 
-function appendSelectedQuestionToContext(questionId: string) {
-  const selectedIds = parseIdList(contextState.selectedQuestionIdsText);
-  if (!selectedIds.includes(questionId)) {
-    selectedIds.push(questionId);
+function openQuestionPicker() {
+  questionPickerVisible.value = true;
+  drawerSelectedQuestionIds.value = [];
+  pickerDetailCollapseNames.value = [];
+  if (!questionPickerCollectionId.value) {
+    questionPickerCollectionId.value = currentCollectionId.value;
   }
-  contextState.selectedQuestionIdsText = selectedIds.join(',');
-}
 
-function openQuestionPicker(_mode: 'select' | 'manage') {
-  if (!currentCollectionId.value) {
-    showInfo('请先选择题集');
+  if (questionPickerCollectionId.value) {
+    void loadQuestionCandidates();
     return;
   }
 
-  questionPickerVisible.value = true;
-  drawerSelectedQuestionIds.value = [...selectedQuestionIds.value];
-  pickerDetailCollapseNames.value = [];
-
-  if (questionPickerCollectionId.value !== currentCollectionId.value) {
-    resetQuestionPickerFilters();
-  }
-
-  void loadQuestionCandidates();
+  questionPickerPage.value = null;
+  pickerActiveQuestionId.value = '';
 }
 
 function resetQuestionPickerFilters() {
@@ -1771,10 +2027,30 @@ function resetQuestionPickerFilters() {
 
 function handleResetQuestionPickerFilters() {
   resetQuestionPickerFilters();
+  if (questionPickerCollectionId.value) {
+    void loadQuestionCandidates();
+  }
+}
+
+function onQuestionPickerCollectionChange() {
+  drawerSelectedQuestionIds.value = [];
+  questionPickerPage.value = null;
+  pickerActiveQuestionId.value = '';
+  pickerQuestionDetailLoadingId.value = '';
+  pickerDetailCollapseNames.value = [];
+  resetQuestionPickerFilters();
+
+  if (!questionPickerCollectionId.value) {
+    return;
+  }
+
   void loadQuestionCandidates();
 }
 
 function onQuestionFilterChange() {
+  if (!questionPickerCollectionId.value) {
+    return;
+  }
   questionPickerQuery.pageNum = 1;
   void loadQuestionCandidates();
 }
@@ -1829,7 +2105,7 @@ function normalizeQuestionPickerPage(raw: unknown): QuestionSummaryPage {
 }
 
 async function loadQuestionCandidates() {
-  if (!currentCollectionId.value) {
+  if (!questionPickerCollectionId.value) {
     return;
   }
 
@@ -1840,7 +2116,7 @@ async function loadQuestionCandidates() {
 
   questionPickerLoading.value = true;
   try {
-    const response = await fetchCollectionQuestions(currentCollectionId.value, {
+    const response = await fetchCollectionQuestions(questionPickerCollectionId.value, {
       pageNum: questionPickerQuery.pageNum,
       pageSize: questionPickerQuery.pageSize,
       keyword: questionPickerQuery.keyword || undefined,
@@ -1850,17 +2126,11 @@ async function loadQuestionCandidates() {
       sortField: 'updatedAt',
       sortDirection: 'DESC'
     });
-    console.info('[QuestionPicker] raw page response:', response);
     const page = normalizeQuestionPickerPage(response);
-    console.info('[QuestionPicker] normalized page data:', page);
     questionPickerPage.value = page;
     questionPickerQuery.pageNum = page.pageNum || questionPickerQuery.pageNum;
     questionPickerQuery.pageSize = page.pageSize || questionPickerQuery.pageSize;
-    questionPickerCollectionId.value = currentCollectionId.value;
     page.records.forEach((question) => cacheQuestionMeta(question));
-    await nextTick();
-    const paginationRendered = Boolean(pickerPaginationRef.value?.querySelector('.el-pagination'));
-    console.info('[QuestionPicker] pagination dom rendered:', paginationRendered);
 
     if (!page.records.length) {
       pickerActiveQuestionId.value = '';
@@ -1930,42 +2200,36 @@ function toggleDrawerQuestion(question: QuestionSummary, checked: string | numbe
   }
 }
 
-function applyDrawerSelection(closeDrawer: boolean) {
-  const normalized = normalizeLongIdList(drawerSelectedQuestionIds.value);
-  contextState.selectedQuestionIdsText = normalized.join(',');
-  drawerSelectedQuestionIds.value = [...normalized];
-
-  if (closeDrawer) {
-    questionPickerVisible.value = false;
-  }
-
-  if (!normalized.length) {
-    showInfo('当前未选择题目，已清空已选题目');
+async function applyAndExplainFromDrawer() {
+  if (!canExplainBase.value) {
+    if (streaming.value) {
+      showInfo('当前正在生成回复，请稍后再试。');
+    } else if (!activeSessionId.value) {
+      showInfo('请先创建或选择一个会话。');
+    }
     return;
   }
-
-  showSuccess(`已加入 ${normalized.length} 道题到当前对话`);
-}
-
-async function applyAndExplainFromDrawer() {
+  if (!questionPickerCollectionId.value) {
+    showInfo('请先选择题集');
+    return;
+  }
   if (!drawerSelectedQuestionIds.value.length) {
     showInfo('请先勾选题目');
     return;
   }
-  applyDrawerSelection(false);
-  questionPickerVisible.value = false;
-  await handleExplainSelectedQuestions();
-}
-
-async function handleExplainSelectedQuestions() {
-  if (!canExplainSelected.value) {
-    if (explainDisabledReason.value) {
-      showInfo(explainDisabledReason.value);
-    }
+  const selectedQuestionIds = normalizeLongIdList(drawerSelectedQuestionIds.value);
+  if (!selectedQuestionIds.length) {
+    showInfo('请先勾选题目');
     return;
   }
-
-  await sendChatMessage('请讲解当前已选题目，按“考点、解题思路、关键步骤、易错点”逐题说明。', 'explain');
+  contextState.collectionIdValues = [questionPickerCollectionId.value];
+  questionPickerVisible.value = false;
+  await sendChatMessage('请讲解我刚刚选择的题目，按“考点、解题思路、关键步骤、易错点”逐题说明。', 'explain', {
+    toolContext: {
+      collectionId: questionPickerCollectionId.value,
+      selectedQuestionIds
+    }
+  });
 }
 
 async function handleSend() {
@@ -1977,18 +2241,19 @@ async function handleSend() {
   await sendChatMessage(userText, inferResultTypeFromText(userText));
 }
 
-async function sendChatMessage(message: string, resultType: ResultType = 'general'): Promise<string> {
+async function sendChatMessage(
+  message: string,
+  resultType: ResultType = 'general',
+  options: SendMessageOptions = {}
+): Promise<string> {
   if (!activeSessionId.value || streaming.value) {
     return '';
   }
 
-  const collectionIds = normalizeLongIdList(contextState.collectionIdValues);
-  if (!collectionIds.length) {
-    showInfo('请先选择题集');
-    return '';
-  }
-
-  const selectedIds = parseIdList(contextState.selectedQuestionIdsText);
+  const collectionIds = options.toolContext?.collectionId ? normalizeLongIdList([options.toolContext.collectionId]) : [];
+  const selectedIds = options.toolContext?.selectedQuestionIds
+    ? normalizeLongIdList(options.toolContext.selectedQuestionIds)
+    : [];
   const sid = activeSessionId.value;
   const list = ensureSessionMessages(sid);
 
@@ -2097,18 +2362,6 @@ function updateMessage(list: MessageItem[], id: string, updater: (prev: string) 
   }
 }
 
-function parseIdList(raw: string): string[] {
-  if (!raw.trim()) {
-    return [];
-  }
-  return normalizeLongIdList(
-    raw
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-  );
-}
-
 function normalizeLongIdList(values: string[]): string[] {
   return values
     .map((item) => item.trim())
@@ -2127,7 +2380,8 @@ function mapServerMessages(rawMessages: AgentChatMessageVO[], sessionId: string)
   return rawMessages
     .map((item, index) => {
       const role = normalizeRole(item.role);
-      const content = (item.text ?? item.thinking ?? '').trim();
+      const rawContent = (item.text ?? item.thinking ?? '').trim();
+      const content = role === 'assistant' ? normalizeWelcomeMessage(rawContent) : rawContent;
       if (role === 'user') {
         latestIntent = inferResultTypeFromText(content);
       }
@@ -2150,6 +2404,15 @@ function normalizeRole(role?: string): MessageRole {
     return 'user';
   }
   return 'system';
+}
+
+function normalizeWelcomeMessage(content: string) {
+  if (!content) {
+    return '';
+  }
+  return content
+    .replace(/创建新题目并加入当前题集/g, '生成同主题练习内容')
+    .replace(/创建新题目/g, '生成练习内容');
 }
 
 function roleLabel(role: MessageRole) {
@@ -2190,13 +2453,30 @@ function inferResultTypeFromText(input: string): ResultType {
 function getSessionPreview(sessionId: string) {
   const list = messagesBySession[sessionId];
   if (!list?.length) {
-    return '点击开始提问';
+    return '题库学习助手欢迎会话';
   }
-  const latest = [...list].reverse().find((item) => item.role !== 'system' && item.content.trim());
-  if (!latest) {
-    return '等待新的消息';
+  const userMessages = list.filter((item) => item.role === 'user' && item.content.trim());
+  if (!userMessages.length) {
+    return '题库学习助手欢迎会话';
   }
-  return clipText(latest.content.replace(/\s+/g, ' ').trim(), 24);
+  const intents = userMessages.map((item) => inferResultTypeFromText(item.content));
+  const hasExplain = intents.includes('explain');
+  const hasSearch = intents.includes('search');
+  const hasGenerate = intents.includes('generate');
+
+  if (hasSearch && hasExplain) {
+    return '检索了题目并进行了讲解';
+  }
+  if (hasExplain) {
+    return '围绕题目进行了讲解分析';
+  }
+  if (hasSearch) {
+    return '查看了题库中的题目';
+  }
+  if (hasGenerate) {
+    return '生成了同主题练习内容';
+  }
+  return '进行了题库学习交流';
 }
 
 function formatSessionTime(value?: string) {
@@ -2237,11 +2517,6 @@ function clipText(text: string, limit: number) {
   return `${text.slice(0, limit)}...`;
 }
 
-function clearSelectedQuestions() {
-  contextState.selectedQuestionIdsText = '';
-  drawerSelectedQuestionIds.value = [];
-}
-
 function resetQuestionPickerState() {
   questionPickerCollectionId.value = '';
   questionPickerPage.value = null;
@@ -2249,11 +2524,6 @@ function resetQuestionPickerState() {
   pickerQuestionDetailLoadingId.value = '';
   pickerDetailCollapseNames.value = [];
   resetQuestionPickerFilters();
-}
-
-function clearContext() {
-  clearSelectedQuestions();
-  showSuccess('已清空已选题目');
 }
 
 function applyQuickPrompt(prompt: string) {
@@ -2433,80 +2703,37 @@ onBeforeUnmount(() => {
 }
 
 .toolbar-card :deep(.el-card__body) {
-  padding: 8px 12px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 8px 12px;
 }
 
-.context-strip {
+.workspace-toolbar {
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.context-board {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.strip-section {
+.toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 30px;
-  min-width: 0;
-}
-
-.strip-section.collection {
-  flex: 1 1 250px;
-}
-
-.strip-section.selected {
-  flex: 1 1 340px;
-}
-
-.strip-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  white-space: nowrap;
-}
-
-.strip-tags {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-}
-
-.strip-hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.strip-actions {
-  display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  align-items: center;
 }
 
-.tool-strip {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px dashed var(--el-border-color-light);
-  padding-top: 6px;
+.tool-btn {
+  height: 40px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
 }
 
-.action-tip {
-  margin: 0;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+.tool-btn-secondary {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  border-radius: 10px;
 }
 
 .message-scroll {
@@ -2516,34 +2743,6 @@ onBeforeUnmount(() => {
   padding: 12px 16px 18px;
   background: linear-gradient(180deg, #f8fbff 0%, #f3f7fd 60%, #f8fbff 100%);
   overscroll-behavior: contain;
-}
-
-.result-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 2px 2px 10px;
-}
-
-.result-head-title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.result-head-subtitle {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.result-head-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .loading-wrap {
@@ -2556,14 +2755,6 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   text-align: center;
-}
-
-.quick-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
 }
 
 .quick-prompts {
@@ -2673,7 +2864,7 @@ onBeforeUnmount(() => {
 
 .composer-head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
@@ -2685,25 +2876,12 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.composer-shortcuts {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 .composer-footer {
   margin-top: 6px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-}
-
-.hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
 }
 
 .action-group {
@@ -2982,6 +3160,83 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
+.paper-requirement-form {
+  width: 100%;
+}
+
+.paper-constrain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.paper-constrain-head {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 120px) minmax(0, 140px) minmax(0, 140px) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.paper-constrain-row {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 120px) minmax(0, 140px) minmax(0, 140px) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.paper-constrain-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.paper-constrain-label {
+  display: none;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.paper-constrain-cell :deep(.el-select),
+.paper-constrain-cell :deep(.el-input-number) {
+  width: 100%;
+}
+
+.paper-constrain-cell-action {
+  align-self: stretch;
+  justify-content: center;
+}
+
+.paper-constrain-actions {
+  margin-top: 8px;
+}
+
+.paper-result-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.paper-reason-card {
+  border: 1px solid var(--el-border-color-light);
+}
+
+.paper-reason-text {
+  margin: 0;
+  color: var(--el-text-color-primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .create-grid {
   display: grid;
   gap: 10px;
@@ -3174,40 +3429,24 @@ onBeforeUnmount(() => {
     border-bottom: 1px solid var(--el-border-color-light);
   }
 
-  .context-strip {
-    align-items: flex-start;
-  }
-
-  .tool-strip {
+  .workspace-toolbar {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .strip-actions {
+  .toolbar-actions {
     width: 100%;
     justify-content: flex-start;
   }
 
-  .strip-section.selected {
-    flex-basis: 100%;
-  }
-
-  .strip-tags {
+  .tool-btn,
+  .tool-btn-secondary {
     width: 100%;
   }
 
   .composer-footer {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .composer-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .result-head {
-    flex-direction: column;
   }
 
   .picker-filter-grid {
@@ -3240,6 +3479,26 @@ onBeforeUnmount(() => {
 
   .draft-workbench {
     grid-template-columns: 1fr;
+  }
+
+  .paper-constrain-head {
+    display: none;
+  }
+
+  .paper-constrain-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .paper-constrain-label {
+    display: inline-block;
+  }
+
+  .paper-constrain-cell-action {
+    justify-content: flex-start;
   }
 
   .split-card {

@@ -6,6 +6,7 @@
         <el-menu class="top-menu" mode="horizontal" :ellipsis="false" :default-active="activePath" @select="handleMenuSelect">
           <el-menu-item index="/home">首页</el-menu-item>
           <el-menu-item index="/collections">题集管理</el-menu-item>
+          <el-menu-item index="/papers">组卷管理</el-menu-item>
           <el-menu-item index="/imports">批量导入</el-menu-item>
           <el-menu-item index="/agent-demo">Agent演示</el-menu-item>
         </el-menu>
@@ -29,6 +30,9 @@ const router = useRouter();
 const activePath = computed(() => {
   if (route.path.startsWith('/collections')) {
     return '/collections';
+  }
+  if (route.path.startsWith('/papers')) {
+    return '/papers';
   }
   if (route.path.startsWith('/agent-demo')) {
     return '/agent-demo';

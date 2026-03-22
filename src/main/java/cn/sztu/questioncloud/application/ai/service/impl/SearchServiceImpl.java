@@ -1,6 +1,5 @@
 package cn.sztu.questioncloud.application.ai.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.ai.dto.QuestionHitDTO;
 import cn.sztu.questioncloud.application.ai.port.QuestionSearchPort;
 import cn.sztu.questioncloud.application.ai.service.SearchService;
@@ -20,7 +19,8 @@ public class SearchServiceImpl implements SearchService {
 
 
     /**
-     * RAG检索题集内相关题目
+     * 自然语言检索题集内相关题目
+     *
      * @param userId         用户ID
      * @param collectionIds  题集ID
      * @param query          用户的自然语言描述
@@ -28,8 +28,8 @@ public class SearchServiceImpl implements SearchService {
      * @return 命中的题目列表
      */
     @Override
-    public List<QuestionHitDTO> RAGSearch(Long userId, List<Long> collectionIds, String query, RAGSearchParam ragSearchParam) {
-        RAGSearchParam safeParam = ragSearchParam == null ? new RAGSearchParam() : ragSearchParam;
+    public List<QuestionHitDTO> searchQuestions(Long userId, List<Long> collectionIds, String query, RAGSearchParam ragSearchParam) {
+        RAGSearchParam safeParam = ragSearchParam == null ? RAGSearchParam.builder().build() : ragSearchParam;
         // 构建RAG检索请求
         SearchFilter filter = SearchFilter.builder()
                 .ownerId(userId)

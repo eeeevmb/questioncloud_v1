@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>dev.langchain4j</groupId>
+  <artifactId>langchain4j-community-dashscope</artifactId>
+  <version>1.12.2-beta22</version>
+  <name>LangChain4j :: Community :: Integration :: DashScope</name>
+  <description>Parent POM for langchain4j-community submodules</description>
+  <url>https://github.com/langchain4j/langchain4j-community/models/langchain4j-community-dashscope</url>
+  <licenses>
+    <license>
+      <name>Apache-2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>dliubarskyi</id>
+      <name>Dmytro Liubarskyi</name>
+      <email>info@langchain4j.dev</email>
+      <url>https://github.com/dliubarskyi</url>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/langchain4j/langchain4j-community.git/models/langchain4j-community-dashscope</connection>
+    <developerConnection>scm:git:git@github.com:langchain4j/langchain4j-community.git/models/langchain4j-community-dashscope</developerConnection>
+    <url>https://github.com/langchain4j/langchain4j-community/models/langchain4j-community-dashscope</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-core</artifactId>
+      <version>1.12.2</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>dashscope-sdk-java</artifactId>
+      <version>2.22.10</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+</project>

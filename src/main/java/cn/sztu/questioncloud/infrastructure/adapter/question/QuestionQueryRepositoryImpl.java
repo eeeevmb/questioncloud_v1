@@ -2,10 +2,8 @@ package cn.sztu.questioncloud.infrastructure.adapter.question;
 
 import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
-import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
-import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.RepositoryUtils;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
@@ -210,17 +208,26 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
             return Collections.emptyList();
         }
 
+        List<Long> questionIds = QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionId)
+                .in(CollectionItem::getCollectionId, collectionIds)
+                .returnType(Long.class)
+                .list()
+                .stream()
+                .distinct()
+                .toList();
+        if (questionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         return QueryChain.of(questionMapper)
                 .select(QuestionSummaryVO.class)
                 .from(QuestionEntity.class)
-                .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
                 .leftJoin(QuestionEntity::getCurrentVersionId, QuestionStat::getVersionId)
-                // 条件筛选
-                .in(CollectionItem::getCollectionId, collectionIds)
+                .in(QuestionEntity::getId, questionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
-                .groupBy(QuestionEntity::getId)
                 // 暂定按照难度升序排序
                 .orderBy(QuestionStat::getDifficulty)
                 .returnType(QuestionDetailVO.class)
