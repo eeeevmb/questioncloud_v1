@@ -2,13 +2,16 @@ package cn.sztu.questioncloud.web.rest.v1.paper;
 
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
 import cn.sztu.questioncloud.application.paper.service.PaperItemService;
+import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperListItemVO;
 
 import java.util.List;
 
@@ -41,6 +44,17 @@ public class PaperController {
     @PostMapping
     public ResultVO<PaperCreatedVO> createPaper(@Valid @RequestBody PaperSaveReq req) {
         return ResultVO.success(paperAppService.createPaper(req));
+    }
+
+    /**
+     * 分页查询当前用户试卷列表
+     *
+     * @param query 分页与筛选参数
+     * @return 试卷分页结果
+     */
+    @GetMapping
+    public ResultVO<PageResult<PaperListItemVO>> pagePapers(@Valid PaperPageQuery query) {
+        return ResultVO.success(paperAppService.pagePapers(query));
     }
 
     /**

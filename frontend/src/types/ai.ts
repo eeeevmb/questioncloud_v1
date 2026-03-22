@@ -19,3 +19,29 @@ export interface QuestionDraft {
   difficulty?: number | null;
   assumptions?: string | null;
 }
+
+export interface GeneratePaperDraftBucketConstrain {
+  typeCode: string;
+  count: number;
+  difficultyMin: number;
+  difficultyMax: number;
+}
+
+export interface GeneratePaperDraftReq {
+  message: string;
+  collectionIds: string[];
+  constrains: GeneratePaperDraftBucketConstrain[];
+}
+
+export interface CandidateQuestionVO {
+  questionId: string;
+  questionVersionId: string;
+  title: string;
+  typeCode: string;
+  difficulty: number;
+}
+
+export interface AgentPaperDraftVO {
+  reason: string;
+  candidateQuestions: CandidateQuestionVO[];
+}

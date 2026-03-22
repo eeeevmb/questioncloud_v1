@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.ai.port;
 
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
+import cn.sztu.questioncloud.application.ai.dto.PaperGenerationPlan;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
@@ -35,10 +36,17 @@ public interface LlmPort {
 
     /**
      * 根据用户描述生成题目草稿
-     * @param userInput 用户输入
+     * @param userInput 用户描述
      * @return 题目草稿
      */
     QuestionDraft generateQuestionDraft(String userInput);
+
+    /**
+     * 根据用户描述生成组卷计划
+     * @param userInput 用户描述
+     * @return 组卷计划
+     */
+    PaperGenerationPlan generatePaperGenerationPlan(String userInput, List<String> allowedTypeCodes);
 
     // 流式接口
 

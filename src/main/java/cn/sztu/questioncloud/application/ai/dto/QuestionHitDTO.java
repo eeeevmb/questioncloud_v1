@@ -11,9 +11,14 @@ import lombok.Data;
 @Builder
 public class QuestionHitDTO {
     /**
-     * 相似度排序(topK)
+     * 相似度排序
      */
-    private Integer matchRank;
+    private Integer similarityRank;
+
+    /**
+     * 标题
+     */
+    private String title;
 
     /**
      * 题干，截断前200个字符
@@ -29,6 +34,21 @@ public class QuestionHitDTO {
      * 难度系数
      */
     private Double difficulty;
+
+    /**
+     * 题目ID
+     */
+    private Long questionId;
+
+    /**
+     * 题目版本ID
+     */
+    private Long questionVersionId;
+
+    /**
+     * 曝光系数
+     */
+    private Double exposureFactor;
 
     /**
      * 题源题集

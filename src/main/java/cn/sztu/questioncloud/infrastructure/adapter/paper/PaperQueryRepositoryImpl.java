@@ -1,15 +1,18 @@
 package cn.sztu.questioncloud.infrastructure.adapter.paper;
 
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
+import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.paper.PaperItemMapper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.paper.PaperMapper;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperListItemVO;
+import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -92,5 +95,23 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
                 .eq(PaperEntity::getId, paperId)
                 .returnType(BigDecimal.class)
                 .get();
+    }
+
+    @Override
+    public Pager<PaperListItemVO> pageByOwnerId(Long ownerId, PaperPageQuery query) {
+        var queryChain = QueryChain.of(paperMapper)
+                .select(PaperListItemVO.class)
+                .trimStringInCondition(true)
+                .eq(PaperEntity::getOwnerId, ownerId)
+                .orderByDesc(PaperEntity::getUpdatedAt);
+
+        if (query.getStatus() != null) {
+            queryChain.eq(PaperEntity::getStatus, query.getStatus());
+        }
+        if (StrUtil.isNotBlank(query.getKeyword())) {
+            queryChain.like(PaperEntity::getTitle, query.getKeyword());
+        }
+
+        return queryChain.returnType(PaperListItemVO.class).paging(query.buildPager());
     }
 }

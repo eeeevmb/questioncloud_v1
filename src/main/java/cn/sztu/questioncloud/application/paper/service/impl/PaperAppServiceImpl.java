@@ -8,16 +8,19 @@ import cn.sztu.questioncloud.application.paper.port.PaperPresenceCheckerReposito
 import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperRepository;
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
-import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
+import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperListItemVO;
+import cn.xbatis.core.mybatis.mapper.context.Pager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -185,5 +188,16 @@ public class PaperAppServiceImpl implements PaperAppService {
             throw new ApplicationException(PaperErrorCodeEnum.PAPER_STATUS_ERROR,
                     "非草稿试卷无法修改试卷，当前状态：" + paperEntity.getStatus());
         }
+    }
+
+    @Override
+    public PageResult<PaperListItemVO> pagePapers(PaperPageQuery query) {
+        if (query == null) {
+            query = new PaperPageQuery();
+        }
+        query.valid();
+        Long userId = StpUtil.getLoginIdAsLong();
+        Pager<PaperListItemVO> paging = paperQueryRepository.pageByOwnerId(userId, query);
+        return PageResult.of(paging.getResults(), paging.getTotal(), query);
     }
 }
