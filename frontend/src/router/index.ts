@@ -48,6 +48,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/papers',
+      name: 'paper-list',
+      component: () => import('../views/PapersView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/papers/:paperId',
+      name: 'paper-detail',
+      component: () => import('../views/PaperDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/math-sample',
       name: 'math-sample',
       component: () => import('../views/MathSampleView.vue'),

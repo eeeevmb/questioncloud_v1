@@ -6,7 +6,6 @@ import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
-import cn.xbatis.core.mybatis.mapper.context.Pager;
 
 /**
  * 题目相关服务
@@ -25,10 +24,10 @@ public interface PaperAppService {
 
     /**
      * 复制试卷
-     * 
+     *
      * @param paperId 试卷ID
      */
-    // PaperCreatedVO copyPaper(Long paperId);
+    //PaperCreatedVO copyPaper(Long paperId);
 
 
     /**
