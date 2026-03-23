@@ -2,10 +2,8 @@ package cn.sztu.questioncloud.infrastructure.adapter.question;
 
 import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
-import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
 import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
-import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.RepositoryUtils;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
@@ -203,38 +201,32 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
     @Override
     public List<QuestionDetailVO> findIdsByCollectionsAndType(List<Long> collectionIds, String typeCode) {
         if (collectionIds == null || collectionIds.isEmpty()) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
 
-        List<QuestionDetailVO> rawList = QueryChain.of(questionMapper)
-                .select(QuestionDetailVO.class)
+        List<Long> questionIds = QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionId)
+                .in(CollectionItem::getCollectionId, collectionIds)
+                .returnType(Long.class)
+                .list()
+                .stream()
+                .distinct()
+                .toList();
+        if (questionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return QueryChain.of(questionMapper)
+                .select(QuestionSummaryVO.class)
                 .from(QuestionEntity.class)
-                .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
                 .leftJoin(QuestionEntity::getCurrentVersionId, QuestionStat::getVersionId)
-                // 条件筛选
-                .in(CollectionItem::getCollectionId, collectionIds)
+                .in(QuestionEntity::getId, questionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
                 // 暂定按照难度升序排序
                 .orderBy(QuestionStat::getDifficulty)
                 .returnType(QuestionDetailVO.class)
                 .list();
-        /**
-         * 本查询涉及多表 JOIN (question_version, question_stats)。
-         * 使用 GROUP BY 会导致严格模式下抛出 BadSqlGrammarException。
-         */
-
-        // 去重 (应对一道题同时属于多个题集的情况)
-        List<QuestionDetailVO> distinctList = new ArrayList<>();
-        Set<Long> seenIds = new HashSet<>();
-
-        for (QuestionDetailVO vo : rawList) {
-            if (seenIds.add(vo.getId())) {
-                distinctList.add(vo);
-            }
-        }
-
-        return distinctList;
     }
 }

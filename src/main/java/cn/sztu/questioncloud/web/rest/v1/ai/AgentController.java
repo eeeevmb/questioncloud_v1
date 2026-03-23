@@ -6,10 +6,8 @@ import cn.sztu.questioncloud.application.ai.service.AgentChatService;
 import cn.sztu.questioncloud.application.ai.service.AiGenerateService;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
-import cn.sztu.questioncloud.web.rest.v1.ai.req.ChatReq;
-import cn.sztu.questioncloud.web.rest.v1.ai.req.CreateChatSessionReq;
-import cn.sztu.questioncloud.web.rest.v1.ai.req.GenerateQuestionDraftReq;
-import cn.sztu.questioncloud.web.rest.v1.ai.req.UpdateChatSessionTitleReq;
+import cn.sztu.questioncloud.web.rest.v1.ai.req.*;
+import cn.sztu.questioncloud.web.rest.v1.ai.vo.AgentPaperDraftVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatMessageVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.ChatSessionVO;
 import jakarta.validation.Valid;
@@ -104,11 +102,18 @@ public class AgentController {
      * 根据用户描述生成题目草稿
      * @return 题目草稿
      */
-    @PostMapping("question-draft/generate")
+    @PostMapping("/question-draft/generate")
     public ResultVO<QuestionDraft> generateQuestionDraft(@Valid @RequestBody GenerateQuestionDraftReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
         return ResultVO.success(aiGenerateService.generateQuestionDraft(req.toString()));
     }
 
-    // 获取所有可用agent
+    /**
+     * 根据用户描述生成候选题目清单
+     */
+    @PostMapping("/paper-draft/generate")
+    public ResultVO<AgentPaperDraftVO> generateAgentPaperDraft(@Valid @RequestBody GeneratePaperDraftReq req) {
+        Long userId = StpUtil.getLoginIdAsLong();
+        return ResultVO.success(aiGenerateService.generateAgentPaperDraft(userId, req));
+    }
 }

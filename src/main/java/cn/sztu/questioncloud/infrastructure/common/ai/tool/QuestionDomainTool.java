@@ -123,7 +123,7 @@ public class QuestionDomainTool {
                 return new ToolResult<>(false, null, "检索参数 query 不能为空", null);
             }
 
-            List<QuestionHitDTO> data = searchService.RAGSearch(
+            List<QuestionHitDTO> data = searchService.searchQuestions(
                     context.getUserId(),
                     context.getCollectionIds(),
                     args.getQuery(),
