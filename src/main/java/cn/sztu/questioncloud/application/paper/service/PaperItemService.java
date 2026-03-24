@@ -25,6 +25,15 @@ public interface PaperItemService {
     List<PaperItemVO> savePaperItems(Long paperId, List<PaperItemSaveReq> reqs);
 
     /**
+     * 新增试卷题目
+     * 仅新增试卷题目，题目顺序逐增加到试卷末尾
+     *
+     * @param paperId 试卷ID
+     * @param reqs 新增试卷题目请求
+     */
+    List<PaperItemVO> addPaperItems(Long paperId, List<PaperItemSaveReq> reqs);
+
+    /**
      * 删除试卷所有题目
      * 若要删除试卷题目，请调用此方法
      * 若要删除部分题目，请调用save方法间接删除
