@@ -59,7 +59,7 @@
           <div class="card-actions">
             <el-button :loading="previewLoading" @click="handlePreviewRandomBuild">随机预览</el-button>
             <el-button :disabled="!randomPreviewRows.length" type="primary" plain @click="fillDraftItemsFromPreview">
-              填充到待保存列表
+              填充到草稿区域
             </el-button>
           </div>
         </div>
@@ -122,11 +122,11 @@
       <template #header>
         <div class="card-title-row">
           <div>
-            <h3>待保存题目列表</h3>
+            <h3>草稿区域</h3>
             <span class="hint">由随机预览结果填充，可调整分值后一次性保存到试卷</span>
           </div>
           <div class="card-actions">
-            <el-button :disabled="!draftRows.length" @click="clearDraftRows">清空待保存列表</el-button>
+            <el-button :disabled="!draftRows.length" @click="clearDraftRows">清空草稿</el-button>
             <el-button type="primary" :loading="submittingItems" @click="handleSaveItems">保存到试卷</el-button>
           </div>
         </div>
@@ -136,21 +136,21 @@
         <el-table-column label="来源" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="row.source === 'preview' ? 'success' : 'info'" effect="plain">
-              {{ row.source === 'preview' ? '预览' : '手工' }}
+              {{ row.source === 'preview' ? '预览' : (row.source === 'paper' ? '试卷' : '手工') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="题目 ID" min-width="220">
+        <el-table-column label="题目 ID" min-width="160">
           <template #default="{ row }">
             {{ row.questionId }}
           </template>
         </el-table-column>
-        <el-table-column label="版本 ID" min-width="220">
+        <el-table-column label="版本 ID" min-width="160">
           <template #default="{ row }">
             {{ row.questionVersionId }}
           </template>
         </el-table-column>
-        <el-table-column label="分值" width="150">
+        <el-table-column label="分值" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.score" :min="0.5" :step="0.5" :precision="2" controls-position="right" />
           </template>
@@ -167,7 +167,7 @@
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!draftRows.length" description="暂无待保存题目，请先执行随机预览并填充。" />
+      <el-empty v-if="!draftRows.length" description="草稿区域为空，请先执行随机预览并填充。" />
     </el-card>
 
     <el-card shadow="never" class="items-card">
@@ -284,8 +284,27 @@ async function loadPaper() {
   try {
     paper.value = await fetchPaperDetail(paperId.value);
     syncEditForm();
+    syncDraftRowsFromPaper();
   } finally {
     loading.value = false;
+  }
+}
+
+function syncDraftRowsFromPaper() {
+  if (paper.value?.items?.length) {
+    draftRows.value = paper.value.items.map((item) => ({
+      key: createRowKey(item.questionId, item.questionVersionId),
+      questionId: item.questionId,
+      questionVersionId: item.questionVersionId,
+      score: item.score,
+      typeCode: item.typeCode,
+      difficulty: item.difficulty,
+      questionTitle: item.questionTitle,
+      stem: item.stem,
+      source: 'paper' as const
+    }));
+  } else {
+    draftRows.value = [];
   }
 }
 
@@ -373,7 +392,7 @@ function fillDraftItemsFromPreview() {
     typeCode: row.typeCode,
     source: 'preview'
   }));
-  showSuccess('已填充到待保存列表');
+  showSuccess('已填充到草稿区域');
 }
 
 function addRandomRule() {
@@ -402,7 +421,7 @@ async function handleSaveItems() {
 
   const payload = normalizeDraftItems(draftRows.value);
   if (!payload.length) {
-    showError('请至少填写一条待保存题目');
+    showError('请至少填写一条草稿题目');
     return;
   }
 

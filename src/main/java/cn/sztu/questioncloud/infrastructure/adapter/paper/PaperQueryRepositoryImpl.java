@@ -70,7 +70,7 @@ public class PaperQueryRepositoryImpl implements PaperQueryRepository {
             }
         } else {
             // 默认按试卷创建日期升序排序
-            queryChain.orderBy(QuestionEntity::getCreatedAt);
+            queryChain.orderBy(PaperEntity::getCreatedAt);
         }
         return queryChain.returnType(PaperBasicVO.class).paging(query.buildPager());
     }

@@ -27,6 +27,9 @@ public class PaperItemDetailVO {
     private Long paperId;
     private Long questionId;
 
+    @ResultEntityField(target = PaperItemEntity.class, property = "questionVersionId")
+    private Long questionVersionId;
+
     // --- 试题信息 ---
     private BigDecimal score;
     private Integer seq;
