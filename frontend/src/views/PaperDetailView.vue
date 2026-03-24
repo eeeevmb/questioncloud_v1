@@ -59,7 +59,7 @@
           <div class="card-actions">
             <el-button :loading="previewLoading" @click="handlePreviewRandomBuild">随机预览</el-button>
             <el-button :disabled="!randomPreviewRows.length" type="primary" plain @click="fillDraftItemsFromPreview">
-              填充到待保存列表
+              填充到草稿区域
             </el-button>
           </div>
         </div>
@@ -97,7 +97,7 @@
                 <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
               </el-select>
               <el-input-number v-model="rule.count" :min="1" :step="1" :precision="0" controls-position="right" class="rule-count" />
-              <el-input-number v-model="rule.score" :min="0.5" :step="0.5" :precision="2" controls-position="right" class="rule-score" />
+              <el-input-number v-model="rule.expectedDifficulty" :min="0" :max="1" :step="0.1" :precision="1" controls-position="right" class="rule-difficulty" placeholder="0~1" />
               <el-button type="danger" plain :disabled="randomForm.rules.length === 1" @click="removeRandomRule(index)">删除</el-button>
             </div>
           </div>
@@ -107,11 +107,33 @@
       <div class="preview-panel">
         <div class="section-subtitle">预览结果</div>
         <el-table v-loading="previewLoading" :data="randomPreviewRows" border row-key="key">
-          <el-table-column prop="questionId" label="题目 ID" min-width="180" />
-          <el-table-column prop="questionVersionId" label="版本 ID" min-width="180" />
-          <el-table-column prop="typeCode" label="题型" width="160" />
-          <el-table-column prop="score" label="分值" width="100">
+          <el-table-column prop="questionTitle" label="标题" min-width="200">
+            <template #default="{ row }">
+              <span class="stem-preview">{{ row.questionTitle || '无标题' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="题干" min-width="260">
+            <template #default="{ row }">
+              <span class="stem-preview">{{ row.stem || '无' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="难度" width="100">
+            <template #default="{ row }">
+              {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '无' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="题型" width="120">
+            <template #default="{ row }">
+              {{ row.typeCode || '无' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="分值" width="100">
             <template #default="{ row }">{{ formatScore(row.score) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row, $index }">
+              <el-button type="primary" link size="small" :loading="row.replacing" @click="handleReplacePreviewItem(row, $index)">换一题</el-button>
+            </template>
           </el-table-column>
         </el-table>
         <el-empty v-if="!previewLoading && !randomPreviewRows.length" description="暂无预览结果" />
@@ -122,11 +144,11 @@
       <template #header>
         <div class="card-title-row">
           <div>
-            <h3>待保存题目列表</h3>
+            <h3>草稿区域</h3>
             <span class="hint">由随机预览结果填充，可调整分值后一次性保存到试卷</span>
           </div>
           <div class="card-actions">
-            <el-button :disabled="!draftRows.length" @click="clearDraftRows">清空待保存列表</el-button>
+            <el-button :disabled="!draftRows.length" @click="clearDraftRows">清空草稿</el-button>
             <el-button type="primary" :loading="submittingItems" @click="handleSaveItems">保存到试卷</el-button>
           </div>
         </div>
@@ -136,38 +158,44 @@
         <el-table-column label="来源" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="row.source === 'preview' ? 'success' : 'info'" effect="plain">
-              {{ row.source === 'preview' ? '预览' : '手工' }}
+              {{ row.source === 'preview' ? '预览' : (row.source === 'paper' ? '试卷' : '手工') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="题目 ID" min-width="220">
+        <el-table-column prop="questionTitle" label="标题" min-width="200">
           <template #default="{ row }">
-            {{ row.questionId }}
+            <span class="stem-preview">{{ row.questionTitle || '无标题' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="版本 ID" min-width="220">
+        <el-table-column label="题干" min-width="260">
           <template #default="{ row }">
-            {{ row.questionVersionId }}
+            <span class="stem-preview">{{ row.stem || '无' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="分值" width="150">
+        <el-table-column label="难度" width="100">
+          <template #default="{ row }">
+            {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '无' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="题型" width="120">
+          <template #default="{ row }">
+            {{ row.typeCode || '无' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="分值" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.score" :min="0.5" :step="0.5" :precision="2" controls-position="right" />
           </template>
         </el-table-column>
-        <el-table-column label="题型" width="160">
-          <template #default="{ row }">
-            {{ row.typeCode || '—' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ $index }">
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row, $index }">
+            <el-button v-if="row.source === 'preview'" type="primary" link size="small" :loading="row.replacing" @click="handleReplaceDraftItem(row, $index)">换一题</el-button>
             <el-button type="danger" link @click="removeDraftRow($index)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!draftRows.length" description="暂无待保存题目，请先执行随机预览并填充。" />
+      <el-empty v-if="!draftRows.length" description="草稿区域为空，请先执行随机预览并填充。" />
     </el-card>
 
     <el-card shadow="never" class="items-card">
@@ -212,6 +240,7 @@ import {
   deletePaper,
   fetchPaperDetail,
   previewRandomBuild,
+  randomReplaceItem,
   savePaperItems,
   updatePaper
 } from '../api/paper';
@@ -219,10 +248,12 @@ import { fetchCollections } from '../api/collection';
 import type {
   PaperDetailVO,
   PaperDraftItemRow,
+  PaperItemDetailRef,
   PaperItemSavePayload,
   PaperRandomBuildReq,
   PaperRandomBuildRule,
-  PaperSavePayload
+  PaperSavePayload,
+  RandomReplaceReq
 } from '../types/paper';
 import type { CollectionView } from '../types/collection';
 import { showError, showSuccess } from '../utils/messages';
@@ -284,8 +315,27 @@ async function loadPaper() {
   try {
     paper.value = await fetchPaperDetail(paperId.value);
     syncEditForm();
+    syncDraftRowsFromPaper();
   } finally {
     loading.value = false;
+  }
+}
+
+function syncDraftRowsFromPaper() {
+  if (paper.value?.items?.length) {
+    draftRows.value = paper.value.items.map((item) => ({
+      key: createRowKey(item.questionId, item.questionVersionId),
+      questionId: item.questionId,
+      questionVersionId: item.questionVersionId,
+      score: item.score,
+      typeCode: item.typeCode,
+      difficulty: item.difficulty,
+      questionTitle: item.questionTitle,
+      stem: item.stem,
+      source: 'paper' as const
+    }));
+  } else {
+    draftRows.value = [];
   }
 }
 
@@ -365,15 +415,25 @@ function fillDraftItemsFromPreview() {
     return;
   }
 
-  draftRows.value = randomPreviewRows.value.map((row) => ({
-    key: createRowKey(row.questionId, row.questionVersionId),
-    questionId: row.questionId,
-    questionVersionId: row.questionVersionId,
-    score: row.score,
-    typeCode: row.typeCode,
-    source: 'preview'
-  }));
-  showSuccess('已填充到待保存列表');
+    // 先过滤掉来源为'预览'的题目，保留其他来源的题目
+  const nonPreviewRows = draftRows.value.filter(row => row.source !== 'preview');
+  
+  // 将新预览的题目添加到后面
+  draftRows.value = [
+    ...nonPreviewRows,
+    ...randomPreviewRows.value.map((row) => ({
+      key: createRowKey(row.questionId, row.questionVersionId),
+      questionId: row.questionId,
+      questionVersionId: row.questionVersionId,
+      score: row.score,
+      typeCode: row.typeCode,
+      difficulty: row.difficulty,
+      questionTitle: row.questionTitle,
+      stem: row.stem,
+      source: 'preview'
+    }))
+  ];
+  showSuccess('已填充到草稿区域');
 }
 
 function addRandomRule() {
@@ -391,8 +451,106 @@ function removeDraftRow(index: number) {
   draftRows.value.splice(index, 1);
 }
 
+async function handleReplaceDraftItem(row: PaperDraftItemRow, index: number) {
+  if (!paperId.value) {
+    return;
+  }
+
+  const collectionIds = normalizeCollectionIds(randomForm.collectionIds);
+  if (!collectionIds.length) {
+    showError('请先选择题集');
+    return;
+  }
+
+  if (!row.typeCode) {
+    showError('题目类型不存在');
+    return;
+  }
+
+  // 排除当前草稿区域已有的题目ID
+  const excludedQuestionIds = draftRows.value.map(r => r.questionId);
+
+  const request: RandomReplaceReq = {
+    collectionIds,
+    excludedQuestionIds,
+    typeCode: row.typeCode,
+    expectedDifficulty: row.difficulty
+  };
+
+  row.replacing = true;
+  try {
+    const newItem = await randomReplaceItem(paperId.value, request);
+    // 替换当前行
+    draftRows.value[index] = {
+      key: createRowKey(String(newItem.questionId), String(newItem.questionVersionId)),
+      questionId: String(newItem.questionId),
+      questionVersionId: String(newItem.questionVersionId),
+      score: row.score, // 保留原分值
+      typeCode: newItem.typeCode || row.typeCode,
+      difficulty: newItem.difficulty,
+      questionTitle: newItem.questionTitle,
+      stem: newItem.stem,
+      source: 'preview',
+      replacing: false
+    };
+    showSuccess('已更换题目');
+  } catch (error) {
+    showError(error instanceof Error ? error.message : '换一题失败');
+    row.replacing = false;
+  }
+}
+
 function clearDraftRows() {
   draftRows.value = [];
+}
+
+async function handleReplacePreviewItem(row: PaperDraftItemRow, index: number) {
+  if (!paperId.value) {
+    return;
+  }
+
+  const collectionIds = normalizeCollectionIds(randomForm.collectionIds);
+  if (!collectionIds.length) {
+    showError('请先选择题集');
+    return;
+  }
+
+  if (!row.typeCode) {
+    showError('题目类型不存在');
+    return;
+  }
+
+  // 排除当前预览结果已有的题目ID
+  const excludedQuestionIds = randomPreviewRows.value.map(r => r.questionId);
+
+  const request: RandomReplaceReq = {
+    collectionIds,
+    excludedQuestionIds,
+    typeCode: row.typeCode,
+    expectedDifficulty: row.difficulty
+  };
+
+  row.replacing = true;
+  try {
+    const newItem = await randomReplaceItem(paperId.value, request);
+    // 替换当前行
+    randomPreviewRows.value[index] = {
+      key: createRowKey(String(newItem.questionId), String(newItem.questionVersionId)),
+      questionId: String(newItem.questionId),
+      questionVersionId: String(newItem.questionVersionId),
+      score: row.score, // 保留原分值
+      typeCode: newItem.typeCode || row.typeCode,
+      difficulty: newItem.difficulty,
+      questionTitle: newItem.questionTitle,
+      stem: newItem.stem,
+      source: 'preview',
+      replacing: false
+    };
+    showSuccess('已更换题目');
+  } catch (error) {
+    showError(error instanceof Error ? error.message : '换一题失败');
+    row.replacing = false;
+  }
 }
 
 async function handleSaveItems() {
@@ -402,7 +560,7 @@ async function handleSaveItems() {
 
   const payload = normalizeDraftItems(draftRows.value);
   if (!payload.length) {
-    showError('请至少填写一条待保存题目');
+    showError('请至少填写一条草稿题目');
     return;
   }
 
@@ -524,13 +682,15 @@ function normalizeRandomRules(rules: PaperRandomBuildRule[]): PaperRandomBuildRu
     .map((rule) => ({
       typeCode: rule.typeCode?.trim() || '',
       count: Number(rule.count),
-      score: Number(rule.score)
+      expectedDifficulty: rule.expectedDifficulty !== undefined && rule.expectedDifficulty !== null
+        ? Number(rule.expectedDifficulty)
+        : undefined
     }))
-    .filter((rule) => rule.typeCode && Number.isFinite(rule.count) && rule.count > 0 && Number.isFinite(rule.score) && rule.score >= 0.5);
+    .filter((rule) => rule.typeCode && Number.isFinite(rule.count) && rule.count > 0);
 }
 
 function expandPreviewRows(
-  result: { questionId: string; questionVersionId: string }[],
+  result: PaperItemDetailRef[],
   rules: PaperRandomBuildRule[]
 ): PaperDraftItemRow[] {
   const rows: PaperDraftItemRow[] = [];
@@ -540,11 +700,14 @@ function expandPreviewRows(
     const slice = result.slice(cursor, cursor + rule.count);
     for (const item of slice) {
       rows.push({
-        key: createRowKey(item.questionId, item.questionVersionId),
+        key: createRowKey(String(item.questionId), String(item.questionVersionId)),
         questionId: String(item.questionId),
         questionVersionId: String(item.questionVersionId),
-        score: Number(rule.score),
-        typeCode: rule.typeCode,
+        score: 1, // 默认分值，可在草稿区域中调整
+        typeCode: item.typeCode || rule.typeCode,
+        difficulty: item.difficulty,
+        questionTitle: item.questionTitle,
+        stem: item.stem,
         source: 'preview'
       });
     }
@@ -576,7 +739,7 @@ function createRandomRule(): PaperRandomBuildRule {
   return {
     typeCode: '',
     count: 1,
-    score: 1
+    expectedDifficulty: undefined
   };
 }
 
@@ -667,7 +830,7 @@ function createRowKey(questionId: string, questionVersionId: string) {
 
 .rule-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.7fr 0.7fr auto;
+  grid-template-columns: 1.2fr 0.7fr 0.9fr auto;
   gap: 10px;
   align-items: center;
 }

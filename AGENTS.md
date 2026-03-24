@@ -1,8 +1,6 @@
 # Repository Guidelines
 
 ## Response Style
-Always start every response by addressing me as “Mr. Chen”. The very first words of your reply must be “Mr. Chen,” (including the comma). Do not omit it, do not replace it with any other greeting, and do not add any text before it.
-
 Always Reply in Chinese.
 
 ## Project Structure & Module Organization

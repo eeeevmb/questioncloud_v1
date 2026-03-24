@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.paper.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.paper.enums.PaperErrorCodeEnum;
 import cn.sztu.questioncloud.application.paper.port.PaperItemRepository;
+import cn.sztu.questioncloud.application.paper.port.PaperQueryRepository;
 import cn.sztu.questioncloud.application.paper.port.PaperRepository;
 import cn.sztu.questioncloud.application.paper.service.PaperItemService;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
@@ -26,6 +27,7 @@ import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,7 +48,17 @@ public class PaperItemServiceImpl implements PaperItemService {
 
     // === 人工组卷 ===
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<PaperItemVO> savePaperItems(Long paperId, List<PaperItemSaveReq> reqs){
+        this.deleteItemsByPaperId(paperId);
+        if (reqs == null || reqs.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return this.addPaperItems(paperId, reqs);
+    }
+
+    @Override
+    public List<PaperItemVO> addPaperItems(Long paperId, List<PaperItemSaveReq> reqs) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
         PaperEntity paperEntity = paperRepository.getById(paperId);
@@ -55,31 +67,32 @@ public class PaperItemServiceImpl implements PaperItemService {
         validatePaperStatus(paperEntity, userId);
         validateQuestionVersions(reqs);
 
-        // 3. 数据预处理
+        // 3. 获取属性
+        Integer maxSeq = paperEntity.getTotalItems() == null ? 0 : paperEntity.getTotalItems();
+        BigDecimal totalScore = paperEntity.getTotalScore() == null ? BigDecimal.ZERO : paperEntity.getTotalScore();
         List<PaperItemEntity> newEntities = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
-        BigDecimal totalScore = BigDecimal.ZERO; // 试卷总分累加器
 
-        // 4. 构建试卷题目实体并计算总分
-        for (int i = 0; i < reqs.size(); i++) {
-            PaperItemSaveReq req = reqs.get(i);
+        // 4. 构建新增试卷题目实体
+        for (PaperItemSaveReq req : reqs) {
+            totalScore = totalScore.add(req.getScore());
+            maxSeq++;
+
             PaperItemEntity entity = PaperItemEntity.builder()
                     .paperId(paperId)
-                    .seq(i + 1) // 题序从1开始
+                    .seq(maxSeq)
                     .questionId(req.getQuestionId())
                     .questionVersionId(req.getQuestionVersionId())
                     .score(req.getScore())
                     .createdAt(now)
                     .build();
             newEntities.add(entity);
-            totalScore = totalScore.add(req.getScore());
         }
-        paperItemRepository.deleteItemsByPaperId(paperId);
         paperItemRepository.saveBatchItems(newEntities);
 
         PaperEntity statsUpdate = PaperEntity.builder()
                 .id(paperId)
-                .totalItems(newEntities.size())
+                .totalItems(maxSeq)
                 .totalScore(totalScore)
                 .updatedAt(now)
                 .build();
@@ -110,6 +123,15 @@ public class PaperItemServiceImpl implements PaperItemService {
 
         // 3. 执行删除
         paperItemRepository.deleteItemsByPaperId(paperId);
+        LocalDateTime now = LocalDateTime.now();
+        PaperEntity statsUpdate = PaperEntity.builder()
+                .id(paperId)
+                .totalItems(0)
+                .totalScore(BigDecimal.ZERO)
+                .updatedAt(now)
+                .build();
+
+        paperRepository.updateStatistics(statsUpdate);
     }
 
     @Override
@@ -176,10 +198,11 @@ public class PaperItemServiceImpl implements PaperItemService {
                     ))
                     .toList();
 
-            for (QuestionDetailVO vo : selected) {
-                PaperItemDetailVO itemVO = PaperItemDetailVO.builder()
-                        .questionId(vo.getId())
-                        .questionTitle(vo.getTitle())
+           for (QuestionDetailVO vo : selected) {
+               PaperItemDetailVO itemVO = PaperItemDetailVO.builder()
+                       .questionId(vo.getId())
+                        .questionVersionId(vo.getCurrentVersionId())
+                       .questionTitle(vo.getTitle())
                         .stem(vo.getStem())
                         .typeCode(vo.getTypeCode())
                         .difficulty(vo.getDifficulty())
@@ -246,8 +269,9 @@ public class PaperItemServiceImpl implements PaperItemService {
                 .orElseThrow(() -> new ApplicationException(QuestionErrorCodeEnum.QUESTION_QUANTITY_INSUFFICIENT, "抽题失败"));
 
         return PaperItemDetailVO.builder()
-                .questionId(selected.getId())
-                .questionTitle(selected.getTitle())
+               .questionId(selected.getId())
+                .questionVersionId(selected.getCurrentVersionId())
+               .questionTitle(selected.getTitle())
                 .stem(selected.getStem())
                 .typeCode(selected.getTypeCode())
                 .difficulty(selected.getDifficulty())
