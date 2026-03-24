@@ -53,6 +53,19 @@ public class PaperController {
         return ResultVO.success(paperItemService.savePaperItems(paperId, batchReq.getItems()));
     }
 
+    /**
+     * 新增试卷题目
+     * 不覆盖原有题目列表，在原有题目列表末尾追加新题目
+     *
+     * @param paperId 试卷ID
+     * @param batchReq 题目列表 (试题顺序由题目列表题目顺序决定)
+     */
+    @PostMapping("/{paperId}/items/add")
+    public ResultVO<List<PaperItemVO>> addPaperItems(@Valid @RequestBody PaperItemBatchSaveReq batchReq,
+                                                      @PathVariable Long paperId) {
+        return ResultVO.success(paperItemService.addPaperItems(paperId, batchReq.getItems()));
+    }
+
     // === 随机组卷 ===
 
     /**

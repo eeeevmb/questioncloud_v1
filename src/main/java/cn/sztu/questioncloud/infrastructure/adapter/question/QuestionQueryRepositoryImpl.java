@@ -19,11 +19,7 @@ import cn.xbatis.core.sql.executor.chain.QueryChain;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -210,20 +206,29 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
             return Collections.emptyList();
         }
 
-        return QueryChain.of(questionMapper)
-                .select(QuestionSummaryVO.class)
+        // 1. 正常执行连表查询（不加 groupBy）
+        // 此时查出来的数据已经按难度排好了序，但是会有重复记录
+        List<QuestionDetailVO> rawList = QueryChain.of(questionMapper)
+                .select(QuestionDetailVO.class) // 💡 提醒：既然返回 DetailVO，这里最好也 Select 它，否则会丢字段
                 .from(QuestionEntity.class)
                 .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
                 .leftJoin(QuestionEntity::getCurrentVersionId, QuestionStat::getVersionId)
-                // 条件筛选
                 .in(CollectionItem::getCollectionId, collectionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
-                .groupBy(QuestionEntity::getId)
-                // 暂定按照难度升序排序
-                .orderBy(QuestionStat::getDifficulty)
+                .orderBy(QuestionStat::getDifficulty) // 依然交由数据库排序
                 .returnType(QuestionDetailVO.class)
                 .list();
+
+        // 2. 在 Java 内存中去重，并保留 SQL 的排序结果
+        Map<Long, QuestionDetailVO> distinctMap = new LinkedHashMap<>();
+        for (QuestionDetailVO vo : rawList) {
+            // 如果 map 里还没存过这个题目 ID，就放进去。后续查出来的重复题目会直接被忽略。
+            distinctMap.putIfAbsent(vo.getId(), vo);
+        }
+
+        // 3. 返回去重后的纯净列表
+        return new ArrayList<>(distinctMap.values());
     }
 }
