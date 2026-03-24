@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.ai.port;
 
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
 import cn.sztu.questioncloud.application.ai.dto.PaperGenerationPlan;
+import cn.sztu.questioncloud.application.ai.dto.QuestionSemanticEnrichmentDTO;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
@@ -33,6 +34,13 @@ public interface LlmPort {
      * @return 会话标题
      */
     String generateSessionTitle(UserMessage userMessage);
+
+    /**
+     * 根据题目文本生成语义增强后的题目对象
+     * @param input 输入
+     * @return 语义增强题目对象
+     */
+    QuestionSemanticEnrichmentDTO generateQuestionSemanticEnrichmentDTO(String input);
 
     /**
      * 根据用户描述生成题目草稿

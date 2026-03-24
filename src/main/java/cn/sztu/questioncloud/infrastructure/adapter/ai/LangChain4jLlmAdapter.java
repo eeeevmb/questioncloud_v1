@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.infrastructure.adapter.ai;
 
 import cn.sztu.questioncloud.application.ai.dto.AgentDefinition;
 import cn.sztu.questioncloud.application.ai.dto.PaperGenerationPlan;
+import cn.sztu.questioncloud.application.ai.dto.QuestionSemanticEnrichmentDTO;
 import cn.sztu.questioncloud.application.ai.port.LlmPort;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -126,6 +127,63 @@ public class LangChain4jLlmAdapter implements LlmPort {
             return title.isBlank() ? "新会话" : title;
         } catch (Exception e) {
             return "新会话";
+        }
+    }
+
+    /**
+     * 根据题目文本生成语义增强后的题目对象
+     *
+     * @param input 输入
+     * @return 语义增强题目对象
+     */
+    @Override
+    public QuestionSemanticEnrichmentDTO generateQuestionSemanticEnrichmentDTO(String input) {
+        try {
+            ResponseFormat responseFormat = buildQuestionSemanticEnrichmentResponseFormat();
+
+            ChatRequest request = ChatRequest.builder()
+                    .messages(List.of(
+                            SystemMessage.from("""
+                                    你是题目语义增强助手。
+                                    你必须严格输出 QuestionSemanticEnrichmentDTO 的 JSON 对象，不要输出 markdown 代码块，不要输出解释。
+
+                                    任务要求：
+                                    1. 对输入中的题干与解析进行语义清洗，去除 LaTeX 排版噪声（如无意义换行、重复空格、冗余格式符）。
+                                    2. 保留数学语义与计算逻辑，不要改写题意本身。
+                                    3. 返回 stem、solution、knowledgePoints 三个字段。
+                                    4. knowledgePoints 为简洁中文知识点标签列表，建议 2~4 个核心知识点 + 1 个解题方法标签。
+                                    5. 不要输出过于宽泛、过于碎片化、偏讲解总结的标签，例如“充分条件”“反例分析”“系数提取”这类低检索价值表达。
+                                    6. 不要为了凑数量强行补充标签；如果核心标签只有 2~3 个，就输出 2~3 个。
+                                    7. 若某个候选标签不是该题的主要求解路径或主干知识点，则不要输出。
+                                    8. 不要生成与题目无关的知识点；不要输出空对象。
+
+                                    输出必须可被 JSON 反序列化为 QuestionSemanticEnrichmentDTO。
+                                    """),
+                            UserMessage.from("""
+                                    原始题目文本如下：
+                                    %s
+                                    """.formatted(input))
+                    ))
+                    .parameters(ChatRequestParameters.builder()
+                            .temperature(0.1)
+                            .maxOutputTokens(1024)
+                            .responseFormat(responseFormat)
+                            .build())
+                    .build();
+
+            ChatResponse response = chatModel.chat(request);
+            AiMessage aiMessage = response.aiMessage();
+            if (aiMessage == null || aiMessage.text() == null || aiMessage.text().isBlank()) {
+                throw new IllegalStateException("模型未返回可解析的语义增强结果");
+            }
+
+            QuestionSemanticEnrichmentDTO dto = objectMapper.readValue(aiMessage.text(), QuestionSemanticEnrichmentDTO.class);
+            if (dto.getKnowledgePoints() == null) {
+                dto.setKnowledgePoints(List.of());
+            }
+            return dto;
+        } catch (Exception e) {
+            throw new RuntimeException("生成题目语义增强结果失败", e);
         }
     }
 
@@ -462,6 +520,36 @@ public class LangChain4jLlmAdapter implements LlmPort {
 
         JsonSchema jsonSchema = JsonSchema.builder()
                 .name("PaperGenerationPlan")
+                .rootElement(rootSchema)
+                .build();
+
+        return ResponseFormat.builder()
+                .type(ResponseFormatType.JSON)
+                .jsonSchema(jsonSchema)
+                .build();
+    }
+
+    private ResponseFormat buildQuestionSemanticEnrichmentResponseFormat() {
+        JsonObjectSchema rootSchema = JsonObjectSchema.builder()
+                .description("题目语义增强输出参数")
+                .addProperty("stem", JsonStringSchema.builder()
+                        .description("清洗后的题干，保留原题语义，去除 LaTeX 排版噪声")
+                        .build())
+                .addProperty("solution", JsonStringSchema.builder()
+                        .description("清洗后的解析，保留解题逻辑，去除 LaTeX 排版噪声")
+                        .build())
+                .addProperty("knowledgePoints", JsonArraySchema.builder()
+                        .description("知识点标签列表，简洁可检索")
+                        .items(JsonStringSchema.builder()
+                                .description("单个知识点标签")
+                                .build())
+                        .build())
+                .required("stem", "solution", "knowledgePoints")
+                .additionalProperties(false)
+                .build();
+
+        JsonSchema jsonSchema = JsonSchema.builder()
+                .name("QuestionSemanticEnrichmentDTO")
                 .rootElement(rootSchema)
                 .build();
 
