@@ -5,7 +5,7 @@
         <div>
           <p class="eyebrow">组卷管理</p>
           <h2>试卷列表</h2>
-          <p class="hero-desc">查看当前登录用户创建的试卷，支持按状态和关键字检索。</p>
+          <p class="hero-desc">查看当前登录用户创建的试卷，支持按关键字检索。</p>
         </div>
         <div class="hero-actions">
           <el-button :loading="listLoading" @click="loadPapers">刷新</el-button>
@@ -25,13 +25,6 @@
               @keyup.enter="handleSearch"
             />
           </el-form-item>
-          <el-form-item label="状态">
-            <el-select v-model="queryForm.status" clearable placeholder="全部">
-              <el-option label="草稿" :value="0" />
-              <el-option label="已发布" :value="1" />
-              <el-option label="已归档" :value="2" />
-            </el-select>
-          </el-form-item>
           <el-form-item label="每页条数">
             <el-select v-model="pagination.pageSize" @change="handlePageSizeChange">
               <el-option :value="10" label="10 条 / 页" />
@@ -50,11 +43,6 @@
     <el-card shadow="never">
       <el-table v-loading="listLoading" :data="paperPage?.records ?? []" border row-key="id">
         <el-table-column prop="title" label="标题" min-width="220" />
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" effect="plain">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column prop="totalItems" label="题数" width="90" />
         <el-table-column label="总分" width="110">
           <template #default="{ row }">
@@ -131,10 +119,8 @@ const createDialogVisible = ref(false);
 
 const queryForm = reactive<{
   keyword: string;
-  status: number | '';
 }>({
-  keyword: '',
-  status: ''
+  keyword: ''
 });
 
 const pagination = reactive({
@@ -154,8 +140,7 @@ onMounted(() => {
 const activeQuery = computed(() => ({
   pageNum: pagination.pageNum,
   pageSize: pagination.pageSize,
-  keyword: queryForm.keyword.trim() || undefined,
-  status: queryForm.status === '' ? undefined : queryForm.status
+  keyword: queryForm.keyword.trim() || undefined
 }));
 
 async function loadPapers() {
@@ -185,7 +170,6 @@ function handlePageSizeChange(pageSize: number) {
 
 function resetFilters() {
   queryForm.keyword = '';
-  queryForm.status = '';
   pagination.pageNum = 1;
   pagination.pageSize = 10;
   void loadPapers();
@@ -232,32 +216,6 @@ async function handleDelete(row: PaperListItemVO) {
   await deletePaper(row.id);
   showSuccess('试卷已删除');
   await loadPapers();
-}
-
-function statusLabel(status: number) {
-  switch (status) {
-    case 0:
-      return '草稿';
-    case 1:
-      return '已发布';
-    case 2:
-      return '已归档';
-    default:
-      return `状态 ${status}`;
-  }
-}
-
-function statusTagType(status: number) {
-  switch (status) {
-    case 0:
-      return 'info';
-    case 1:
-      return 'success';
-    case 2:
-      return 'warning';
-    default:
-      return 'info';
-  }
 }
 
 function formatDateTime(value?: string | null) {
@@ -331,7 +289,7 @@ function formatScore(value: number) {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
   gap: 12px 16px;
   flex: 1;
 }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="paper-detail-page">
     <div class="page-toolbar">
       <el-button @click="goBack">返回列表</el-button>
@@ -17,7 +17,9 @@
             <p class="eyebrow">试卷详情</p>
             <h2>{{ paper?.title || '试卷详情' }}</h2>
           </div>
-          <el-tag :type="statusTagType(paper?.status)" effect="plain">{{ statusLabel(paper?.status) }}</el-tag>
+          <el-tag :type="statusTagType(paper?.status)" effect="plain">
+            {{ statusLabel(paper?.status) }}
+          </el-tag>
         </div>
       </template>
 
@@ -27,19 +29,19 @@
         <el-descriptions-item label="总分">{{ formatScore(paper?.totalScore) }}</el-descriptions-item>
         <el-descriptions-item label="更新时间">{{ formatDateTime(paper?.updatedAt) }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatDateTime(paper?.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="归属用户">{{ paper?.ownerId || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="所属用户">{{ paper?.ownerId || '—' }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
 
-    <el-card shadow="never" class="edit-card">
+    <el-card shadow="never">
       <template #header>
         <div class="card-title-row">
           <h3>基本信息</h3>
-          <span class="hint">仅可修改标题和描述</span>
+          <span class="hint">仅支持修改标题和描述</span>
         </div>
       </template>
 
-      <el-form label-position="top" class="paper-form">
+      <el-form label-position="top" class="single-column-form">
         <el-form-item label="标题">
           <el-input v-model="editForm.title" placeholder="试卷标题" />
         </el-form-item>
@@ -49,23 +51,61 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="never" class="random-card">
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-title-row">
+          <div>
+            <h3>自由组卷</h3>
+            <span class="hint">从你自己的题集中选择题目，加入草稿区域后再统一保存。</span>
+          </div>
+          <div class="card-actions">
+            <el-button type="primary" plain :disabled="!manualQuestionCollectionId" @click="showQuestionSelector = true">
+              选择题目
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <el-form label-position="top" class="single-column-form">
+        <el-form-item label="题集范围">
+          <el-select
+            v-model="manualQuestionCollectionId"
+            filterable
+            clearable
+            placeholder="请选择题集"
+            :loading="collectionLoading"
+            style="max-width: 360px"
+            @change="handleManualCollectionChange"
+          >
+            <el-option
+              v-for="collection in collectionOptions"
+              :key="collection.collectionId"
+              :label="collection.name"
+              :value="collection.collectionId"
+            />
+          </el-select>
+          <div class="field-tip">手动选题会从这里选中的题集内分页检索题目。</div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never">
       <template #header>
         <div class="card-title-row">
           <div>
             <h3>随机组卷</h3>
-            <span class="hint">按题集名称选择范围，再配置题型规则后先预览</span>
+            <span class="hint">按题集范围和题型规则生成候选题目，再填充到草稿区域。</span>
           </div>
           <div class="card-actions">
             <el-button :loading="previewLoading" @click="handlePreviewRandomBuild">随机预览</el-button>
-            <el-button :disabled="!randomPreviewRows.length" type="primary" plain @click="fillDraftItemsFromPreview">
+            <el-button type="primary" plain :disabled="!randomPreviewRows.length" @click="fillDraftItemsFromPreview">
               填充到草稿区域
             </el-button>
           </div>
         </div>
       </template>
 
-      <el-form label-position="top" class="random-form">
+      <el-form label-position="top" class="single-column-form">
         <el-form-item label="题集">
           <el-select
             v-model="randomForm.collectionIds"
@@ -82,7 +122,7 @@
               :value="collection.collectionId"
             />
           </el-select>
-          <div class="field-tip">可多选，最终按你选中的题集范围进行随机预览。</div>
+          <div class="field-tip">支持多选，预览结果会从选中的题集范围内生成。</div>
         </el-form-item>
 
         <div class="rule-block">
@@ -93,12 +133,22 @@
 
           <div class="rule-list">
             <div v-for="(rule, index) in randomForm.rules" :key="index" class="rule-row">
-              <el-select v-model="rule.typeCode" placeholder="题型" class="rule-type">
+              <el-select v-model="rule.typeCode" placeholder="题型">
                 <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
               </el-select>
-              <el-input-number v-model="rule.count" :min="1" :step="1" :precision="0" controls-position="right" class="rule-count" />
-              <el-input-number v-model="rule.expectedDifficulty" :min="0" :max="1" :step="0.1" :precision="1" controls-position="right" class="rule-difficulty" placeholder="0~1" />
-              <el-button type="danger" plain :disabled="randomForm.rules.length === 1" @click="removeRandomRule(index)">删除</el-button>
+              <el-input-number v-model="rule.count" :min="1" :step="1" :precision="0" controls-position="right" />
+              <el-input-number
+                v-model="rule.expectedDifficulty"
+                :min="0"
+                :max="1"
+                :step="0.1"
+                :precision="1"
+                controls-position="right"
+                placeholder="0~1"
+              />
+              <el-button type="danger" plain :disabled="randomForm.rules.length === 1" @click="removeRandomRule(index)">
+                删除
+              </el-button>
             </div>
           </div>
         </div>
@@ -107,32 +157,32 @@
       <div class="preview-panel">
         <div class="section-subtitle">预览结果</div>
         <el-table v-loading="previewLoading" :data="randomPreviewRows" border row-key="key">
-          <el-table-column prop="questionTitle" label="标题" min-width="200">
+          <el-table-column prop="questionTitle" label="标题" min-width="220">
             <template #default="{ row }">
               <span class="stem-preview">{{ row.questionTitle || '无标题' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="题干" min-width="260">
+          <el-table-column label="题干" min-width="280">
             <template #default="{ row }">
-              <span class="stem-preview">{{ row.stem || '无' }}</span>
+              <span class="stem-preview">{{ row.stem || '—' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="难度" width="100">
             <template #default="{ row }">
-              {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '无' }}
+              {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '—' }}
             </template>
           </el-table-column>
-          <el-table-column label="题型" width="120">
-            <template #default="{ row }">
-              {{ row.typeCode || '无' }}
-            </template>
+          <el-table-column label="题型" width="130">
+            <template #default="{ row }">{{ row.typeCode || '—' }}</template>
           </el-table-column>
           <el-table-column label="分值" width="100">
             <template #default="{ row }">{{ formatScore(row.score) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="120" fixed="right">
             <template #default="{ row, $index }">
-              <el-button type="primary" link size="small" :loading="row.replacing" @click="handleReplacePreviewItem(row, $index)">换一题</el-button>
+              <el-button type="primary" link size="small" :loading="row.replacing" @click="handleReplacePreviewItem(row, $index)">
+                换一题
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -140,12 +190,12 @@
       </div>
     </el-card>
 
-    <el-card shadow="never" class="draft-card">
+    <el-card shadow="never">
       <template #header>
         <div class="card-title-row">
           <div>
             <h3>草稿区域</h3>
-            <span class="hint">由随机预览结果填充，可调整分值后一次性保存到试卷</span>
+            <span class="hint">可从自由组卷或随机预览加入题目，拖拽行即可调整顺序。</span>
           </div>
           <div class="card-actions">
             <el-button :disabled="!draftRows.length" @click="clearDraftRows">清空草稿</el-button>
@@ -154,55 +204,67 @@
         </div>
       </template>
 
-      <el-table :data="draftRows" border row-key="key">
+      <el-table ref="draftTableRef" :data="draftRows" border row-key="key">
+        <el-table-column label="" width="52" align="center">
+          <template #default>
+            <span class="drag-handle" title="拖拽排序">☰</span>
+          </template>
+        </el-table-column>
         <el-table-column label="来源" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source === 'preview' ? 'success' : 'info'" effect="plain">
-              {{ row.source === 'preview' ? '预览' : (row.source === 'paper' ? '试卷' : '手工') }}
+            <el-tag size="small" effect="plain" :type="draftSourceTagType(row.source)">
+              {{ draftSourceLabel(row.source) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="questionTitle" label="标题" min-width="200">
+        <el-table-column prop="questionTitle" label="标题" min-width="220">
           <template #default="{ row }">
             <span class="stem-preview">{{ row.questionTitle || '无标题' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="题干" min-width="260">
+        <el-table-column label="题干" min-width="280">
           <template #default="{ row }">
-            <span class="stem-preview">{{ row.stem || '无' }}</span>
+            <span class="stem-preview">{{ row.stem || '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="难度" width="100">
           <template #default="{ row }">
-            {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '无' }}
+            {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '—' }}
           </template>
         </el-table-column>
-        <el-table-column label="题型" width="120">
-          <template #default="{ row }">
-            {{ row.typeCode || '无' }}
-          </template>
+        <el-table-column label="题型" width="130">
+          <template #default="{ row }">{{ row.typeCode || '—' }}</template>
         </el-table-column>
         <el-table-column label="分值" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.score" :min="0.5" :step="0.5" :precision="2" controls-position="right" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="80" fixed="right" align="center">
           <template #default="{ row, $index }">
-            <el-button v-if="row.source === 'preview'" type="primary" link size="small" :loading="row.replacing" @click="handleReplaceDraftItem(row, $index)">换一题</el-button>
-            <el-button type="danger" link @click="removeDraftRow($index)">删除</el-button>
+            <el-dropdown trigger="click" @command="(command) => handleDraftAction(command, row, $index)">
+              <button class="draft-action-trigger" type="button" :disabled="row.replacing" aria-label="草稿操作">
+                :
+              </button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="replace">换一题</el-dropdown-item>
+                  <el-dropdown-item command="delete">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!draftRows.length" description="草稿区域为空，请先执行随机预览并填充。" />
+      <el-empty v-if="!draftRows.length" description="草稿区域为空，请先添加题目" />
     </el-card>
 
-    <el-card shadow="never" class="items-card">
+    <el-card shadow="never">
       <template #header>
         <div class="card-title-row">
           <h3>当前已保存题目</h3>
-          <span class="hint">这里展示的是试卷已经入库的题目列表</span>
+          <span class="hint">这里展示的是已经写入试卷的题目列表。</span>
         </div>
       </template>
 
@@ -228,11 +290,81 @@
 
       <el-empty v-if="!loading && !(paper?.items?.length ?? 0)" description="当前试卷还没有题目" />
     </el-card>
+
+    <el-dialog v-model="showQuestionSelector" title="选择题目" width="90%" :close-on-click-modal="false">
+      <div class="question-selector">
+        <div class="selector-toolbar">
+          <el-select
+            v-model="manualQuestionCollectionId"
+            placeholder="题集"
+            clearable
+            filterable
+            style="width: 220px"
+            @change="handleManualCollectionChange"
+          >
+            <el-option
+              v-for="collection in collectionOptions"
+              :key="collection.collectionId"
+              :label="collection.name"
+              :value="collection.collectionId"
+            />
+          </el-select>
+          <el-select v-model="questionQuery.typeCode" placeholder="题型" clearable style="width: 150px" @change="handleQuestionQueryChange">
+            <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+          <el-input v-model="questionQuery.keyword" placeholder="搜索标题" clearable style="width: 250px" @keyup.enter="handleQuestionQueryChange" />
+          <el-button type="primary" :disabled="!manualQuestionCollectionId" @click="handleQuestionQueryChange">搜索</el-button>
+        </div>
+
+        <el-table
+          v-loading="questionSelectorLoading"
+          :data="questionList"
+          border
+          row-key="id"
+          @selection-change="handleQuestionSelectionChange"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column prop="title" label="标题" min-width="220">
+            <template #default="{ row }">
+              <span class="stem-preview">{{ row.title }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="题型" width="130">
+            <template #default="{ row }">{{ row.typeCode }}</template>
+          </el-table-column>
+          <el-table-column label="难度" width="100">
+            <template #default="{ row }">{{ Number(row.difficulty ?? 0).toFixed(2) }}</template>
+          </el-table-column>
+          <el-table-column label="正确率" width="110">
+            <template #default="{ row }">{{ formatPercent(row.correctRate) }}</template>
+          </el-table-column>
+        </el-table>
+
+        <div class="pagination-container">
+          <el-pagination
+            v-model:current-page="questionQuery.pageNum"
+            v-model:page-size="questionQuery.pageSize"
+            :total="questionTotal"
+            :page-sizes="[10, 20, 50, 100]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="loadQuestions"
+            @size-change="loadQuestions"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showQuestionSelector = false">取消</el-button>
+        <el-button type="primary" :disabled="!selectedQuestions.length" @click="handleAddSelectedQuestions">
+          添加选中题目 ({{ selectedQuestions.length }})
+        </el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import {
@@ -244,7 +376,8 @@ import {
   savePaperItems,
   updatePaper
 } from '../api/paper';
-import { fetchCollections } from '../api/collection';
+import { fetchCollections, fetchCollectionQuestions } from '../api/collection';
+import { fetchQuestionDetail } from '../api/question';
 import type {
   PaperDetailVO,
   PaperDraftItemRow,
@@ -252,10 +385,10 @@ import type {
   PaperItemSavePayload,
   PaperRandomBuildReq,
   PaperRandomBuildRule,
-  PaperSavePayload,
-  RandomReplaceReq
+  PaperSavePayload
 } from '../types/paper';
-import type { CollectionView } from '../types/collection';
+import type { CollectionQuestionQuery, CollectionView } from '../types/collection';
+import type { QuestionSummary } from '../types/question';
 import { showError, showSuccess } from '../utils/messages';
 
 const route = useRoute();
@@ -267,10 +400,20 @@ const actionLoading = ref(false);
 const previewLoading = ref(false);
 const submittingItems = ref(false);
 const collectionLoading = ref(false);
-const collectionOptions = ref<CollectionView[]>([]);
+const questionSelectorLoading = ref(false);
+
 const paper = ref<PaperDetailVO | null>(null);
+const collectionOptions = ref<CollectionView[]>([]);
 const randomPreviewRows = ref<PaperDraftItemRow[]>([]);
 const draftRows = ref<PaperDraftItemRow[]>([]);
+const questionList = ref<QuestionSummary[]>([]);
+const questionTotal = ref(0);
+const selectedQuestions = ref<QuestionSummary[]>([]);
+
+const showQuestionSelector = ref(false);
+const draftTableRef = ref();
+const manualQuestionCollectionId = ref('');
+let draggedRowIndex: number | null = null;
 
 const editForm = reactive<PaperSavePayload>({
   title: '',
@@ -283,6 +426,13 @@ const randomForm = reactive<{
 }>({
   collectionIds: [],
   rules: [createRandomRule()]
+});
+
+const questionQuery = reactive<CollectionQuestionQuery>({
+  pageNum: 1,
+  pageSize: 20,
+  keyword: '',
+  typeCode: ''
 });
 
 const typeOptions = [
@@ -300,12 +450,32 @@ onMounted(() => {
   void loadCollections();
 });
 
+onUnmounted(() => {
+  teardownDraftRowDnD();
+});
+
 watch(
   () => route.params.paperId,
   () => {
     void loadPaper();
   }
 );
+
+watch(
+  draftRows,
+  async () => {
+    await nextTick();
+    bindDraftRowDnD();
+  },
+  { deep: true }
+);
+
+watch(showQuestionSelector, (visible) => {
+  if (visible && manualQuestionCollectionId.value) {
+    questionQuery.pageNum = 1;
+    void loadQuestions();
+  }
+});
 
 async function loadPaper() {
   if (!paperId.value) {
@@ -316,26 +486,10 @@ async function loadPaper() {
     paper.value = await fetchPaperDetail(paperId.value);
     syncEditForm();
     syncDraftRowsFromPaper();
+  } catch (error) {
+    showError(error instanceof Error ? error.message : '加载试卷失败');
   } finally {
     loading.value = false;
-  }
-}
-
-function syncDraftRowsFromPaper() {
-  if (paper.value?.items?.length) {
-    draftRows.value = paper.value.items.map((item) => ({
-      key: createRowKey(item.questionId, item.questionVersionId),
-      questionId: item.questionId,
-      questionVersionId: item.questionVersionId,
-      score: item.score,
-      typeCode: item.typeCode,
-      difficulty: item.difficulty,
-      questionTitle: item.questionTitle,
-      stem: item.stem,
-      source: 'paper' as const
-    }));
-  } else {
-    draftRows.value = [];
   }
 }
 
@@ -344,6 +498,9 @@ async function loadCollections() {
   try {
     const list = await fetchCollections();
     collectionOptions.value = list;
+    if (!manualQuestionCollectionId.value && list.length) {
+      manualQuestionCollectionId.value = list[0].collectionId;
+    }
   } catch (error) {
     showError(error instanceof Error ? error.message : '加载题集失败');
   } finally {
@@ -356,11 +513,31 @@ function syncEditForm() {
   editForm.description = paper.value?.description || '';
 }
 
+function syncDraftRowsFromPaper() {
+  if (!paper.value?.items?.length) {
+    draftRows.value = [];
+    return;
+  }
+
+  draftRows.value = paper.value.items.map((item) => ({
+    key: createRowKey(item.questionId, item.questionVersionId),
+    questionId: item.questionId,
+    questionVersionId: item.questionVersionId,
+    score: item.score,
+    typeCode: item.typeCode,
+    difficulty: item.difficulty,
+    questionTitle: item.questionTitle,
+    stem: item.stem,
+    source: 'paper'
+  }));
+}
+
 async function handleSavePaperBasic() {
   if (!paperId.value || !editForm.title.trim()) {
     showError('请先填写试卷标题');
     return;
   }
+
   saving.value = true;
   try {
     await updatePaper(paperId.value, {
@@ -401,7 +578,7 @@ async function handlePreviewRandomBuild() {
     };
     const result = await previewRandomBuild(paperId.value, request);
     randomPreviewRows.value = expandPreviewRows(result, rules);
-    showSuccess(`已生成 ${randomPreviewRows.value.length} 条候选题`);
+    showSuccess(`已生成 ${randomPreviewRows.value.length} 道候选题`);
   } catch (error) {
     showError(error instanceof Error ? error.message : '随机预览失败');
   } finally {
@@ -415,10 +592,7 @@ function fillDraftItemsFromPreview() {
     return;
   }
 
-    // 先过滤掉来源为'预览'的题目，保留其他来源的题目
-  const nonPreviewRows = draftRows.value.filter(row => row.source !== 'preview');
-  
-  // 将新预览的题目添加到后面
+  const nonPreviewRows = draftRows.value.filter((row) => row.source !== 'preview');
   draftRows.value = [
     ...nonPreviewRows,
     ...randomPreviewRows.value.map((row) => ({
@@ -430,7 +604,7 @@ function fillDraftItemsFromPreview() {
       difficulty: row.difficulty,
       questionTitle: row.questionTitle,
       stem: row.stem,
-      source: 'preview'
+      source: 'preview' as const
     }))
   ];
   showSuccess('已填充到草稿区域');
@@ -451,6 +625,10 @@ function removeDraftRow(index: number) {
   draftRows.value.splice(index, 1);
 }
 
+function clearDraftRows() {
+  draftRows.value = [];
+}
+
 async function handleReplaceDraftItem(row: PaperDraftItemRow, index: number) {
   if (!paperId.value) {
     return;
@@ -461,31 +639,25 @@ async function handleReplaceDraftItem(row: PaperDraftItemRow, index: number) {
     showError('请先选择题集');
     return;
   }
-
   if (!row.typeCode) {
     showError('题目类型不存在');
     return;
   }
 
-  // 排除当前草稿区域已有的题目ID
-  const excludedQuestionIds = draftRows.value.map(r => r.questionId);
-
-  const request: RandomReplaceReq = {
-    collectionIds,
-    excludedQuestionIds,
-    typeCode: row.typeCode,
-    expectedDifficulty: row.difficulty
-  };
-
   row.replacing = true;
   try {
-    const newItem = await randomReplaceItem(paperId.value, request);
-    // 替换当前行
+    const newItem = await randomReplaceItem(paperId.value, {
+      collectionIds,
+      excludedQuestionIds: draftRows.value.map((item) => item.questionId),
+      typeCode: row.typeCode,
+      expectedDifficulty: row.difficulty
+    });
+
     draftRows.value[index] = {
       key: createRowKey(String(newItem.questionId), String(newItem.questionVersionId)),
       questionId: String(newItem.questionId),
       questionVersionId: String(newItem.questionVersionId),
-      score: row.score, // 保留原分值
+      score: row.score,
       typeCode: newItem.typeCode || row.typeCode,
       difficulty: newItem.difficulty,
       questionTitle: newItem.questionTitle,
@@ -493,15 +665,21 @@ async function handleReplaceDraftItem(row: PaperDraftItemRow, index: number) {
       source: 'preview',
       replacing: false
     };
-    showSuccess('已更换题目');
+    showSuccess('已替换题目');
   } catch (error) {
-    showError(error instanceof Error ? error.message : '换一题失败');
     row.replacing = false;
+    showError(error instanceof Error ? error.message : '换一题失败');
   }
 }
 
-function clearDraftRows() {
-  draftRows.value = [];
+function handleDraftAction(command: string, row: PaperDraftItemRow, index: number) {
+  if (command === 'delete') {
+    removeDraftRow(index);
+    return;
+  }
+  if (command === 'replace') {
+    void handleReplaceDraftItem(row, index);
+  }
 }
 
 async function handleReplacePreviewItem(row: PaperDraftItemRow, index: number) {
@@ -514,31 +692,25 @@ async function handleReplacePreviewItem(row: PaperDraftItemRow, index: number) {
     showError('请先选择题集');
     return;
   }
-
   if (!row.typeCode) {
     showError('题目类型不存在');
     return;
   }
 
-  // 排除当前预览结果已有的题目ID
-  const excludedQuestionIds = randomPreviewRows.value.map(r => r.questionId);
-
-  const request: RandomReplaceReq = {
-    collectionIds,
-    excludedQuestionIds,
-    typeCode: row.typeCode,
-    expectedDifficulty: row.difficulty
-  };
-
   row.replacing = true;
   try {
-    const newItem = await randomReplaceItem(paperId.value, request);
-    // 替换当前行
+    const newItem = await randomReplaceItem(paperId.value, {
+      collectionIds,
+      excludedQuestionIds: randomPreviewRows.value.map((item) => item.questionId),
+      typeCode: row.typeCode,
+      expectedDifficulty: row.difficulty
+    });
+
     randomPreviewRows.value[index] = {
       key: createRowKey(String(newItem.questionId), String(newItem.questionVersionId)),
       questionId: String(newItem.questionId),
       questionVersionId: String(newItem.questionVersionId),
-      score: row.score, // 保留原分值
+      score: row.score,
       typeCode: newItem.typeCode || row.typeCode,
       difficulty: newItem.difficulty,
       questionTitle: newItem.questionTitle,
@@ -546,10 +718,10 @@ async function handleReplacePreviewItem(row: PaperDraftItemRow, index: number) {
       source: 'preview',
       replacing: false
     };
-    showSuccess('已更换题目');
+    showSuccess('已替换题目');
   } catch (error) {
-    showError(error instanceof Error ? error.message : '换一题失败');
     row.replacing = false;
+    showError(error instanceof Error ? error.message : '换一题失败');
   }
 }
 
@@ -560,7 +732,7 @@ async function handleSaveItems() {
 
   const payload = normalizeDraftItems(draftRows.value);
   if (!payload.length) {
-    showError('请至少填写一条草稿题目');
+    showError('请至少添加一题到草稿区域');
     return;
   }
 
@@ -570,7 +742,7 @@ async function handleSaveItems() {
     showSuccess('题目列表已保存到试卷');
     await loadPaper();
   } catch (error) {
-    showError(error instanceof Error ? error.message : '保存题目列表失败');
+    showError(error instanceof Error ? error.message : '保存题目失败');
   } finally {
     submittingItems.value = false;
   }
@@ -589,13 +761,14 @@ async function handleClearItems() {
   } catch {
     return;
   }
+
   actionLoading.value = true;
   try {
     await clearPaperItems(paperId.value);
     showSuccess('题目已清空');
     await loadPaper();
   } catch (error) {
-    showError(error instanceof Error ? error.message : '清空题目失败');
+    showError(error instanceof Error ? error.message : '清空失败');
   } finally {
     actionLoading.value = false;
   }
@@ -614,6 +787,7 @@ async function handleDeletePaper() {
   } catch {
     return;
   }
+
   actionLoading.value = true;
   try {
     await deletePaper(paperId.value);
@@ -623,6 +797,85 @@ async function handleDeletePaper() {
     showError(error instanceof Error ? error.message : '删除试卷失败');
   } finally {
     actionLoading.value = false;
+  }
+}
+
+async function loadQuestions() {
+  if (!manualQuestionCollectionId.value) {
+    showError('请先选择题集');
+    return;
+  }
+
+  questionSelectorLoading.value = true;
+  try {
+    const result = await fetchCollectionQuestions(manualQuestionCollectionId.value, {
+      ...questionQuery,
+      keyword: questionQuery.keyword?.trim() || undefined,
+      typeCode: questionQuery.typeCode?.trim() || undefined
+    });
+    questionList.value = result.records;
+    questionTotal.value = result.total;
+  } catch (error) {
+    showError(error instanceof Error ? error.message : '加载题目失败');
+  } finally {
+    questionSelectorLoading.value = false;
+  }
+}
+
+function handleQuestionQueryChange() {
+  questionQuery.pageNum = 1;
+  void loadQuestions();
+}
+
+function handleManualCollectionChange() {
+  selectedQuestions.value = [];
+  questionList.value = [];
+  questionTotal.value = 0;
+  questionQuery.pageNum = 1;
+}
+
+function handleQuestionSelectionChange(selection: QuestionSummary[]) {
+  selectedQuestions.value = selection;
+}
+
+async function handleAddSelectedQuestions() {
+  if (!selectedQuestions.value.length) {
+    return;
+  }
+
+  const existingKeys = new Set(draftRows.value.map((row) => row.key));
+  const uniqueQuestions = selectedQuestions.value.filter(
+    (question) => !existingKeys.has(createRowKey(question.id, question.currentVersionId))
+  );
+
+  if (!uniqueQuestions.length) {
+    showError('选中的题目已全部存在于草稿区域');
+    return;
+  }
+
+  questionSelectorLoading.value = true;
+  try {
+    const details = await Promise.all(uniqueQuestions.map((question) => fetchQuestionDetail(question.id)));
+    const newRows: PaperDraftItemRow[] = details.map((detail) => ({
+      key: createRowKey(detail.id, detail.currentVersionId),
+      questionId: detail.id,
+      questionVersionId: detail.currentVersionId,
+      score: 1,
+      typeCode: detail.typeCode,
+      difficulty: detail.difficulty,
+      questionTitle: detail.title,
+      stem: detail.stem,
+      source: 'manual'
+    }));
+
+    draftRows.value = [...draftRows.value, ...newRows];
+    selectedQuestions.value = [];
+    showQuestionSelector.value = false;
+    showSuccess(`已添加 ${newRows.length} 道题目到草稿区域`);
+  } catch (error) {
+    showError(error instanceof Error ? error.message : '添加题目失败');
+  } finally {
+    questionSelectorLoading.value = false;
   }
 }
 
@@ -656,6 +909,32 @@ function statusTagType(status?: number | null) {
   }
 }
 
+function draftSourceLabel(source?: PaperDraftItemRow['source']) {
+  switch (source) {
+    case 'preview':
+      return '预览';
+    case 'manual':
+      return '手动';
+    case 'paper':
+      return '试卷';
+    default:
+      return '未知';
+  }
+}
+
+function draftSourceTagType(source?: PaperDraftItemRow['source']) {
+  switch (source) {
+    case 'preview':
+      return 'success';
+    case 'manual':
+      return 'warning';
+    case 'paper':
+      return 'info';
+    default:
+      return 'info';
+  }
+}
+
 function formatDateTime(value?: string | null) {
   if (!value) {
     return '—';
@@ -671,28 +950,24 @@ function formatPercent(value?: number | null) {
   return `${(Number(value ?? 0) * 100).toFixed(2)}%`;
 }
 
-function normalizeCollectionIds(values: string[]): string[] {
-  return values
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value));
+function normalizeCollectionIds(values: string[]) {
+  return values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
 }
 
-function normalizeRandomRules(rules: PaperRandomBuildRule[]): PaperRandomBuildRule[] {
+function normalizeRandomRules(rules: PaperRandomBuildRule[]) {
   return rules
     .map((rule) => ({
       typeCode: rule.typeCode?.trim() || '',
       count: Number(rule.count),
-      expectedDifficulty: rule.expectedDifficulty !== undefined && rule.expectedDifficulty !== null
-        ? Number(rule.expectedDifficulty)
-        : undefined
+      expectedDifficulty:
+        rule.expectedDifficulty !== undefined && rule.expectedDifficulty !== null
+          ? Number(rule.expectedDifficulty)
+          : undefined
     }))
     .filter((rule) => rule.typeCode && Number.isFinite(rule.count) && rule.count > 0);
 }
 
-function expandPreviewRows(
-  result: PaperItemDetailRef[],
-  rules: PaperRandomBuildRule[]
-): PaperDraftItemRow[] {
+function expandPreviewRows(result: PaperItemDetailRef[], rules: PaperRandomBuildRule[]) {
   const rows: PaperDraftItemRow[] = [];
   let cursor = 0;
 
@@ -703,7 +978,7 @@ function expandPreviewRows(
         key: createRowKey(String(item.questionId), String(item.questionVersionId)),
         questionId: String(item.questionId),
         questionVersionId: String(item.questionVersionId),
-        score: 1, // 默认分值，可在草稿区域中调整
+        score: 1,
         typeCode: item.typeCode || rule.typeCode,
         difficulty: item.difficulty,
         questionTitle: item.questionTitle,
@@ -746,6 +1021,69 @@ function createRandomRule(): PaperRandomBuildRule {
 function createRowKey(questionId: string, questionVersionId: string) {
   return `${questionId}-${questionVersionId}`;
 }
+
+function handleDragStart(event: DragEvent, index: number) {
+  draggedRowIndex = index;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(index));
+  }
+}
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+}
+
+function handleDrop(event: DragEvent, targetIndex: number) {
+  event.preventDefault();
+  if (draggedRowIndex === null || draggedRowIndex === targetIndex) {
+    draggedRowIndex = null;
+    return;
+  }
+
+  const rows = [...draftRows.value];
+  const [draggedRow] = rows.splice(draggedRowIndex, 1);
+  rows.splice(targetIndex, 0, draggedRow);
+  draftRows.value = rows;
+  draggedRowIndex = null;
+}
+
+function teardownDraftRowDnD() {
+  const body = draftTableRef.value?.$el?.querySelector?.('.el-table__body-wrapper tbody') as HTMLTableSectionElement | null;
+  if (!body) {
+    return;
+  }
+
+  Array.from(body.querySelectorAll('tr')).forEach((row) => {
+    row.draggable = false;
+    row.ondragstart = null;
+    row.ondragover = null;
+    row.ondrop = null;
+    row.ondragend = null;
+  });
+}
+
+function bindDraftRowDnD() {
+  teardownDraftRowDnD();
+
+  const body = draftTableRef.value?.$el?.querySelector?.('.el-table__body-wrapper tbody') as HTMLTableSectionElement | null;
+  if (!body) {
+    return;
+  }
+
+  Array.from(body.querySelectorAll('tr')).forEach((row, index) => {
+    row.draggable = true;
+    row.ondragstart = (event) => handleDragStart(event as DragEvent, index);
+    row.ondragover = (event) => handleDragOver(event as DragEvent);
+    row.ondrop = (event) => handleDrop(event as DragEvent, index);
+    row.ondragend = () => {
+      draggedRowIndex = null;
+    };
+  });
+}
 </script>
 
 <style scoped>
@@ -763,7 +1101,9 @@ function createRowKey(questionId: string, questionVersionId: string) {
   flex-wrap: wrap;
 }
 
-.toolbar-actions {
+.toolbar-actions,
+.card-actions,
+.selector-toolbar {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -795,14 +1135,7 @@ function createRowKey(questionId: string, questionVersionId: string) {
   font-size: 12px;
 }
 
-.card-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.paper-form,
-.random-form {
+.single-column-form {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
@@ -835,12 +1168,6 @@ function createRowKey(questionId: string, questionVersionId: string) {
   align-items: center;
 }
 
-.rule-type,
-.rule-count,
-.rule-score {
-  width: 100%;
-}
-
 .preview-panel {
   margin-top: 16px;
   display: flex;
@@ -859,6 +1186,33 @@ function createRowKey(questionId: string, questionVersionId: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pagination-container {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--el-text-color-secondary);
+  user-select: none;
+}
+
+.draft-action-trigger {
+  border: 0;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.draft-action-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 960px) {

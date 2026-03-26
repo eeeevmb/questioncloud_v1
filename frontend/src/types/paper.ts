@@ -24,7 +24,6 @@ export interface PaperBasicVO {
 export interface PaperListItemVO {
   id: string;
   title: string;
-  status: number;
   totalItems: number;
   totalScore: number;
   updatedAt: string;
@@ -96,7 +95,6 @@ export interface PaperPageQuery {
   pageNum?: number;
   pageSize?: number;
   keyword?: string;
-  status?: number | null;
 }
 
 export interface PaperRandomBuildRule {
