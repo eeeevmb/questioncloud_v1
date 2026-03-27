@@ -52,6 +52,21 @@ public class AgentChatServiceImpl implements AgentChatService {
     private static final String THINK_MODULE_AGENT_NAME = "ThinkModule";
     private static final String AGENT_NAME_ID_MAP_CACHE_KEY = "agent:map:name-id";
 
+    /**
+     * Agent 对话执行主流程。
+     * <p>
+     * 流程说明：
+     * 1) 校验会话与智能体定义，写入会话上下文；
+     * 2) 组装消息并进入 think-execute 循环，按需调用工具；
+     * 3) 当本轮不再请求工具后，切换到流式输出最终回复；
+     * 4) 结束时清理工具协议消息并回写到记忆存储。
+     *
+     * @param context   会话业务上下文（题集、已选题等）
+     * @param sessionId 会话ID
+     * @param agentName 智能体名称
+     * @param userInput 用户输入
+     * @return 最终回复的流式文本分片
+     */
     @Override
     public Flux<String> chat(ChatSessionContext context, Long sessionId, String agentName, String userInput) {
         ChatSessionEntity sessionEntity = chatSessionRepository.findById(sessionId);

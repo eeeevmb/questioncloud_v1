@@ -16,7 +16,7 @@ public class QuestionEventConsumer {
         this.questionVectorizeService = questionVectorizeService;
     }
 
-    @RabbitListener(queues = RabbitMQConfig.QUESTION_QUEUE_NAME)
+    @RabbitListener(queues = RabbitMQConfig.QUESTION_QUEUE_NAME, concurrency = "4")
     public void handleQuestionEvent(QuestionEventMessage message,
                                     @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
         switch (routingKey) {

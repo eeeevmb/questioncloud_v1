@@ -25,6 +25,16 @@ public class AgentController {
     private final AgentChatService agentChatService;
     private final AiGenerateService aiGenerateService;
 
+    /**
+     * Agent 对话入口（SSE）。
+     * <p>
+     * 将请求中的上下文信息与当前登录用户组装为 {@link ChatSessionContext}，
+     * 调用应用层对话链路并将文本分片包装为 SSE message 事件，
+     * 最后追加 done 事件（[DONE]）。
+     *
+     * @param req 对话请求
+     * @return SSE 事件流
+     */
     @PostMapping("/chat")
     public Flux<ServerSentEvent<String>> chat(@Valid @RequestBody ChatReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
