@@ -32,6 +32,9 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
      */
     @Override
     public void onQuestionUpsert(QuestionEventMessage message) {
+        long startNs = System.nanoTime();
+        log.info("开始题目向量化入库, questionId={}, versionId={}, collectionId={}",
+                message.getQuestionId(), message.getVersionId(), message.getCollectionId());
         QuestionVersionEntity versionEntity = questionVersionRepository.getVersionById(message.getVersionId());
         QuestionStat questionStat = questionStatRepository.getByQuestionId(message.getQuestionId());
 
@@ -40,8 +43,12 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
         String text = "题干：\n" + versionEntity.getStem() +
                 "\n\n解析：\n" + versionEntity.getSolution();
 
-        // 增强语义处理
+        // 增强语义处理（包含 LLM 调用）
+        long llmStartNs = System.nanoTime();
         QuestionSemanticEnrichmentDTO dto = llmPort.generateQuestionSemanticEnrichmentDTO(text);
+        long llmCostMs = (System.nanoTime() - llmStartNs) / 1_000_000;
+        log.info("onQuestionUpsert 调用LLM耗时, questionId={}, versionId={}, costMs={}",
+                message.getQuestionId(), message.getVersionId(), llmCostMs);
         log.info("增强结果: {}", dto);
 
         Map<String, Object> metadata = new HashMap<>();
@@ -52,7 +59,14 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
         metadata.put("difficulty", questionStat.getDifficulty() == null ? 0.00 : questionStat.getDifficulty());
         metadata.put("ownerId", message.getOwnerId());
 
+        long vectorStartNs = System.nanoTime();
         vectorPort.upsert(vectorId, dto.toString(), metadata);
+        long vectorCostMs = (System.nanoTime() - vectorStartNs) / 1_000_000;
+        long totalCostMs = (System.nanoTime() - startNs) / 1_000_000;
+        log.info("onQuestionUpsert 调用向量化API耗时, questionId={}, vectorId={}, costMs={}",
+                message.getQuestionId(), vectorId, vectorCostMs);
+        log.info("onQuestionUpsert 完成, questionId={}, versionId={}, totalCostMs={}",
+                message.getQuestionId(), message.getVersionId(), totalCostMs);
     }
 
     /**
