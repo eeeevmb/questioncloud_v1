@@ -85,7 +85,7 @@ export interface PaperDraftItemRow extends PaperItemRef {
   score: number;
   typeCode?: string;
   difficulty?: number;
-  source?: 'preview' | 'manual' | 'paper';
+  source?: 'preview' | 'manual' | 'paper' | 'ai';
   questionTitle?: string;
   stem?: string;
   replacing?: boolean;
