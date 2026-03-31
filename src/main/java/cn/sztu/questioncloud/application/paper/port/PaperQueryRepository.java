@@ -1,21 +1,36 @@
 package cn.sztu.questioncloud.application.paper.port;
 
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
 import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperListItemVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemDetailVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.util.List;
 
 public interface PaperQueryRepository {
     /**
-     * 根据试卷ID查询题目详情
+     * 查询试卷信息 (不含题目列表)
+     * 对应 PaperDetailVO 中的 items 为 null
+     *
+     * @param paperId 试卷ID
+     * @return 查询结果  后续应该改成返回 PaperBasicVO
+     */
+    PaperDetailVO getBasicPaperById(Long paperId);
+
+    /**
+     * 分页搜索试卷列表 (只返回基础信息)
+     */
+    Pager<PaperBasicVO> searchPapers(PaperPageQuery req, Long userId);
+
+    /**
+     * 查询试卷关联的题目详情列表
      *
      * @param paperId 试卷ID
      * @return 查询结果
      */
-    Optional<PaperDetailVO> getPaperDetailById(Long paperId);
+    List<PaperItemDetailVO> listPaperItemsByPaperId(Long paperId);
 
     /**
      * 根据试卷ID查询题目总数
@@ -32,13 +47,4 @@ public interface PaperQueryRepository {
      * @return 试卷总分
      */
     BigDecimal sumScoreByPaperId(Long paperId);
-
-    /**
-     * 分页查询当前用户试卷列表
-     *
-     * @param ownerId 当前用户ID
-     * @param query   分页与筛选参数
-     * @return 分页结果
-     */
-    Pager<PaperListItemVO> pageByOwnerId(Long ownerId, PaperPageQuery query);
 }

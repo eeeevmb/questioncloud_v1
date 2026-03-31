@@ -43,11 +43,6 @@ public class PaperEntity implements Serializable {
     private String description;
 
     /**
-     * 状态 (0=draft, 1=published, 2=archived)
-     */
-    private Integer status;
-
-    /**
      * 题目总数
      */
     private Integer totalItems;
