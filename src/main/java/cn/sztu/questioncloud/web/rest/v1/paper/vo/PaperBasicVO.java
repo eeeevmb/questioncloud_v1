@@ -3,8 +3,10 @@ package cn.sztu.questioncloud.web.rest.v1.paper.vo;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.xbatis.db.annotations.ResultEntity;
 import cn.xbatis.db.annotations.ResultEntityField;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,13 +17,14 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @ResultEntity(PaperEntity.class) // 直接映射 PaperEntity
 public class PaperBasicVO {
     private Long id;
     // --- 基础信息 ---
     private String title;
     private String description;
-    private Integer status;
 
     // --- 统计信息 ---
     private Integer totalItems;

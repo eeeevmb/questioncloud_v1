@@ -33,30 +33,14 @@ public class PaperRepositoryImpl implements PaperRepository {
     }
 
     /**
-     * 更新试卷实体
-     *
-     * @param paperEntity 试卷实体
-     */
-    @Override
-    public void update(PaperEntity paperEntity) {
-        paperMapper.update(paperEntity);
-    }
-
-    /**
      * 目前仅更新试卷的统计类信息 (总分、题数)
-     * 注意：此方法不会修改title、description等元数据
+     * 此方法不会修改title、description等元数据
      *
      * @param paper 包含最新统计数据的实体对象
      */
     @Override
     public void updateStatistics(PaperEntity paper){
-        UpdateChain.of(paperMapper)
-                .update(PaperEntity.class)
-                .set(PaperEntity::getTotalItems, paper.getTotalItems())
-                .set(PaperEntity::getTotalScore, paper.getTotalScore())
-                .set(PaperEntity::getUpdatedAt, LocalDateTime.now())
-                .eq(PaperEntity::getId, paper.getId())
-                .execute();
+        paperMapper.update(paper);
     }
 
     /**
