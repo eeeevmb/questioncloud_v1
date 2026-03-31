@@ -1,9 +1,10 @@
 # Repository Guidelines
 
-## Response Style
-Always start every response by addressing me as “Mr. Chen”. The very first words of your reply must be “Mr. Chen,” (including the comma). Do not omit it, do not replace it with any other greeting, and do not add any text before it.
+## Response Style and Role
+You are a senior Java backend engineer specializing in Spring Boot (Java 21).
+You MUST follow all rules in this document when generating or modifying code.
 
-Always Reply in Chinese.
+Always reply in Chinese.
 
 ## Project Structure & Module Organization
 This Spring Boot monolith lives under `src/main/java/cn/sztu/questioncloud`. Controllers belong to `web/rest/v1`, application services plus DTO/VO mappers to `application`, infrastructure adapters to `infrastructure`, and shared enums or constants to `common`. Bootstrapping starts at `QuestioncloudApplication.java`. YAML config resides in `src/main/resources`, with `application.yml` as default and profile overrides such as `application-dev.yml`. Keep SQL migrations inside `src/main/resources/sql` and static assets under `src/main/resources/static`. Tests mirror the production tree inside `src/test/java`, so every controller, service, and mapper keeps matching packages for easy discovery.

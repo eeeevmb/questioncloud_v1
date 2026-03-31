@@ -1,5 +1,6 @@
 HELP.md
 AGENTS.md
+rag-plan.md
 identifier.sqlite
 target/
 src/main/resources/application-local.yml
