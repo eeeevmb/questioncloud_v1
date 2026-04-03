@@ -5,11 +5,16 @@ export interface RegisterPayload {
   username: string;
   email: string;
   password: string;
+  verificationCode: string;
 }
 
 export interface LoginPayload {
   account: string;
   password: string;
+}
+
+export interface SendRegisterCodePayload {
+  email: string;
 }
 
 export interface AvatarResponse {
@@ -18,6 +23,10 @@ export interface AvatarResponse {
 
 export function registerUser(payload: RegisterPayload) {
   return apiClient.post<string>('/api/v1/user/register', payload);
+}
+
+export function sendRegisterCode(payload: SendRegisterCodePayload) {
+  return apiClient.post<void>('/api/v1/user/send-register-code', payload);
 }
 
 export function loginUser(payload: LoginPayload) {
