@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.web.rest.v1.user;
 
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
+import cn.sztu.questioncloud.web.rest.v1.user.req.SendRegisterCodeReq;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.AvatarVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
@@ -46,6 +47,19 @@ public class UserController {
     public ResultVO<RegisterVO> registerUser(@Valid @RequestBody RegisterReq request) {
         return ResultVO.success(userAccountService.register(request));
     }
+
+    /**
+     * 发送注册验证码
+     *
+     * @param request 发送验证码请求
+     * @return 无内容响应
+     */
+    @PostMapping("/send-register-code")
+    public ResultVO<Void> sendRegisterCode(@Valid @RequestBody SendRegisterCodeReq request) {
+        userAccountService.sendRegisterCode(request);
+        return ResultVO.success();
+    }
+
 
     /**
      * 用户登陆
