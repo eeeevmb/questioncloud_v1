@@ -29,6 +29,24 @@
           <el-form-item label="密码">
             <el-input v-model="registerForm.password" type="password" placeholder="至少 8 位" show-password />
           </el-form-item>
+          <el-form-item label="验证码">
+            <div class="verification-row">
+              <el-input
+                v-model="registerForm.verificationCode"
+                maxlength="6"
+                placeholder="请输入 6 位验证码"
+                clearable
+              />
+              <el-button
+                class="send-code-button"
+                :disabled="sendCodeDisabled"
+                :loading="sendCodeLoading"
+                @click="handleSendRegisterCode"
+              >
+                {{ sendCodeButtonText }}
+              </el-button>
+            </div>
+          </el-form-item>
           <el-button type="success" :loading="registerLoading" @click="handleRegister">注册</el-button>
         </el-form>
       </el-tab-pane>
@@ -37,15 +55,17 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { loginUser, registerUser } from '../api/user';
+import { loginUser, registerUser, sendRegisterCode } from '../api/user';
 import { useAuthStore } from '../stores/auth';
-import { showSuccess } from '../utils/messages';
+import { showError, showInfo, showSuccess } from '../utils/messages';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SEND_CODE_COUNTDOWN_SECONDS = 60;
 
 const activeTab = ref<'login' | 'register'>('login');
 const loginForm = reactive({
@@ -55,14 +75,27 @@ const loginForm = reactive({
 const registerForm = reactive({
   username: '',
   email: '',
-  password: ''
+  password: '',
+  verificationCode: ''
 });
 
 const loginLoading = ref(false);
 const registerLoading = ref(false);
+const sendCodeLoading = ref(false);
+const sendCodeCountdown = ref(0);
+let sendCodeTimer: number | null = null;
+
+const sendCodeDisabled = computed(() => {
+  return sendCodeLoading.value || sendCodeCountdown.value > 0 || !isValidEmail(registerForm.email);
+});
+
+const sendCodeButtonText = computed(() => {
+  return sendCodeCountdown.value > 0 ? `${sendCodeCountdown.value}s 后重发` : '发送验证码';
+});
 
 async function handleLogin() {
   if (!loginForm.account || !loginForm.password) {
+    showInfo('请输入账号和密码');
     return;
   }
   loginLoading.value = true;
@@ -79,14 +112,43 @@ async function handleLogin() {
   }
 }
 
+async function handleSendRegisterCode() {
+  const email = registerForm.email.trim();
+  if (!isValidEmail(email)) {
+    showError('请输入正确的邮箱地址');
+    return;
+  }
+
+  sendCodeLoading.value = true;
+  try {
+    await sendRegisterCode({ email });
+    startSendCodeCountdown();
+    showSuccess('验证码已发送，请查收邮箱');
+  } catch (error) {
+    // 已统一提示
+  } finally {
+    sendCodeLoading.value = false;
+  }
+}
+
 async function handleRegister() {
-  if (!registerForm.username || !registerForm.email || !registerForm.password) {
+  if (!registerForm.username || !registerForm.email || !registerForm.password || !registerForm.verificationCode) {
+    showInfo('请完整填写注册信息');
+    return;
+  }
+  if (!isValidEmail(registerForm.email)) {
+    showError('请输入正确的邮箱地址');
+    return;
+  }
+  if (!/^\d{6}$/.test(registerForm.verificationCode)) {
+    showError('请输入 6 位数字验证码');
     return;
   }
   registerLoading.value = true;
   try {
     await registerUser({ ...registerForm });
     showSuccess('注册成功，请使用账号登录');
+    resetRegisterForm();
     activeTab.value = 'login';
   } catch (error) {
     // 已统一提示
@@ -94,11 +156,48 @@ async function handleRegister() {
     registerLoading.value = false;
   }
 }
+
+function isValidEmail(email: string) {
+  return EMAIL_PATTERN.test(email.trim());
+}
+
+function startSendCodeCountdown() {
+  clearSendCodeTimer();
+  sendCodeCountdown.value = SEND_CODE_COUNTDOWN_SECONDS;
+  sendCodeTimer = window.setInterval(() => {
+    if (sendCodeCountdown.value <= 1) {
+      sendCodeCountdown.value = 0;
+      clearSendCodeTimer();
+      return;
+    }
+    sendCodeCountdown.value -= 1;
+  }, 1000);
+}
+
+function clearSendCodeTimer() {
+  if (sendCodeTimer !== null) {
+    window.clearInterval(sendCodeTimer);
+    sendCodeTimer = null;
+  }
+}
+
+function resetRegisterForm() {
+  registerForm.username = '';
+  registerForm.email = '';
+  registerForm.password = '';
+  registerForm.verificationCode = '';
+  sendCodeCountdown.value = 0;
+  clearSendCodeTimer();
+}
+
+onBeforeUnmount(() => {
+  clearSendCodeTimer();
+});
 </script>
 
 <style scoped>
 .auth-card {
-  max-width: 560px;
+  max-width: 460px;
   margin: 48px auto;
 }
 
@@ -109,5 +208,27 @@ async function handleRegister() {
 .header p {
   margin: 8px 0 0;
   color: var(--el-text-color-secondary);
+}
+
+.verification-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.send-code-button {
+  flex-shrink: 0;
+  min-width: 128px;
+}
+
+:deep(.el-input__wrapper input:-webkit-autofill),
+:deep(.el-input__wrapper input:-webkit-autofill:hover),
+:deep(.el-input__wrapper input:-webkit-autofill:focus),
+:deep(.el-textarea__inner:-webkit-autofill),
+:deep(.el-textarea__inner:-webkit-autofill:hover),
+:deep(.el-textarea__inner:-webkit-autofill:focus) {
+  -webkit-text-fill-color: var(--el-text-color-primary);
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  transition: background-color 9999s ease-out 0s;
 }
 </style>
