@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.infrastructure.common.persistent.entity.user;
 import cn.xbatis.db.annotations.Table;
 import cn.xbatis.db.annotations.TableField;
 import cn.xbatis.db.annotations.TableId;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,8 +27,10 @@ public class UserAccountEntity implements Serializable {
     @TableField("password")
     private String password;
 
+    @Column(unique = true)
     private String email;
 
+    @Column(unique = true)
     private String phoneNumber;
 
     private String avatarUrl;

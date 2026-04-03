@@ -1,12 +1,16 @@
 package cn.sztu.questioncloud.application.user.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.sztu.questioncloud.application.user.enums.VerificationTypeEnum;
 import cn.sztu.questioncloud.application.user.messaging.UserEventPublisher;
 import cn.sztu.questioncloud.application.user.port.UserAccountRepository;
+import cn.sztu.questioncloud.application.user.port.UserNotificationPort;
 import cn.sztu.questioncloud.application.user.port.UserPresenceCheckerPort;
+import cn.sztu.questioncloud.application.user.port.UserVerificationPort;
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.application.user.enums.UserStatusEnum;
+import cn.sztu.questioncloud.web.rest.v1.user.req.SendRegisterCodeReq;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
@@ -40,15 +44,19 @@ import java.util.Optional;
 @Service
 public class UserAccountServiceImpl implements UserAccountService {
     private final UserAccountRepository userAccountRepository;
+    private final UserNotificationPort userNotificationPort;
     private final UserPresenceCheckerPort userPresenceCheckerPort;
+    private final UserVerificationPort userVerificationPort;
     private final FileStorageService fileStorageService;
     private final FileValidatorRegistry fileValidatorRegistry;
     private final MediaTypeResolver mediaTypeResolver;
     private final UserEventPublisher userEventPublisher;
 
-    public UserAccountServiceImpl(UserAccountRepository userAccountRepository, UserPresenceCheckerPort userPresenceCheckerPort, FileStorageService fileStorageService, FileValidatorRegistry fileValidatorRegistry, MediaTypeResolver mediaTypeResolver, UserEventPublisher userEventPublisher) {
+    public UserAccountServiceImpl(UserAccountRepository userAccountRepository, UserNotificationPort userNotificationPort, UserPresenceCheckerPort userPresenceCheckerPort, UserVerificationPort userVerificationPort, FileStorageService fileStorageService, FileValidatorRegistry fileValidatorRegistry, MediaTypeResolver mediaTypeResolver, UserEventPublisher userEventPublisher) {
         this.userAccountRepository = userAccountRepository;
+        this.userNotificationPort = userNotificationPort;
         this.userPresenceCheckerPort = userPresenceCheckerPort;
+        this.userVerificationPort = userVerificationPort;
         this.fileValidatorRegistry = fileValidatorRegistry;
         this.fileStorageService = fileStorageService;
         this.mediaTypeResolver = mediaTypeResolver;
@@ -64,13 +72,28 @@ public class UserAccountServiceImpl implements UserAccountService {
     @Override
     @Transactional
     public RegisterVO register(RegisterReq request) {
+        // 1. 参数校验
         if (userPresenceCheckerPort.existsByUsername(request.username())) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该用户名已被使用");
         }
-
         if (userPresenceCheckerPort.existsByEmail(request.email())) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该邮箱已被使用");
         }
+        // 2. 验证 redis存储的验证码
+        boolean valid = userVerificationPort.verifyCode(
+                request.email(),
+                request.verificationCode(),
+                VerificationTypeEnum.REGISTER
+        );
+        if (!valid) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "验证码错误或已过期");
+        }
+        // 3. (如果验证码正确)删除 redis存储的验证码
+        userVerificationPort.deleteVerificationToken(
+                request.email(),
+                VerificationTypeEnum.REGISTER
+        );
+        // 4. 创建用户并保存到数据库
         UserAccountEntity newUser = new UserAccountEntity();
         newUser.setUsername(request.username());
         newUser.setEmail(request.email());
@@ -78,10 +101,32 @@ public class UserAccountServiceImpl implements UserAccountService {
         newUser.setStatus(UserStatusEnum.ACTIVE.getCode());
 
         userAccountRepository.save(newUser);
-
         userEventPublisher.publishUserRegistered(newUser.getId());
 
         return new RegisterVO(newUser.getId());
+    }
+
+    /**
+     * 发送注册验证码
+     *
+     * @param request 发送注册验证码请求
+     */
+    @Override
+    public void sendRegisterCode(SendRegisterCodeReq request) {
+        if (userPresenceCheckerPort.existsByEmail(request.email())) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该邮箱已被使用");
+        }
+        // 创建验证码并存入 redis
+        String verificationCode = userVerificationPort.createVerificationToken(
+                request.email(),
+                VerificationTypeEnum.REGISTER
+        );
+        // 发送验证码邮件
+        userNotificationPort.sendVerificationCode(
+                request.email(),
+                verificationCode,
+                VerificationTypeEnum.REGISTER
+        );
     }
 
     /**

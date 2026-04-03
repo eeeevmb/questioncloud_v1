@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class PaperPresenceCheckerRepositoryImpl implements PaperPresenceCheckerRepository {
+public class PaperPresenceCheckerAdapter implements PaperPresenceCheckerRepository {
 
     private final PaperMapper paperMapper;
 
