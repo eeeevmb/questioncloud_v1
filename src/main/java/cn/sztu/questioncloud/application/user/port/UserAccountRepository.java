@@ -52,4 +52,12 @@ public interface UserAccountRepository {
      * @param url    头像url
      */
     void updateAvatar(Long userId, String url);
+
+    /**
+     * 更新密码
+     *
+     * @param email 用户id
+     * @param newPassword 新密码
+     */
+    void updatePasswordByEmail(String email, String newPassword);
 }
