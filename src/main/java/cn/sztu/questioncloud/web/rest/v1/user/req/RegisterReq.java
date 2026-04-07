@@ -7,7 +7,9 @@ import jakarta.validation.constraints.Pattern;
 /**
  * 用户注册请求
  * @param username
+ * @param email
  * @param password
+ * @param verificationCode
  */
 
 public record RegisterReq (

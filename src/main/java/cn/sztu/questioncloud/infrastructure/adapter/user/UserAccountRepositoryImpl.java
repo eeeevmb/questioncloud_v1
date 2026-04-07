@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.infrastructure.adapter.user;
 
 import cn.sztu.questioncloud.application.user.port.UserAccountRepository;
+import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.user.UserAccountEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.user.UserAccountMapper;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -77,6 +79,19 @@ public class UserAccountRepositoryImpl implements UserAccountRepository {
                 .limit(1)
                 .get();
         user.setAvatarUrl(url);
+        userAccountMapper.update(user);
+    }
+
+    @Override
+    public void updatePasswordByEmail(String email, String newPassword) {
+        UserAccountEntity user = QueryChain.of(userAccountMapper)
+                .eq(UserAccountEntity::getEmail, email)
+                .limit(1)
+                .get();
+        if (user == null) {
+            throw new ApplicationException("用户不存在");
+        }
+        user.setPassword(newPassword);
         userAccountMapper.update(user);
     }
 }
