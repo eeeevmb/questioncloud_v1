@@ -30,7 +30,7 @@
             <el-input v-model="registerForm.email" type="email" placeholder="name@example.com" clearable />
           </el-form-item>
           <el-form-item label="密码">
-            <el-input v-model="registerForm.password" type="password" placeholder="至少 8 位" show-password />
+            <el-input v-model="registerForm.password" type="password" placeholder="至少 8 位密码" show-password />
           </el-form-item>
           <el-form-item label="验证码">
             <div class="verification-row">
@@ -56,68 +56,18 @@
     </el-tabs>
   </el-card>
 
-  <el-dialog
+  <ResetPasswordDialog
     v-model="resetPasswordDialogVisible"
-    title="找回密码"
-    width="420px"
-    destroy-on-close
-    append-to-body
-    @closed="resetResetPasswordForm"
-  >
-    <el-form label-position="top" @submit.prevent="handleResetPassword">
-      <el-form-item label="邮箱">
-        <el-input v-model="resetPasswordForm.email" type="email" placeholder="请输入注册邮箱" clearable />
-      </el-form-item>
-      <el-form-item label="新密码">
-        <el-input
-          v-model="resetPasswordForm.newPassword"
-          type="password"
-          placeholder="请输入新密码"
-          show-password
-        />
-      </el-form-item>
-      <el-form-item label="确认新密码">
-        <el-input
-          v-model="resetPasswordForm.confirmNewPassword"
-          type="password"
-          placeholder="请再次输入新密码"
-          show-password
-        />
-      </el-form-item>
-      <el-form-item label="验证码">
-        <div class="verification-row">
-          <el-input
-            v-model="resetPasswordForm.verificationCode"
-            maxlength="6"
-            placeholder="请输入 6 位验证码"
-            clearable
-          />
-          <el-button
-            class="send-code-button"
-            :disabled="resetCodeDisabled"
-            :loading="resetCodeLoading"
-            @click="handleSendResetPasswordCode"
-          >
-            {{ resetCodeButtonText }}
-          </el-button>
-        </div>
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="closeResetPasswordDialog">取消</el-button>
-        <el-button type="primary" :loading="resetPasswordLoading" @click="handleResetPassword">
-          重置密码
-        </el-button>
-      </div>
-    </template>
-  </el-dialog>
+    :initial-email="loginAccountEmail"
+    @success="handleResetPasswordSuccess"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { loginUser, registerUser, resetPassword, sendRegisterCode, sendResetPasswordCode } from '../api/user';
+import { loginUser, registerUser, sendRegisterCode } from '../api/user';
+import ResetPasswordDialog from '../components/ResetPasswordDialog.vue';
 import { useAuthStore } from '../stores/auth';
 import { showError, showInfo, showSuccess } from '../utils/messages';
 
@@ -128,6 +78,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SEND_CODE_COUNTDOWN_SECONDS = 60;
 
 const activeTab = ref<'login' | 'register'>('login');
+const resetPasswordDialogVisible = ref(false);
 const loginForm = reactive({
   account: '',
   password: ''
@@ -138,23 +89,16 @@ const registerForm = reactive({
   password: '',
   verificationCode: ''
 });
-const resetPasswordForm = reactive({
-  email: '',
-  newPassword: '',
-  confirmNewPassword: '',
-  verificationCode: ''
-});
 
 const loginLoading = ref(false);
 const registerLoading = ref(false);
 const sendCodeLoading = ref(false);
 const sendCodeCountdown = ref(0);
-const resetPasswordDialogVisible = ref(false);
-const resetCodeLoading = ref(false);
-const resetCodeCountdown = ref(0);
-const resetPasswordLoading = ref(false);
 let sendCodeTimer: number | null = null;
-let resetCodeTimer: number | null = null;
+
+const loginAccountEmail = computed(() => {
+  return isValidEmail(loginForm.account) ? loginForm.account.trim() : '';
+});
 
 const sendCodeDisabled = computed(() => {
   return sendCodeLoading.value || sendCodeCountdown.value > 0 || !isValidEmail(registerForm.email);
@@ -162,18 +106,6 @@ const sendCodeDisabled = computed(() => {
 
 const sendCodeButtonText = computed(() => {
   return sendCodeCountdown.value > 0 ? `${sendCodeCountdown.value}s 后重发` : '发送验证码';
-});
-
-const resetCodeDisabled = computed(() => {
-  return (
-    resetCodeLoading.value ||
-    resetCodeCountdown.value > 0 ||
-    !isValidEmail(resetPasswordForm.email)
-  );
-});
-
-const resetCodeButtonText = computed(() => {
-  return resetCodeCountdown.value > 0 ? `${resetCodeCountdown.value}s 后重发` : '发送验证码';
 });
 
 async function handleLogin() {
@@ -188,8 +120,6 @@ async function handleLogin() {
     showSuccess('登录成功');
     const redirect = (route.query.redirect as string) || '/home';
     router.replace(redirect);
-  } catch (error) {
-    // 错误信息由 axios 拦截器提示
   } finally {
     loginLoading.value = false;
   }
@@ -197,11 +127,6 @@ async function handleLogin() {
 
 function openResetPasswordDialog() {
   resetPasswordDialogVisible.value = true;
-}
-
-function closeResetPasswordDialog() {
-  resetPasswordDialogVisible.value = false;
-  resetResetPasswordForm();
 }
 
 async function handleSendRegisterCode() {
@@ -214,39 +139,10 @@ async function handleSendRegisterCode() {
   sendCodeLoading.value = true;
   try {
     await sendRegisterCode({ email });
-    startCountdown('register');
+    startCountdown();
     showSuccess('验证码已发送，请查收邮箱');
-  } catch (error) {
-    // 已统一提示
   } finally {
     sendCodeLoading.value = false;
-  }
-}
-
-async function handleSendResetPasswordCode() {
-  const email = resetPasswordForm.email.trim();
-  if (!isValidEmail(email)) {
-    showError('请输入正确的邮箱地址');
-    return;
-  }
-  if (!resetPasswordForm.newPassword || !resetPasswordForm.confirmNewPassword) {
-    showInfo('请先填写新密码和确认新密码');
-    return;
-  }
-  if (resetPasswordForm.newPassword !== resetPasswordForm.confirmNewPassword) {
-    showError('两次输入的新密码不一致');
-    return;
-  }
-
-  resetCodeLoading.value = true;
-  try {
-    await sendResetPasswordCode({ email });
-    startCountdown('reset');
-    showSuccess('重置密码验证码已发送，请查收邮箱');
-  } catch (error) {
-    // 已统一提示
-  } finally {
-    resetCodeLoading.value = false;
   }
 }
 
@@ -269,78 +165,31 @@ async function handleRegister() {
     showSuccess('注册成功，请使用账号登录');
     resetRegisterForm();
     activeTab.value = 'login';
-  } catch (error) {
-    // 已统一提示
   } finally {
     registerLoading.value = false;
   }
 }
 
-async function handleResetPassword() {
-  if (
-    !resetPasswordForm.email ||
-    !resetPasswordForm.newPassword ||
-    !resetPasswordForm.confirmNewPassword ||
-    !resetPasswordForm.verificationCode
-  ) {
-    showInfo('请完整填写找回密码信息');
-    return;
-  }
-  if (!isValidEmail(resetPasswordForm.email)) {
-    showError('请输入正确的邮箱地址');
-    return;
-  }
-  if (resetPasswordForm.newPassword !== resetPasswordForm.confirmNewPassword) {
-    showError('两次输入的新密码不一致');
-    return;
-  }
-  if (!/^\d{6}$/.test(resetPasswordForm.verificationCode)) {
-    showError('请输入 6 位数字验证码');
-    return;
-  }
-
-  resetPasswordLoading.value = true;
-  try {
-    await resetPassword({ ...resetPasswordForm });
-    loginForm.account = resetPasswordForm.email.trim();
-    loginForm.password = '';
-    showSuccess('密码重置成功，请使用新密码登录');
-    closeResetPasswordDialog();
-  } catch (error) {
-    // 已统一提示
-  } finally {
-    resetPasswordLoading.value = false;
-  }
+function handleResetPasswordSuccess(email: string) {
+  loginForm.account = email;
+  loginForm.password = '';
+  activeTab.value = 'login';
 }
 
 function isValidEmail(email: string) {
   return EMAIL_PATTERN.test(email.trim());
 }
 
-function startCountdown(scene: 'register' | 'reset') {
-  if (scene === 'register') {
-    clearSendCodeTimer();
-    sendCodeCountdown.value = SEND_CODE_COUNTDOWN_SECONDS;
-    sendCodeTimer = window.setInterval(() => {
-      if (sendCodeCountdown.value <= 1) {
-        sendCodeCountdown.value = 0;
-        clearSendCodeTimer();
-        return;
-      }
-      sendCodeCountdown.value -= 1;
-    }, 1000);
-    return;
-  }
-
-  clearResetCodeTimer();
-  resetCodeCountdown.value = SEND_CODE_COUNTDOWN_SECONDS;
-  resetCodeTimer = window.setInterval(() => {
-    if (resetCodeCountdown.value <= 1) {
-      resetCodeCountdown.value = 0;
-      clearResetCodeTimer();
+function startCountdown() {
+  clearSendCodeTimer();
+  sendCodeCountdown.value = SEND_CODE_COUNTDOWN_SECONDS;
+  sendCodeTimer = window.setInterval(() => {
+    if (sendCodeCountdown.value <= 1) {
+      sendCodeCountdown.value = 0;
+      clearSendCodeTimer();
       return;
     }
-    resetCodeCountdown.value -= 1;
+    sendCodeCountdown.value -= 1;
   }, 1000);
 }
 
@@ -348,13 +197,6 @@ function clearSendCodeTimer() {
   if (sendCodeTimer !== null) {
     window.clearInterval(sendCodeTimer);
     sendCodeTimer = null;
-  }
-}
-
-function clearResetCodeTimer() {
-  if (resetCodeTimer !== null) {
-    window.clearInterval(resetCodeTimer);
-    resetCodeTimer = null;
   }
 }
 
@@ -367,18 +209,8 @@ function resetRegisterForm() {
   clearSendCodeTimer();
 }
 
-function resetResetPasswordForm() {
-  resetPasswordForm.email = '';
-  resetPasswordForm.newPassword = '';
-  resetPasswordForm.confirmNewPassword = '';
-  resetPasswordForm.verificationCode = '';
-  resetCodeCountdown.value = 0;
-  clearResetCodeTimer();
-}
-
 onBeforeUnmount(() => {
   clearSendCodeTimer();
-  clearResetCodeTimer();
 });
 </script>
 
@@ -412,12 +244,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
   gap: 12px;
 }
 
