@@ -6,6 +6,8 @@ import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeE
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import cn.sztu.questioncloud.infrastructure.common.cache.util.CacheKeyBuilder;
+import cn.sztu.questioncloud.infrastructure.common.exception.CommonInfraExceptionEnum;
+import cn.sztu.questioncloud.infrastructure.common.exception.InfrastructureException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -41,20 +43,32 @@ public class UserVerificationAdapter implements UserVerificationPort {
         String cooldownKey = getRateLimitCooldownKey(identify, type);
         boolean cooldownSet = cacheService.set(cooldownKey, "1", SINGLE_SEND_INTERVAL_SECONDS, TimeUnit.SECONDS);
         if (!cooldownSet) {
-            throw new RuntimeException("验证码发送频控初始化失败，请稍后重试");
+            throw new InfrastructureException(
+                    CommonInfraExceptionEnum.INFRA_COMMON_UNKNOWN_ERROR,
+                    "验证码发送频控初始化失败"
+            );
         }
         //增加发送计数器，统计窗口内的发送次数
         String counterKey = getRateLimitCounterKey(identify, type);
         long count = cacheService.increment(counterKey);
         if (count == 1) {
-            cacheService.expire(counterKey, RATE_LIMIT_WINDOW_MINUTES, TimeUnit.MINUTES);
+            boolean expired = cacheService.expire(counterKey, RATE_LIMIT_WINDOW_MINUTES, TimeUnit.MINUTES);
+            if (!expired) {
+                throw new InfrastructureException(
+                        CommonInfraExceptionEnum.INFRA_COMMON_UNKNOWN_ERROR,
+                        "验证码发送计数窗口初始化失败"
+                );
+            }
         }
         //生成验证码并保存到缓存，设置过期时间为验证码的有效期
         String code = generateCode();
         String codeKey = getVerificationCodeKey(identify, type);
         boolean codeSet = cacheService.set(codeKey, code, type.getExpiryMinutes(), TimeUnit.MINUTES);
         if (!codeSet) {
-            throw new RuntimeException("验证码缓存失败，请稍后重试");
+            throw new InfrastructureException(
+                    CommonInfraExceptionEnum.INFRA_COMMON_UNKNOWN_ERROR,
+                    "验证码缓存失败"
+            );
         }
 
         return code;
@@ -75,7 +89,13 @@ public class UserVerificationAdapter implements UserVerificationPort {
     @Override
     public void deleteVerificationToken(String identify, VerificationTypeEnum type) {
         String codeKey = getVerificationCodeKey(identify, type);
-        cacheService.delete(codeKey);
+        boolean deleted = cacheService.delete(codeKey);
+        if (!deleted && cacheService.exists(codeKey)) {
+            throw new InfrastructureException(
+                    CommonInfraExceptionEnum.INFRA_COMMON_UNKNOWN_ERROR,
+                    "验证码删除失败"
+            );
+        }
     }
 
     @Override
@@ -93,7 +113,13 @@ public class UserVerificationAdapter implements UserVerificationPort {
         Long count = cacheService.get(windowKey);
         if (count != null && count >= RATE_LIMIT_MAX_REQUESTS) {
             String blockKey = getRateLimitBlockKey(identify, type);
-            cacheService.set(blockKey, "1", BLOCK_DURATION_MINUTES, TimeUnit.MINUTES);
+            boolean blockSet = cacheService.set(blockKey, "1", BLOCK_DURATION_MINUTES, TimeUnit.MINUTES);
+            if (!blockSet) {
+                throw new InfrastructureException(
+                        CommonInfraExceptionEnum.INFRA_COMMON_UNKNOWN_ERROR,
+                        "验证码封禁状态设置失败"
+                );
+            }
             cacheService.delete(windowKey);
             return true;
         }
