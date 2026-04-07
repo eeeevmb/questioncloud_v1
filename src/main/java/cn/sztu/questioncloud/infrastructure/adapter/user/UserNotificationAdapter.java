@@ -32,12 +32,14 @@ public class UserNotificationAdapter implements UserNotificationPort {
     private String buildSubject(VerificationTypeEnum verificationType) {
         return switch (verificationType) {
             case REGISTER -> "【QuestionCloud】注册验证码";
+            case PASSWORD_RESET -> "【QuestionCloud】重置密码验证码";
         };
     }
 
     private String buildContent(String code, VerificationTypeEnum verificationType) {
         return switch (verificationType) {
             case REGISTER -> "您好，您的注册验证码是：" + code + "，5分钟内有效。";
+            case PASSWORD_RESET -> "您好，您的重置密码验证码是：" + code + "，5分钟内有效。";
         };
     }
 

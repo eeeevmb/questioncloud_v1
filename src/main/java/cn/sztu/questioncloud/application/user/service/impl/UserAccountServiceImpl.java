@@ -10,7 +10,8 @@ import cn.sztu.questioncloud.application.user.port.UserVerificationPort;
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
 import cn.sztu.questioncloud.application.user.enums.UserStatusEnum;
-import cn.sztu.questioncloud.web.rest.v1.user.req.SendRegisterCodeReq;
+import cn.sztu.questioncloud.web.rest.v1.user.req.ResetPasswordReq;
+import cn.sztu.questioncloud.web.rest.v1.user.req.SendVerificationCodeReq;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
@@ -112,20 +113,50 @@ public class UserAccountServiceImpl implements UserAccountService {
      * @param request 发送注册验证码请求
      */
     @Override
-    public void sendRegisterCode(SendRegisterCodeReq request) {
+    public void sendRegisterCode(SendVerificationCodeReq request) {
         if (userPresenceCheckerPort.existsByEmail(request.email())) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该邮箱已被使用");
         }
-        // 创建验证码并存入 redis
-        String verificationCode = userVerificationPort.createVerificationToken(
+        doSendVerificationCode(request.email(), VerificationTypeEnum.REGISTER);
+    }
+
+    /**
+     * 发送密码重置验证码
+     *
+     * @param request 发送密码重置验证码请求
+     */
+    @Override
+    public void sendResetPasswordCode(SendVerificationCodeReq request) {
+        if (!userPresenceCheckerPort.existsByEmail(request.email())) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该邮箱未注册");
+        }
+        doSendVerificationCode(request.email(), VerificationTypeEnum.PASSWORD_RESET);
+    }
+
+    /**
+     * 重置密码
+     *
+     * @param request 重置密码请求
+     */
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordReq request) {
+        if(!userPresenceCheckerPort.existsByEmail(request.email())) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "该邮箱未注册");
+        }
+        boolean valid = userVerificationPort.verifyCode(
                 request.email(),
-                VerificationTypeEnum.REGISTER
+                request.verificationCode(),
+                VerificationTypeEnum.PASSWORD_RESET
         );
-        // 发送验证码邮件
-        userNotificationPort.sendVerificationCode(
+        if (!valid) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_VALIDATION_ERROR, "验证码错误或已过期");
+        }
+        String newPassword = PasswordEncryptionUtil.encrypt(request.newPassword());
+        userAccountRepository.updatePasswordByEmail(request.email(), newPassword);
+        userVerificationPort.deleteVerificationToken(
                 request.email(),
-                verificationCode,
-                VerificationTypeEnum.REGISTER
+                VerificationTypeEnum.PASSWORD_RESET
         );
     }
 
@@ -250,6 +281,26 @@ public class UserAccountServiceImpl implements UserAccountService {
                 new ApplicationException(CommonResultCodeEnum.NOT_FOUND, "用户不存在"));
 
         return UserBasicInfoVO.fromEntity(user);
+    }
+
+    /**
+     * 创建并发送邮箱注册验证码
+     *
+     * @param email 发送注册验证码请求
+     * @param type 验证码类型
+     */
+    private void doSendVerificationCode(String email, VerificationTypeEnum type){
+        // 创建验证码并存入 redis
+        String verificationCode = userVerificationPort.createVerificationToken(
+                email,
+                type
+        );
+        // 发送验证码邮件
+        userNotificationPort.sendVerificationCode(
+                email,
+                verificationCode,
+                type
+        );
     }
 
     /**

@@ -13,8 +13,14 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface SendRegisterCodePayload {
+export interface SendVerificationCodePayload {
   email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  verificationCode: string;
+  newPassword: string;
 }
 
 export interface AvatarResponse {
@@ -25,8 +31,16 @@ export function registerUser(payload: RegisterPayload) {
   return apiClient.post<string>('/api/v1/user/register', payload);
 }
 
-export function sendRegisterCode(payload: SendRegisterCodePayload) {
+export function sendRegisterCode(payload: SendVerificationCodePayload) {
   return apiClient.post<void>('/api/v1/user/send-register-code', payload);
+}
+
+export function sendResetPasswordCode(payload: SendVerificationCodePayload) {
+  return apiClient.post<void>('/api/v1/user/send-reset-password-code', payload);
+}
+
+export function resetPassword(payload: ResetPasswordPayload) {
+  return apiClient.post<void>('/api/v1/user/reset-password', payload);
 }
 
 export function loginUser(payload: LoginPayload) {
