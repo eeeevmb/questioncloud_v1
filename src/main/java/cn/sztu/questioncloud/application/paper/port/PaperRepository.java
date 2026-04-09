@@ -12,15 +12,8 @@ public interface PaperRepository {
     PaperEntity getById(Long paperId);
 
     /**
-     * 更新试卷实体
-     *
-     * @param paperEntity 试卷实体
-     */
-    void update(PaperEntity paperEntity);
-
-    /**
      * 目前仅更新试卷的统计类信息 (总分、题数)
-     * 注意：此方法不会修改title、description等元数据
+     * 此方法不会修改 title、description等元数据
      *
      * @param paper 包含最新统计数据的实体对象
      */

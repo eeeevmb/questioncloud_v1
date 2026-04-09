@@ -1,6 +1,9 @@
 package cn.sztu.questioncloud.application.user.service;
 
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
+import cn.sztu.questioncloud.application.user.enums.VerificationTypeEnum;
+import cn.sztu.questioncloud.web.rest.v1.user.req.ResetPasswordReq;
+import cn.sztu.questioncloud.web.rest.v1.user.req.SendVerificationCodeReq;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.UserBasicInfoVO;
@@ -14,6 +17,27 @@ public interface UserAccountService {
      * @return 注册响应
      */
     RegisterVO register(RegisterReq request);
+
+    /**
+     * 发送注册验证码
+     *
+     * @param request 发送注册验证码请求
+     */
+    void sendRegisterCode(SendVerificationCodeReq request);
+
+    /**
+     * 发送密码重置验证码
+     *
+     * @param request 发送密码重置验证码请求
+     */
+    void sendResetPasswordCode(SendVerificationCodeReq request);
+
+    /**
+     * 重置密码
+     *
+     * @param request 重置密码请求
+     */
+    void resetPassword(ResetPasswordReq request);
 
     /**
      * 用户登录

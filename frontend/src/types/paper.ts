@@ -24,7 +24,6 @@ export interface PaperBasicVO {
 export interface PaperListItemVO {
   id: string;
   title: string;
-  status: number;
   totalItems: number;
   totalScore: number;
   updatedAt: string;
@@ -34,6 +33,7 @@ export interface PaperListItemVO {
 export interface PaperItemVO {
   paperId: string;
   questionId: string;
+  questionVersionId: string;
   score: number;
   seq: number;
   questionTitle: string;
@@ -47,6 +47,24 @@ export interface PaperItemVO {
 export interface PaperItemRef {
   questionId: string;
   questionVersionId: string;
+}
+
+export interface PaperItemDetailRef {
+  questionId: string;
+  questionVersionId: string;
+  difficulty?: number;
+  questionTitle?: string;
+  stem?: string;
+  typeCode?: string;
+}
+
+export interface PaperItemDetailVO {
+  questionId: string;
+  questionVersionId: string;
+  difficulty?: number;
+  questionTitle?: string;
+  stem?: string;
+  typeCode?: string;
 }
 
 export interface PaperDetailVO {
@@ -66,25 +84,35 @@ export interface PaperDraftItemRow extends PaperItemRef {
   key: string;
   score: number;
   typeCode?: string;
-  source?: 'preview' | 'manual';
+  difficulty?: number;
+  source?: 'preview' | 'manual' | 'paper' | 'ai';
+  questionTitle?: string;
+  stem?: string;
+  replacing?: boolean;
 }
 
 export interface PaperPageQuery {
   pageNum?: number;
   pageSize?: number;
   keyword?: string;
-  status?: number | null;
 }
 
 export interface PaperRandomBuildRule {
   typeCode: string;
   count: number;
-  score: number;
+  expectedDifficulty?: number;
 }
 
 export interface PaperRandomBuildReq {
   collectionIds: string[];
   rules: PaperRandomBuildRule[];
+}
+
+export interface RandomReplaceReq {
+  collectionIds: string[];
+  excludedQuestionIds?: string[];
+  typeCode: string;
+  expectedDifficulty?: number;
 }
 
 export interface PaperItemSavePayload {

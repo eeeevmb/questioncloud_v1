@@ -1,0 +1,97 @@
+import type { PageResult } from './common';
+
+export interface PaperSavePayload {
+  title: string;
+  description?: string | null;
+}
+
+export interface PaperCreatedResponse {
+  paperId: string;
+}
+
+export interface PaperBasicVO {
+  id: string;
+  title: string;
+  description: string | null;
+  status: number;
+  totalItems: number;
+  totalScore: number;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaperListItemVO {
+  id: string;
+  title: string;
+  status: number;
+  totalItems: number;
+  totalScore: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface PaperItemVO {
+  paperId: string;
+  questionId: string;
+  score: number;
+  seq: number;
+  questionTitle: string;
+  stem: string;
+  typeCode: string;
+  versionNo: number;
+  difficulty: number;
+  correctRate: number;
+}
+
+export interface PaperItemRef {
+  questionId: string;
+  questionVersionId: string;
+}
+
+export interface PaperDetailVO {
+  id: string;
+  title: string;
+  description: string | null;
+  status: number;
+  totalItems: number;
+  totalScore: number;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+  items: PaperItemVO[];
+}
+
+export interface PaperDraftItemRow extends PaperItemRef {
+  key: string;
+  score: number;
+  typeCode?: string;
+  source?: 'preview' | 'manual';
+}
+
+export interface PaperPageQuery {
+  pageNum?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: number | null;
+}
+
+export interface PaperRandomBuildRule {
+  expectedDifficulty?: number;
+  typeCode: string;
+  count: number;
+  score: number;
+}
+
+export interface PaperRandomBuildReq {
+  collectionIds: string[];
+  rules: PaperRandomBuildRule[];
+}
+
+export interface PaperItemSavePayload {
+  questionId: string;
+  questionVersionId: string;
+  score: number;
+}
+
+export type PaperPageResult = PageResult<PaperListItemVO>;

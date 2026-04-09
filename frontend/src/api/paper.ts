@@ -4,11 +4,13 @@ import type {
   PaperCreatedResponse,
   PaperDetailVO,
   PaperItemRef,
+  PaperItemDetailRef,
   PaperItemSavePayload,
   PaperPageQuery,
   PaperPageResult,
   PaperRandomBuildReq,
-  PaperSavePayload
+  PaperSavePayload,
+  RandomReplaceReq
 } from '../types/paper';
 
 export function fetchPaperPage(query: PaperPageQuery) {
@@ -17,16 +19,16 @@ export function fetchPaperPage(query: PaperPageQuery) {
   });
 }
 
-export function createPaper(payload: PaperSavePayload) {
-  return apiClient.post<PaperCreatedResponse>('/api/v1/paper', payload);
-}
-
 export function fetchPaperDetail(paperId: string) {
   return apiClient.get<PaperDetailVO>(`/api/v1/paper/${paperId}`);
 }
 
+export function createPaper(payload: PaperSavePayload) {
+  return apiClient.post<PaperCreatedResponse>('/api/v1/paper', payload);
+}
+
 export function updatePaper(paperId: string, payload: PaperSavePayload) {
-  return apiClient.put<PaperBasicVO>(`/api/v1/paper/${paperId}`, payload);
+  return apiClient.put<void>(`/api/v1/paper/${paperId}`, payload);
 }
 
 export function deletePaper(paperId: string) {
@@ -38,9 +40,13 @@ export function clearPaperItems(paperId: string) {
 }
 
 export function savePaperItems(paperId: string, payload: PaperItemSavePayload[]) {
-  return apiClient.post<PaperItemRef[]>(`/api/v1/paper/${paperId}/items`, payload);
+  return apiClient.post<PaperItemRef[]>(`/api/v1/paper/${paperId}/items`, { items: payload });
 }
 
 export function previewRandomBuild(paperId: string, payload: PaperRandomBuildReq) {
-  return apiClient.post<PaperItemRef[]>(`/api/v1/paper/${paperId}/random-preview`, payload);
+  return apiClient.post<PaperItemDetailRef[]>('/api/v1/paper/actions/random-preview', payload);
+}
+
+export function randomReplaceItem(paperId: string, payload: RandomReplaceReq) {
+  return apiClient.post<PaperItemDetailRef>('/api/v1/paper/actions/replace-item', payload);
 }
