@@ -66,6 +66,12 @@ services:
       RABBITMQ_DEFAULT_PASS: ${QC_RABBITMQ_PASS}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY}
       CHROMA_BASE_URL: http://chroma:8000
+      QC_SMTP_HOST: ${QC_SMTP_HOST:-smtp.qq.com}
+      QC_SMTP_PORT: ${QC_SMTP_PORT:-465}
+      QC_SMTP_USERNAME: ${QC_SMTP_USERNAME:-}
+      QC_SMTP_PASSWORD: ${QC_SMTP_PASSWORD:-}
+      QC_SMTP_AUTH: ${QC_SMTP_AUTH:-true}
+      QC_SMTP_SSL_ENABLE: ${QC_SMTP_SSL_ENABLE:-true}
     ports:
       - "${QC_BACKEND_PORT}:8080"
     volumes:
