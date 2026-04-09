@@ -27,6 +27,23 @@ spring:
       port: 6379
       timeout: 3s
 
+  mail:
+    host: ${QC_SMTP_HOST:smtp.qq.com}
+    port: ${QC_SMTP_PORT:465}
+    username: ${QC_SMTP_USERNAME:}
+    password: ${QC_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${QC_SMTP_AUTH:true}
+          ssl:
+            enable: ${QC_SMTP_SSL_ENABLE:true}
+            socketFactory:
+              class: javax.net.ssl.SSLSocketFactory
+              port: ${QC_SMTP_PORT:465}
+        transport:
+          protocol: smtp
+
 langchain4j:
   community:
     dashscope:
