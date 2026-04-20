@@ -95,6 +95,7 @@ export function useQuestionCreate(options: UseQuestionCreateOptions) {
   });
   const aiDraftPreview = ref<QuestionDraft | null>(null);
   const aiDraftForm = reactive<AiDraftFormState>(defaultAiDraftForm());
+  const aiDraftGeneratingTips = ['理解需求', '组织题干与选项', '生成答案与解析'];
 
   const hasCreateCollectionContext = computed(() => Boolean(createQuestionCollectionId.value));
   const isCreateChoiceType = computed(
@@ -143,6 +144,9 @@ export function useQuestionCreate(options: UseQuestionCreateOptions) {
   const draftPreviewOptions = computed(() => options.normalizeDraftOptions(aiDraftForm.options));
   const draftPreviewCorrectAnswer = computed(() => formatDraftCorrectAnswerFromForm());
   const draftPreviewAssumptions = computed(() => options.normalizeText(aiDraftForm.assumptions));
+  const createAiDraftStatusText = computed(() =>
+    createAiDraftLoading.value ? '正在生成题目草稿，通常需要几秒钟' : ''
+  );
 
   function syncCreateCollectionId(validCollectionIds: string[]) {
     if (createQuestionCollectionId.value && !validCollectionIds.includes(createQuestionCollectionId.value)) {
@@ -412,6 +416,9 @@ export function useQuestionCreate(options: UseQuestionCreateOptions) {
   }
 
   async function handleGenerateAiDraft() {
+    if (createAiDraftLoading.value) {
+      return;
+    }
     if (!hasCreateCollectionContext.value || !createQuestionCollectionId.value) {
       showInfo('请先选择题集');
       return;
@@ -555,6 +562,8 @@ export function useQuestionCreate(options: UseQuestionCreateOptions) {
     draftPreviewOptions,
     draftPreviewCorrectAnswer,
     draftPreviewAssumptions,
+    createAiDraftStatusText,
+    aiDraftGeneratingTips,
     syncCreateCollectionId,
     openCreateQuestionDrawer,
     activateAiMode,

@@ -1,10 +1,10 @@
 <template>
-  <el-drawer v-model="visibleModel" size="980px" :with-header="false">
+  <el-drawer v-model="visibleModel" size="min(980px, 100vw)" :with-header="false" class="question-create-drawer">
     <section class="create-drawer">
       <div class="create-header">
         <div>
           <h3>AI 出题</h3>
-          <p>先选择题集，再生成并确认题目草稿。</p>
+          <p>描述出题方向，生成草稿后再确认入库。</p>
         </div>
         <div class="create-header-actions">
           <el-button text @click="visibleModel = false">关闭</el-button>
@@ -16,7 +16,10 @@
       </div>
 
       <template v-if="createMode === 'ai'">
-        <el-alert type="info" :closable="false" class="create-tip" title="先描述出题方向，AI 生成草稿后再确认入库。" />
+        <div class="create-tip">
+          <strong>出题流程</strong>
+          <span>先生成可编辑草稿，再确认创建到题集。</span>
+        </div>
 
         <el-steps :active="aiCreateStep - 1" finish-status="success" simple class="create-steps">
           <el-step title="描述出题需求" />
@@ -24,7 +27,12 @@
         </el-steps>
 
         <div class="ai-step-content">
-          <el-form v-if="aiCreateStep === 1" label-position="top" class="create-form ai-requirement-form">
+          <el-form
+            v-if="aiCreateStep === 1"
+            label-position="top"
+            class="create-form ai-requirement-form"
+            :disabled="createAiDraftLoading"
+          >
             <el-form-item label="题集">
               <el-select
                 v-model="collectionIdModel"
@@ -59,7 +67,7 @@
               </el-select>
             </el-form-item>
 
-            <el-form-item label="适用场景（可选）">
+            <el-form-item label="使用场景">
               <el-input
                 v-model="aiCreateForm.scenario"
                 maxlength="120"
@@ -68,7 +76,7 @@
               />
             </el-form-item>
 
-            <el-form-item label="额外要求（可选）">
+            <el-form-item label="补充要求">
               <el-input
                 v-model="aiCreateForm.requirements"
                 type="textarea"
@@ -78,21 +86,37 @@
                 placeholder="例如：避免计算量过大，强调思路引导"
               />
             </el-form-item>
+
+            <div v-if="createAiDraftLoading" class="generating-panel">
+              <div class="generating-head">
+                <span class="generating-pulse" />
+                <div>
+                  <strong>{{ createAiDraftStatusText }}</strong>
+                  <p>系统正在整理题干、答案和解析，完成后会自动进入草稿确认。</p>
+                </div>
+              </div>
+              <div class="generating-steps">
+                <span v-for="(tip, index) in aiDraftGeneratingTips" :key="tip">
+                  <i>{{ index + 1 }}</i>
+                  {{ tip }}
+                </span>
+              </div>
+            </div>
           </el-form>
 
           <div v-else class="draft-workbench">
-            <el-card shadow="never" class="draft-editor-card split-card">
-              <template #header>草稿编辑</template>
+            <section class="draft-panel draft-editor-card split-card">
+              <div class="draft-panel-header">草稿编辑</div>
               <el-form label-position="top" class="draft-editor-form">
                 <el-form-item label="题型">
                   <el-select v-model="aiDraftForm.typeCode" disabled>
                     <el-option v-for="type in questionTypeOptions" :key="type.code" :label="type.label" :value="type.code" />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="标题（可选）">
+                <el-form-item label="题目标题">
                   <el-input v-model="aiDraftForm.title" placeholder="请输入题目标题" />
                 </el-form-item>
-                <el-form-item label="难度（可选）">
+                <el-form-item label="难度">
                   <el-input-number
                     v-model="aiDraftForm.difficulty"
                     :min="0"
@@ -163,7 +187,7 @@
                 </template>
 
                 <template v-else>
-                  <el-form-item label="参考答案（可选）">
+                  <el-form-item label="参考答案">
                     <el-input
                       v-model="aiDraftForm.answer"
                       type="textarea"
@@ -175,7 +199,7 @@
                   </el-form-item>
                 </template>
 
-                <el-form-item label="解析（可选）">
+                <el-form-item label="解析">
                   <el-input
                     v-model="aiDraftForm.solution"
                     type="textarea"
@@ -186,10 +210,10 @@
                   />
                 </el-form-item>
               </el-form>
-            </el-card>
+            </section>
 
-            <el-card shadow="never" class="draft-preview-card split-card">
-              <template #header>预览效果</template>
+            <section class="draft-panel draft-preview-card split-card">
+              <div class="draft-panel-header">题目预览</div>
               <div class="draft-preview-content">
                 <div class="draft-item">
                   <p class="draft-label">标题</p>
@@ -221,7 +245,7 @@
                   <AssistantMessageContent :content="draftPreviewAssumptions" />
                 </div>
               </div>
-            </el-card>
+            </section>
           </div>
         </div>
 
@@ -231,31 +255,38 @@
             <el-button
               type="primary"
               :loading="createAiDraftLoading"
-              :disabled="!hasCreateCollectionContext"
+              :disabled="!hasCreateCollectionContext || createAiDraftLoading"
               @click="$emit('generate-ai-draft')"
             >
-              生成题目草稿
+              {{ createAiDraftLoading ? '正在生成...' : '生成题目草稿' }}
             </el-button>
           </template>
           <template v-else>
-            <el-button :loading="createAiDraftLoading" :disabled="!hasCreateCollectionContext" @click="$emit('generate-ai-draft')">
-              重新生成
+            <el-button
+              :loading="createAiDraftLoading"
+              :disabled="!hasCreateCollectionContext || createAiDraftLoading"
+              @click="$emit('generate-ai-draft')"
+            >
+              {{ createAiDraftLoading ? '正在生成...' : '重新生成' }}
             </el-button>
-            <el-button @click="$emit('back-to-ai-requirement')">返回修改需求</el-button>
+            <el-button :disabled="createAiDraftLoading" @click="$emit('back-to-ai-requirement')">修改需求</el-button>
             <el-button
               type="primary"
-              :disabled="!hasCreateCollectionContext"
+              :disabled="!hasCreateCollectionContext || createAiDraftLoading"
               :loading="createSubmitting"
               @click="$emit('create-question-from-ai-draft')"
             >
-              直接创建
+              创建题目
             </el-button>
           </template>
         </div>
       </template>
 
       <template v-else>
-        <el-alert type="info" :closable="false" class="create-tip" :title="createGuideText" />
+        <div class="create-tip">
+          <strong>手动创建</strong>
+          <span>{{ createGuideText }}</span>
+        </div>
         <el-form label-position="top" class="create-form">
           <div class="create-grid two-col">
             <el-form-item label="题型">
@@ -263,7 +294,7 @@
                 <el-option v-for="type in questionTypeOptions" :key="type.code" :label="type.label" :value="type.code" />
               </el-select>
             </el-form-item>
-            <el-form-item label="难度（可选）">
+            <el-form-item label="难度">
               <el-input-number
                 v-model="createForm.difficulty"
                 :min="0"
@@ -275,7 +306,7 @@
             </el-form-item>
           </div>
 
-          <el-form-item label="标题（可选）">
+          <el-form-item label="题目标题">
             <el-input v-model="createForm.title" placeholder="例如：导数应用基础题" />
           </el-form-item>
 
@@ -328,7 +359,7 @@
             </el-radio-group>
           </el-card>
 
-          <el-form-item v-if="!isCreateChoiceType && !isCreateTrueFalseType" label="参考答案（可选）">
+          <el-form-item v-if="!isCreateChoiceType && !isCreateTrueFalseType" label="参考答案">
             <el-input
               v-model="createForm.answer"
               type="textarea"
@@ -339,7 +370,7 @@
             />
           </el-form-item>
 
-          <el-form-item label="解析（可选）">
+          <el-form-item label="解析">
             <el-input
               v-model="createForm.solution"
               type="textarea"
@@ -354,7 +385,7 @@
         <div class="create-footer">
           <el-button @click="visibleModel = false">取消</el-button>
           <el-button type="primary" :loading="createSubmitting" :disabled="!hasCreateCollectionContext" @click="$emit('create-question')">
-            直接创建
+            创建题目
           </el-button>
         </div>
       </template>
@@ -401,6 +432,8 @@ const props = defineProps<{
   draftPreviewOptions: QuestionOption[];
   draftPreviewCorrectAnswer: string;
   draftPreviewAssumptions: string;
+  createAiDraftStatusText: string;
+  aiDraftGeneratingTips: string[];
   createSingleCorrect: string;
   aiDraftSingleCorrect: string;
 }>();
@@ -445,42 +478,86 @@ const aiDraftSingleCorrectModel = computed({
 </script>
 
 <style scoped>
+:deep(.question-create-drawer .el-drawer__body) {
+  padding: 0;
+  background: #f5f7fb;
+}
+
+.question-create-drawer :deep(.el-button),
+.question-create-drawer :deep(.el-input__wrapper),
+.question-create-drawer :deep(.el-textarea__inner),
+.question-create-drawer :deep(.el-card),
+.question-create-drawer :deep(.el-select__wrapper) {
+  border-radius: 8px;
+}
+
 .create-drawer {
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding: 22px 24px 0;
+  color: #1f2937;
 }
 
 .create-header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
+  padding: 2px 0 4px;
 }
 
 .create-header h3 {
   margin: 0;
+  color: #172033;
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 750;
 }
 
 .create-header p {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.create-header-actions {
+  flex: 0 0 auto;
 }
 
 .create-tip {
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #475569;
+}
+
+.create-tip strong {
+  color: #2563eb;
+  font-weight: 750;
+}
+
+.create-tip span {
+  font-size: 13px;
 }
 
 .create-mode-switch {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .create-steps {
-  margin-bottom: 2px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .ai-step-content {
@@ -494,7 +571,11 @@ const aiDraftSingleCorrectModel = computed({
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 2px;
+  padding: 18px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
 }
 
 .ai-requirement-form {
@@ -503,7 +584,7 @@ const aiDraftSingleCorrectModel = computed({
 
 .create-grid {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .create-grid.two-col {
@@ -511,7 +592,9 @@ const aiDraftSingleCorrectModel = computed({
 }
 
 .create-subcard {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  border-color: #e5e7eb;
+  box-shadow: none;
 }
 
 .create-subhead {
@@ -521,11 +604,11 @@ const aiDraftSingleCorrectModel = computed({
 }
 
 .create-option-row {
-  border-top: 1px dashed var(--el-border-color-light);
-  padding-top: 10px;
-  margin-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 12px;
+  margin-top: 12px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: 120px 1fr auto;
   align-items: end;
 }
@@ -548,8 +631,92 @@ const aiDraftSingleCorrectModel = computed({
   flex-wrap: wrap;
 }
 
+.generating-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+  padding: 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.generating-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.generating-head strong {
+  display: block;
+  color: #1e3a8a;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.generating-head p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.generating-pulse {
+  position: relative;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.generating-pulse::after {
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  background: rgba(37, 99, 235, 0.18);
+  content: '';
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+
+.generating-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.generating-steps span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.generating-steps i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #2563eb;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .draft-preview-card {
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid #e5e7eb;
 }
 
 .draft-workbench {
@@ -557,12 +724,12 @@ const aiDraftSingleCorrectModel = computed({
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: 16px;
   overflow: hidden;
 }
 
 .draft-editor-card {
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid #e5e7eb;
 }
 
 .split-card {
@@ -572,7 +739,23 @@ const aiDraftSingleCorrectModel = computed({
   flex-direction: column;
 }
 
-.split-card :deep(.el-card__body) {
+.draft-panel {
+  overflow: hidden;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+}
+
+.draft-panel-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.split-card > .draft-editor-form,
+.split-card > .draft-preview-content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -581,28 +764,30 @@ const aiDraftSingleCorrectModel = computed({
 .draft-editor-form,
 .draft-preview-content {
   min-height: 100%;
+  padding: 18px 20px;
 }
 
 .draft-options-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
+  font-weight: 650;
 }
 
 .draft-option-edit-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: start;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .draft-item {
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--el-border-color-lighter);
+  padding: 12px 0;
+  border-bottom: 1px dashed #e5e7eb;
 }
 
 .draft-item:last-child {
@@ -610,14 +795,15 @@ const aiDraftSingleCorrectModel = computed({
 }
 
 .draft-label {
-  margin: 0 0 4px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 650;
 }
 
 .draft-value {
   margin: 0;
-  color: var(--el-text-color-primary);
+  color: #1f2937;
 }
 
 .draft-preview-options {
@@ -637,28 +823,47 @@ const aiDraftSingleCorrectModel = computed({
 .option-key {
   min-width: 18px;
   font-weight: 600;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
 }
 
 .create-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  border-top: 1px solid var(--el-border-color-light);
-  padding-top: 10px;
-  background: #fff;
+  gap: 10px;
+  margin: 0 -24px;
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
   position: sticky;
   bottom: 0;
   z-index: 3;
 }
 
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 1024px) {
+  .create-drawer {
+    padding: 18px 18px 0;
+  }
+
   .create-grid.two-col {
     grid-template-columns: 1fr;
   }
 
   .draft-workbench {
     grid-template-columns: 1fr;
+    overflow-y: auto;
   }
 
   .split-card {
@@ -673,9 +878,15 @@ const aiDraftSingleCorrectModel = computed({
     grid-template-columns: 1fr;
   }
 
+  .generating-steps {
+    grid-template-columns: 1fr;
+  }
+
   .create-footer {
     justify-content: flex-start;
     flex-wrap: wrap;
+    margin: 0 -18px;
+    padding: 14px 18px;
   }
 }
 </style>

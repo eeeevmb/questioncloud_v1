@@ -1,13 +1,16 @@
 <template>
-  <el-card v-if="detail">
-    <template #header>
-      <div class="page-header">
-        <div>
-          <h2>更新题目（当前版本 {{ detail.versionNo }}）</h2>
-          <p>题目类型：{{ detail.typeCode }}，更新会生成新版本。</p>
+    <el-card v-if="detail">
+      <template #header>
+        <div class="page-header">
+          <div>
+            <h2>
+              更新题目
+              <span class="version-badge">v{{ detail.versionNo }}</span>
+            </h2>
+            <p>题目类型：{{ typeLabel }}，修改后会生成新版本。</p>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
 
     <el-form label-position="top" class="form">
       <el-form-item label="标题">
@@ -165,6 +168,21 @@ const assetPreviewErrors = reactive(new Map<string, boolean>());
 const questionId = computed(() => {
   const id = route.params.questionId;
   return typeof id === 'string' ? id : '';
+});
+
+const typeLabelMap: Record<string, string> = {
+  'single-choice': '单选题',
+  'multiple-choice': '多选题',
+  'true-false': '判断题',
+  'fill-in': '填空题',
+  'short-answer': '简答题'
+};
+
+const typeLabel = computed(() => {
+  if (!detail.value) {
+    return '';
+  }
+  return typeLabelMap[detail.value.typeCode] ?? detail.value.typeCode;
 });
 
 watch(() => route.params.questionId, loadDetail, { immediate: true });
@@ -388,6 +406,21 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin-left: 8px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #e6e9ef;
+  background: #f7f8fa;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .page-header h2 {
   margin: 0;
 }

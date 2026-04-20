@@ -2,6 +2,17 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 
 export type ResultType = 'explain' | 'search' | 'generate' | 'general';
 
+export type QuickPromptTone = 'blue' | 'green' | 'orange';
+
+export type QuickPromptIcon = 'explain' | 'summary' | 'practice';
+
+export interface QuickPromptItem {
+  title: string;
+  description: string;
+  tone: QuickPromptTone;
+  icon: QuickPromptIcon;
+}
+
 export interface MessageItem {
   id: string;
   role: MessageRole;

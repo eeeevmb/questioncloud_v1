@@ -112,6 +112,8 @@
       :draft-preview-options="draftPreviewOptions"
       :draft-preview-correct-answer="draftPreviewCorrectAnswer"
       :draft-preview-assumptions="draftPreviewAssumptions"
+      :create-ai-draft-status-text="createAiDraftStatusText"
+      :ai-draft-generating-tips="aiDraftGeneratingTips"
       :create-single-correct="createSingleCorrect"
       :ai-draft-single-correct="aiDraftSingleCorrect"
       @activate-ai-mode="activateAiMode"
@@ -133,14 +135,25 @@
       :question-type-options="questionTypeOptions"
       :paper-draft-step="paperDraftStep"
       :generate-paper-draft-loading="generatePaperDraftLoading"
+      :save-paper-draft-loading="savePaperDraftLoading"
       :paper-draft-error-message="paperDraftErrorMessage"
+      :paper-draft-detail-loading="paperDraftDetailLoading"
+      :paper-draft-detail-error-message="paperDraftDetailErrorMessage"
       :paper-draft-result="paperDraftResult"
       :paper-draft-form="paperDraftForm"
       :paper-draft-candidate-questions="paperDraftCandidateQuestions"
+      :paper-draft-preview-groups="paperDraftPreviewGroups"
+      :paper-draft-expected-total="paperDraftExpectedTotal"
+      :paper-draft-actual-total="paperDraftActualTotal"
+      :paper-draft-shortage-message="paperDraftShortageMessage"
       :paper-draft-constraint-level-error="paperDraftConstraintLevelError"
+      :paper-draft-generating-tips="paperDraftGeneratingTips"
+      :paper-draft-generate-status-text="paperDraftGenerateStatusText"
+      :can-save-paper-draft="canSavePaperDraft"
       @add-constrain="addPaperDraftConstrain"
       @remove-constrain="removePaperDraftConstrain"
       @generate="handleGenerateAgentPaperDraft"
+      @save-paper="handleSavePaperDraftAsPaper"
       @back-to-requirement="backToPaperRequirementForm"
     />
 
@@ -149,6 +162,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import {
   createAgentSession,
@@ -175,7 +189,7 @@ import PaperDraftDrawer from '../components/agent/PaperDraftDrawer.vue';
 import { usePaperDraft } from '../composables/usePaperDraft';
 import { useQuestionCreate } from '../composables/useQuestionCreate';
 import { useQuestionPicker } from '../composables/useQuestionPicker';
-import type { MessageItem, MessageRole, QuestionPickerQueryState, ResultType } from '../types/agent-demo';
+import type { MessageItem, MessageRole, QuestionPickerQueryState, QuickPromptItem, ResultType } from '../types/agent-demo';
 
 interface SendMessageOptions {
   toolContext?: {
@@ -185,7 +199,27 @@ interface SendMessageOptions {
 }
 
 const AGENT_NAME = '题库小助手';
-const quickPrompts = ['帮我讲解这道题', '帮我总结这组题的考点', '给我出几道同类型练习题'];
+const router = useRouter();
+const quickPrompts: QuickPromptItem[] = [
+  {
+    title: '帮我讲解这道题',
+    description: 'AI 将详细拆解题目知识点',
+    tone: 'blue',
+    icon: 'explain'
+  },
+  {
+    title: '帮我总结这组题的考点',
+    description: '提炼核心考点与解题思路',
+    tone: 'green',
+    icon: 'summary'
+  },
+  {
+    title: '给我出几道同类型练习题',
+    description: '生成相似题目加强练习',
+    tone: 'orange',
+    icon: 'practice'
+  }
+];
 
 const questionTypeOptions = [
   { code: 'single-choice', label: '单选题' },
@@ -278,6 +312,8 @@ const {
   draftPreviewOptions,
   draftPreviewCorrectAnswer,
   draftPreviewAssumptions,
+  createAiDraftStatusText,
+  aiDraftGeneratingTips,
   syncCreateCollectionId,
   openCreateQuestionDrawer,
   activateAiMode,
@@ -304,18 +340,33 @@ const {
   paperDraftDrawerVisible,
   paperDraftStep,
   generatePaperDraftLoading,
+  paperDraftDetailLoading,
+  savePaperDraftLoading,
   paperDraftErrorMessage,
+  paperDraftDetailErrorMessage,
   paperDraftResult,
   paperDraftForm,
   paperDraftCandidateQuestions,
+  paperDraftPreviewGroups,
+  paperDraftExpectedTotal,
+  paperDraftActualTotal,
+  paperDraftShortageMessage,
   paperDraftConstraintLevelError,
+  paperDraftGeneratingTips,
+  paperDraftGenerateStatusText,
+  canSavePaperDraft,
   syncPaperDraftCollectionIds,
   openPaperDraftDrawer,
   addPaperDraftConstrain,
   removePaperDraftConstrain,
   handleGenerateAgentPaperDraft,
+  handleSavePaperDraftAsPaper,
   backToPaperRequirementForm
-} = usePaperDraft(currentCollectionId);
+} = usePaperDraft(currentCollectionId, {
+  onPaperSaved: async (paperId) => {
+    await router.push({ name: 'paper-detail', params: { paperId } });
+  }
+});
 
 const activeMessages = computed(() => {
   if (!activeSessionId.value) {
