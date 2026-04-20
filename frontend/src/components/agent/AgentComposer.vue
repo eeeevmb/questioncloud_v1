@@ -16,8 +16,10 @@
       />
       <div class="composer-footer">
         <div class="action-group">
-          <el-button :disabled="!streaming" @click="$emit('abort')">停止生成</el-button>
-          <el-button type="primary" :loading="streaming" :disabled="!canSend" @click="$emit('send')">发送</el-button>
+          <el-button type="primary" :loading="streaming" :disabled="!canSend" @click="$emit('send')">
+            <el-icon v-if="!streaming"><Promotion /></el-icon>
+            <span>发送</span>
+          </el-button>
         </div>
       </div>
     </el-card>
@@ -25,6 +27,8 @@
 </template>
 
 <script setup lang="ts">
+import { Promotion } from '@element-plus/icons-vue';
+
 defineProps<{
   modelValue: string;
   activeSessionId: string;
@@ -83,7 +87,7 @@ defineEmits<{
 .composer-footer {
   margin-top: 6px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
 }

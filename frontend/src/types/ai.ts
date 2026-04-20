@@ -45,3 +45,21 @@ export interface AgentPaperDraftVO {
   reason: string;
   candidateQuestions: CandidateQuestionVO[];
 }
+
+export interface PaperDraftPreviewQuestion {
+  questionId: string;
+  questionVersionId: string;
+  typeCode: string;
+  title: string;
+  stem: string;
+  difficulty: number;
+}
+
+export interface PaperDraftPreviewGroup {
+  typeCode: string;
+  typeLabel: string;
+  expectedCount: number;
+  difficultyMin: number;
+  difficultyMax: number;
+  questions: PaperDraftPreviewQuestion[];
+}

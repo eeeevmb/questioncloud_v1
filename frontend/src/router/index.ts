@@ -72,10 +72,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/agent-demo',
-      name: 'agent-demo',
+      path: '/ai-assistant',
+      name: 'ai-assistant',
       component: () => import('../views/AgentDemoView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/agent-demo',
+      redirect: '/ai-assistant'
     },
     {
       path: '/imports',
