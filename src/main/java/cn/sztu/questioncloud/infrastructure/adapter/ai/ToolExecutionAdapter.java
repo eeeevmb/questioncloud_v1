@@ -90,9 +90,6 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
      * @return 工具执行结果
      */
     private String createQuestion(ChatSessionContext context, String argsJson) throws Exception {
-        // 兼容两种入参格式：
-        // 1) { "typeCode": "...", ... }
-        // 2) { "args": { "typeCode": "...", ... } }
         JsonNode payload = unwrapPayload(argsJson);
         CreateQuestionArgs createQuestionArgs = objectMapper.treeToValue(payload, CreateQuestionArgs.class);
         // 序列化执行结果

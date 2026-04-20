@@ -301,8 +301,7 @@ public class AgentChatServiceImpl implements AgentChatService {
     private String renderContext(ChatSessionContext context) {
         if (context == null) {
             return """
-        当前会话业务上下文：
-        - 当前未提供可用上下文
+        - 当前用户未选中题目
         """;
         }
 
@@ -310,17 +309,16 @@ public class AgentChatServiceImpl implements AgentChatService {
         int selectedQuestionCount = context.getQuestionIds() == null ? 0 : context.getQuestionIds().size();
 
         String selectionHint = selectedQuestionCount > 0
-                ? "当前已有用户选中的题目；如果用户说“这道题”“当前选中题目”“讲解一下这题”，应直接基于当前选中题目处理，不要再次追问用户选择哪一道。"
-                : "当前没有已选中的题目；若用户说“这道题”但未提供更多描述，才需要先定位题目。";
+                ? "当前已有用户选中的题目；如果消息记录中无题干内容，直接调用查看题目详情工具获取"
+                : "当前没有选中题目；若用户说“这道题”但未提供更多描述，引导用户选中题目。";
 
         return """
-        当前会话业务上下文：
         - 当前题集：%s
         - 已选题目数量：%d
         - %s
         - 不要向用户索要或暴露任何内部ID
         """.formatted(
-                hasCollection ? "已绑定" : "未绑定",
+                hasCollection ? "已选中" : "未选中",
                 selectedQuestionCount,
                 selectionHint
         );
