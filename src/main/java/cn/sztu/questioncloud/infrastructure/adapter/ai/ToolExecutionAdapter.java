@@ -8,7 +8,7 @@ import cn.sztu.questioncloud.infrastructure.common.ai.dto.CreateQuestionArgs;
 import cn.sztu.questioncloud.infrastructure.common.ai.dto.SearchQuestionArgs;
 import cn.sztu.questioncloud.infrastructure.common.ai.tool.QuestionDomainTool;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
-import com.fasterxml.jackson.core.io.Json***REMOVED***Exception;
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -80,9 +80,6 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
      * @return 工具执行结果
      */
     private String createQuestion(ChatSessionContext context, String argsJson) throws Exception {
-        // 兼容两种入参格式：
-        // 1) { "typeCode": "...", ... }
-        // 2) { "args": { "typeCode": "...", ... } }
         JsonNode payload = unwrapPayload(argsJson);
         CreateQuestionArgs createQuestionArgs = objectMapper.treeToValue(payload, CreateQuestionArgs.class);
         // 序列化执行结果
@@ -122,7 +119,7 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
         JsonNode root;
         try {
             root = objectMapper.readTree(normalized);
-        } catch (Json***REMOVED***Exception eof) {
+        } catch (JsonEOFException eof) {
             String repaired = repairTruncatedJson(normalized);
             root = objectMapper.readTree(repaired);
         }

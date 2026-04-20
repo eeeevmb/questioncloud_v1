@@ -203,13 +203,14 @@ public class LangChain4jLlmAdapter implements LlmPort {
                             SystemMessage.from("""
                                     你是题目草稿生成助手。
                                     你必须严格输出 QuestionDraft 的 JSON 对象，不要输出 markdown 代码块，不要输出解释。
+                                    重要规则：stem和solution里若有LaTeX数学符号，必须使用 $$ 包围，如"$\\frac{0}{0}$"、"$\\frac{\\infty}{\\infty}$\s"
                                     
                                     字段规则（与创建题目参数一致）：
                                     - typeCode: 必填，枚举为 single-choice/multiple-choice/true-false/fill-in/short-answer
                                     - stem: 必填
-                                    - title: 必选
+                                    - title: 必填
                                     - difficulty: 可选；若用户未指定请输出 0.50
-                                    - solution: 必选
+                                    - solution: 必填
                                     - answer: fill-in/short-answer 建议提供；true-false 也可提供
                                     
                                     题型专用字段：
