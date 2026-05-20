@@ -15,6 +15,7 @@ import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeE
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
 import cn.sztu.questioncloud.common.util.PaperWeightAlgorithmUtil;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperItemEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
@@ -147,6 +148,12 @@ public class PaperItemServiceImpl implements PaperItemService {
 
     // === 随机组卷 ===
     @Override
+    @OperationLog(
+            module = "PAPER",
+            action = "RANDOM_BUILD",
+            targetType = "PAPER",
+            content = "'随机组卷生成了候选试题'"
+    )
     public List<PaperItemDetailVO> previewRandomItems(RandomBuildReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
         boolean ignoreExposure = Boolean.TRUE.equals(req.getIgnoreExposure());

@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 @ResponseBody
 public class GlobalExceptionHandler {
+    private static final Logger ERROR_LOG = LoggerFactory.getLogger("ERROR_LOG");
 
     private final ObjectMapper objectMapper;
 
@@ -47,6 +50,7 @@ public class GlobalExceptionHandler {
         log.warn("应用异常: code={}, message={}, targetType={}",
                 e.getCode(), e.getMessage(),
                 e.getTargetType() != null ? e.getTargetType().getSimpleName() : "null");
+        ERROR_LOG.error("应用异常: code={}, message={}", e.getCode(), e.getMessage(), e);
 
         // 转换数据为目标类型
         Object transformedData = transformToTargetType(e.getData(), e.getTargetType());
@@ -64,6 +68,7 @@ public class GlobalExceptionHandler {
         log.error("基础设施异常: code={}, message={}, data={}, rootCause={}",
                 e.getCode(), e.getMessage(), e.getData(),
                 e.getRootCause() != null ? e.getRootCause().getMessage() : "null", e);
+        ERROR_LOG.error("基础设施异常: code={}, message={}, data={}", e.getCode(), e.getMessage(), e.getData(), e);
 
         // 对外统一返回系统错误，不暴露内部细节
         return ResultVO.error(CommonResultCodeEnum.ERROR.getCode(), CommonResultCodeEnum.ERROR.getMessage());
@@ -87,6 +92,7 @@ public class GlobalExceptionHandler {
         log.error("系统异常: message={}, rootCause={}",
                 e.getMessage(),
                 e.getCause() != null ? e.getCause().getMessage() : "null", e);
+        ERROR_LOG.error("系统异常: message={}", e.getMessage(), e);
 
         // 对外统一返回系统错误，不暴露内部细节
         return ResultVO.error(CommonResultCodeEnum.ERROR.getCode(), CommonResultCodeEnum.ERROR.getMessage());

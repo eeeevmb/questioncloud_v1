@@ -8,6 +8,8 @@ import cn.sztu.questioncloud.application.question.port.QuestionCollectionReposit
 import cn.sztu.questioncloud.application.question.service.QuestionCollectionService;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLogSupport;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionCollectionEntity;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateCollectionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.UpdateCollectionReq;
@@ -65,6 +67,14 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
      * @return 题集视图对象
      */
     @Override
+    @OperationLog(
+            module = "COLLECTION",
+            action = "CREATE",
+            targetType = "COLLECTION",
+            targetId = "#result.collectionId",
+            targetName = "#req.name()",
+            content = "'创建了题集《' + #req.name() + '》'"
+    )
     public CollectionVO createCollection(CreateCollectionReq req) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -124,6 +134,14 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
      * @return 题集视图对象
      */
     @Override
+    @OperationLog(
+            module = "COLLECTION",
+            action = "UPDATE",
+            targetType = "COLLECTION",
+            targetId = "#collectionId",
+            targetName = "#req.name()",
+            content = "'更新了题集《' + #req.name() + '》'"
+    )
     public CollectionVO updateCollection(Long collectionId, UpdateCollectionReq req) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -154,6 +172,14 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
      * @param collectionId 题集ID
      */
     @Override
+    @OperationLog(
+            module = "COLLECTION",
+            action = "DELETE",
+            targetType = "COLLECTION",
+            targetId = "#collectionId",
+            targetName = "#targetName",
+            content = "'删除了题集《' + #targetName + '》'"
+    )
     public void deleteCollection(Long collectionId) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -166,6 +192,7 @@ public class QuestionCollectionServiceImpl implements QuestionCollectionService 
         if (!userId.equals(entity.getOwnerId())) {
             throw new ApplicationException(QuestionErrorCodeEnum.COLLECTION_NOT_FOUND);
         }
+        OperationLogSupport.put("targetName", entity.getName());
 
         // 4. 删除题集操作（内部实现了关联内容删除）
         questionCollectionRepository.deleteById(collectionId);

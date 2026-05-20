@@ -3,6 +3,7 @@ AGENTS.md
 rag-plan.md
 identifier.sqlite
 target/
+logs/
 src/main/resources/application-local.yml
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

@@ -12,6 +12,7 @@ import cn.sztu.questioncloud.application.ai.service.SearchService;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.ai.dto.RAGSearchParam;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
 import cn.sztu.questioncloud.web.rest.v1.ai.req.GeneratePaperDraftReq;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.AgentPaperDraftVO;
 import cn.sztu.questioncloud.web.rest.v1.ai.vo.CandidateQuestionVO;
@@ -40,6 +41,12 @@ public class AiGenerateServiceImpl implements AiGenerateService {
      * @return 题目草稿
      */
     @Override
+    @OperationLog(
+            module = "AI",
+            action = "QUESTION_DRAFT",
+            targetType = "QUESTION",
+            content = "'使用 AI 生成题目草稿'"
+    )
     public QuestionDraft generateQuestionDraft(String userInput) {
         return llmPort.generateQuestionDraft(userInput);
     }
@@ -51,6 +58,13 @@ public class AiGenerateServiceImpl implements AiGenerateService {
      * @return 试卷草稿视图
      */
     @Override
+    @OperationLog(
+            module = "AI",
+            action = "PAPER_DRAFT",
+            targetType = "PAPER",
+            userId = "#userId",
+            content = "'使用 AI 生成试卷草稿'"
+    )
     public AgentPaperDraftVO generateAgentPaperDraft(Long userId, GeneratePaperDraftReq req) {
 
         // LLM根据用户输入生成组卷计划

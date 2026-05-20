@@ -5,6 +5,7 @@ import cn.sztu.questioncloud.application.ai.dto.PaperGenerationPlan;
 import cn.sztu.questioncloud.application.ai.dto.QuestionSemanticEnrichmentDTO;
 import cn.sztu.questioncloud.application.ai.port.LlmPort;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
+import cn.sztu.questioncloud.infrastructure.common.ai.config.LlmModelProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.ChatMessage;
@@ -26,6 +27,8 @@ import dev.langchain4j.model.chat.request.json.JsonStringSchema;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -38,9 +41,12 @@ import java.util.List;
  */
 @Component
 public class LangChain4jLlmAdapter implements LlmPort {
+    private static final Logger AI_LOG = LoggerFactory.getLogger("AI_LOG");
+
     private final ChatModel chatModel;
     private final StreamingChatModel streamingChatModel;
     private final ObjectMapper objectMapper;
+    private final LlmModelProperties llmModelProperties;
 
     private static final BigDecimal DEFAULT_DIFFICULTY = BigDecimal.valueOf(0.50);
     private static final List<String> TYPE_CODES = List.of(
@@ -75,6 +81,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public ChatResponse chat(AgentDefinition definition, List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+        long start = System.currentTimeMillis();
 
         ChatRequest request = ChatRequest.builder()
                 .messages(messages)
@@ -86,7 +93,14 @@ public class LangChain4jLlmAdapter implements LlmPort {
                         .toolSpecifications(toolSpecifications)
                         .build())
                 .build();
-        return chatModel.chat(request);
+        try {
+            ChatResponse response = chatModel.chat(request);
+            logAiCall("CHAT", definition.getChatOptions().getModelName(), start, true, null);
+            return response;
+        } catch (RuntimeException e) {
+            logAiCall("CHAT", definition.getChatOptions().getModelName(), start, false, e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -96,6 +110,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public String generateSessionTitle(UserMessage userMessage) {
+        long start = System.currentTimeMillis();
         try {
             ChatRequest request = ChatRequest.builder()
                     .messages(List.of(
@@ -133,8 +148,10 @@ public class LangChain4jLlmAdapter implements LlmPort {
                 title = title.substring(0, 20);
             }
 
+            logAiCall("CHAT", modelName(), start, true, null);
             return title.isBlank() ? "新会话" : title;
         } catch (Exception e) {
+            logAiCall("CHAT", modelName(), start, false, e.getMessage());
             return "新会话";
         }
     }
@@ -147,6 +164,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public QuestionSemanticEnrichmentDTO generateQuestionSemanticEnrichmentDTO(String input) {
+        long start = System.currentTimeMillis();
         try {
             ResponseFormat responseFormat = buildQuestionSemanticEnrichmentResponseFormat();
 
@@ -190,8 +208,10 @@ public class LangChain4jLlmAdapter implements LlmPort {
             if (dto.getKnowledgePoints() == null) {
                 dto.setKnowledgePoints(List.of());
             }
+            logAiCall("EMBEDDING", modelName(), start, true, null);
             return dto;
         } catch (Exception e) {
+            logAiCall("EMBEDDING", modelName(), start, false, e.getMessage());
             throw new RuntimeException("生成题目语义增强结果失败", e);
         }
     }
@@ -204,6 +224,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public QuestionDraft generateQuestionDraft(String userInput) {
+        long start = System.currentTimeMillis();
         try {
             ResponseFormat responseFormat = buildQuestionDraftResponseFormat();
 
@@ -251,8 +272,10 @@ public class LangChain4jLlmAdapter implements LlmPort {
             if (draft.getDifficulty() == null) {
                 draft.setDifficulty(DEFAULT_DIFFICULTY);
             }
+            logAiCall("QUESTION_DRAFT", modelName(), start, true, null);
             return draft;
         } catch (Exception e) {
+            logAiCall("QUESTION_DRAFT", modelName(), start, false, e.getMessage());
             throw new RuntimeException("生成题目草稿失败", e);
         }
     }
@@ -266,6 +289,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public PaperGenerationPlan generatePaperGenerationPlan(String message, List<String> allowedTypeCodes) {
+        long start = System.currentTimeMillis();
         try {
             ResponseFormat responseFormat = buildPaperGenerationPlanResponseFormat();
 
@@ -382,8 +406,11 @@ public class LangChain4jLlmAdapter implements LlmPort {
                 throw new IllegalStateException("模型未返回可解析的组卷计划");
             }
 
-            return objectMapper.readValue(aiMessage.text(), PaperGenerationPlan.class);
+            PaperGenerationPlan plan = objectMapper.readValue(aiMessage.text(), PaperGenerationPlan.class);
+            logAiCall("PAPER_DRAFT", modelName(), start, true, null);
+            return plan;
         } catch (Exception e) {
+            logAiCall("PAPER_DRAFT", modelName(), start, false, e.getMessage());
             throw new RuntimeException("生成组卷计划失败", e);
         }
     }
@@ -398,6 +425,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
      */
     @Override
     public Flux<String> StreamingChat(AgentDefinition definition, List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
+        long start = System.currentTimeMillis();
         ChatRequest request = ChatRequest.builder()
                 .messages(messages)
                 .parameters(ChatRequestParameters.builder()
@@ -419,6 +447,7 @@ public class LangChain4jLlmAdapter implements LlmPort {
 
             @Override
             public void onCompleteResponse(ChatResponse completeResponse) {
+                logAiCall("CHAT", definition.getChatOptions().getModelName(), start, true, null);
                 if (!emitter.isCancelled()) {
                     emitter.complete();
                 }
@@ -426,11 +455,29 @@ public class LangChain4jLlmAdapter implements LlmPort {
 
             @Override
             public void onError(Throwable error) {
+                logAiCall("CHAT", definition.getChatOptions().getModelName(), start, false, error.getMessage());
                 if (!emitter.isCancelled()) {
                     emitter.error(error);
                 }
             }
         }), FluxSink.OverflowStrategy.BUFFER);
+    }
+
+    private void logAiCall(String callType, String model, long start, boolean success, String errorMessage) {
+        AI_LOG.info("provider={} model={} callType={} promptTokens={} completionTokens={} totalTokens={} latencyMs={} success={} errorMessage={}",
+                "dashscope",
+                model == null ? "" : model,
+                callType,
+                "-",
+                "-",
+                "-",
+                System.currentTimeMillis() - start,
+                success,
+                errorMessage == null ? "" : errorMessage);
+    }
+
+    private String modelName() {
+        return llmModelProperties.getChatModel() == null ? "" : llmModelProperties.getChatModel().getModelName();
     }
 
     private ResponseFormat buildQuestionDraftResponseFormat() {

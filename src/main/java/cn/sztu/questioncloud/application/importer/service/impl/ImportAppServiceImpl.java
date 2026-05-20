@@ -23,6 +23,8 @@ import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.QuestionUtils;
 import cn.sztu.questioncloud.infrastructure.common.file.model.InfraFileMetadata;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLogSupport;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.web.rest.v1.importer.query.ImportItemPageQuery;
@@ -67,6 +69,14 @@ public class ImportAppServiceImpl implements ImportAppService {
     private final CollectionAutoCreator collectionAutoCreator;
     private final QuestionEventPublisher questionEventPublisher;
 
+    @OperationLog(
+            module = "IMPORT",
+            action = "CREATE",
+            targetType = "IMPORT_SESSION",
+            targetId = "#result.importId",
+            targetName = "'导入任务' + #result.importId",
+            content = "'创建了导入任务《' + #result.importId + '》'"
+    )
     public ImportCreateVO createImportSession(ImportSessionCreateReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
         String identifier = StpUtil.getLoginIdAsString();
@@ -165,6 +175,15 @@ public class ImportAppServiceImpl implements ImportAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "IMPORT",
+            action = "COMMIT",
+            targetType = "IMPORT_SESSION",
+            targetId = "#importId",
+            targetName = "'导入任务' + #importId",
+            userId = "#userId",
+            content = "'提交导入任务，入库 ' + #committedCount + ' 道题目'"
+    )
     public void commitImport(Long userId, Long importId, boolean ignoreInvalidDraft) {
         // 验证用户
         ImportSession session = loadSession(importId);
@@ -210,6 +229,7 @@ public class ImportAppServiceImpl implements ImportAppService {
         if (drafts.isEmpty()) {
             throw new ApplicationException(QuestionErrorCodeEnum.IMPORT_NO_VALID_ITEM);
         }
+        OperationLogSupport.put("committedCount", drafts.size());
 
         ImportCommitContext ctx = prepareContext(userId, drafts);
         List<QuestionEventMessage> messages = new ArrayList<>(drafts.size());
@@ -243,6 +263,15 @@ public class ImportAppServiceImpl implements ImportAppService {
      * @param importId 导入会话ID
      */
     @Override
+    @OperationLog(
+            module = "IMPORT",
+            action = "CANCEL",
+            targetType = "IMPORT_SESSION",
+            targetId = "#importId",
+            targetName = "'导入任务' + #importId",
+            userId = "#userId",
+            content = "'取消了导入任务《' + #importId + '》'"
+    )
     public void cancelImport(Long userId, Long importId) {
         // 验证用户
         ImportSession session = loadSession(importId);
