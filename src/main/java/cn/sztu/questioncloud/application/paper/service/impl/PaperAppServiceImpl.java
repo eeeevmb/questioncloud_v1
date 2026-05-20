@@ -13,6 +13,8 @@ import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeE
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLogSupport;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.paper.PaperEntity;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
@@ -41,6 +43,14 @@ public class PaperAppServiceImpl implements PaperAppService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "PAPER",
+            action = "CREATE",
+            targetType = "PAPER",
+            targetId = "#result.paperId",
+            targetName = "#req.title",
+            content = "'创建了试卷《' + #req.title + '》'"
+    )
     public PaperCreatedVO createPaper(PaperSaveReq req) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -95,6 +105,14 @@ public class PaperAppServiceImpl implements PaperAppService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "PAPER",
+            action = "DELETE",
+            targetType = "PAPER",
+            targetId = "#paperId",
+            targetName = "#targetName",
+            content = "'删除了试卷《' + #targetName + '》'"
+    )
     public void deletePaperById(Long paperId) {
         // 1. 基础查询
         PaperEntity paperEntity = paperRepository.getById(paperId);
@@ -102,6 +120,7 @@ public class PaperAppServiceImpl implements PaperAppService {
 
         // 2. 校验存在性与权限
         validatePaperStatus(paperEntity, userId);
+        OperationLogSupport.put("targetName", paperEntity.getTitle());
 
         // 3. 删除试卷及其关联题目
         paperRepository.delete(paperId);
@@ -110,6 +129,14 @@ public class PaperAppServiceImpl implements PaperAppService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "PAPER",
+            action = "UPDATE",
+            targetType = "PAPER",
+            targetId = "#paperId",
+            targetName = "#req.title",
+            content = "'更新了试卷《' + #req.title + '》'"
+    )
     public PaperBasicVO updatePaperInfo(Long paperId, PaperSaveReq req) {
         // 1. 基础查询
         PaperEntity paperEntity = paperRepository.getById(paperId);

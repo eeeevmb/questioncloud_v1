@@ -14,6 +14,8 @@ import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.util.ExposureFactorUtil;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.QuestionUtils;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLog;
+import cn.sztu.questioncloud.infrastructure.common.logging.OperationLogSupport;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.web.rest.v1.question.req.CreateQuestionReq;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
@@ -56,6 +58,15 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "QUESTION",
+            action = "CREATE",
+            targetType = "QUESTION",
+            targetId = "#result.questionId",
+            targetName = "#req.title",
+            userId = "#userId",
+            content = "'新增了题目《' + (#req.title == null || #req.title.isBlank() ? #req.stem.substring(0, T(java.lang.Math).min(#req.stem.length(), 20)) : #req.title) + '》'"
+    )
     public QuestionCreatedVO createQuestion(CreateQuestionReq req, Long userId) {
         String normalizedTypeCode = req.getTypeCode() == null ? null : req.getTypeCode().trim().toLowerCase();
 
@@ -184,6 +195,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "QUESTION",
+            action = "UPDATE",
+            targetType = "QUESTION",
+            targetId = "#questionId",
+            targetName = "#targetName",
+            content = "'更新了题目《' + #targetName + '》'"
+    )
     public void updateQuestionById(UpdateQuestionReq req, Long questionId) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -201,6 +220,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         if (!userId.equals(questionEntity.getOwnerId())) {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
         }
+        OperationLogSupport.put("targetName", firstNonBlank(req.getTitle(), versionEntity.getTitle(), versionEntity.getStem()));
 
         // 4. 创建新题目版本
         LocalDateTime now = LocalDateTime.now();
@@ -257,6 +277,14 @@ public class QuestionAppServiceImpl implements QuestionAppService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @OperationLog(
+            module = "QUESTION",
+            action = "DELETE",
+            targetType = "QUESTION",
+            targetId = "#questionId",
+            targetName = "#targetName",
+            content = "'删除了题目《' + #targetName + '》'"
+    )
     public void deleteQuestionById(Long questionId) {
         // 1. 获取用户ID
         Long userId = StpUtil.getLoginIdAsLong();
@@ -269,6 +297,10 @@ public class QuestionAppServiceImpl implements QuestionAppService {
 
         if (!userId.equals(questionEntity.getOwnerId())) {
             throw new ApplicationException(CommonResultCodeEnum.NO_PERMISSION);
+        }
+        QuestionVersionEntity versionEntity = questionVersionRepository.getCurrentVersionByQuestionId(questionId);
+        if (versionEntity != null) {
+            OperationLogSupport.put("targetName", firstNonBlank(versionEntity.getTitle(), versionEntity.getStem()));
         }
 
         // 3. 发布题库领域事件
@@ -308,5 +340,18 @@ public class QuestionAppServiceImpl implements QuestionAppService {
         Pager<QuestionSummaryVO> paging = queryRepository.findPageByCollectionId(collectionId, query);
 
         return PageResult.of(paging.getResults(), paging.getTotal(), query);
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "未命名题目";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                String trimmed = value.trim();
+                return trimmed.length() > 20 ? trimmed.substring(0, 20) : trimmed;
+            }
+        }
+        return "未命名题目";
     }
 }
