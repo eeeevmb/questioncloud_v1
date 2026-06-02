@@ -8,6 +8,10 @@ import lombok.Data;
 public class SearchFilter {
     private Long ownerId;
 
+    private String docType;
+
+    private String subject;
+
     private Long collectionId;
 
     private Double difficultyMin;

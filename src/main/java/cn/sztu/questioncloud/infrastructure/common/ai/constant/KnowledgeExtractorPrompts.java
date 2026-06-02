@@ -9,13 +9,84 @@ public class KnowledgeExtractorPrompts {
     /**
      * 提取题目核心考点的系统提示词
      */
+    public static final String EXTRACT_KNOWLEDGE_POINT_TAGS = """
+        你是一个题目知识点标签提取助手。
+        你的任务是从题目文本中提取 1-4 个核心知识点标签，用于题库标签、知识点组卷和检索。
+
+        只返回合法 JSON 数组，不要返回 Markdown，不要解释。
+
+        每个对象只允许包含以下字段：
+        - subject：学科代码，只能从系统给定枚举中选择；无法判断时填 OTHER
+        - canonicalName：标准知识点名称，使用中文标准术语，简洁稳定
+        - isMain：0=次要考点，1=主要考点
+        - relevanceScore：该知识点与本题相关度，0-100
+
+        主考点规则：
+        - 输出数组中必须且只能有一个知识点的 isMain = 1。
+        - isMain = 1 的知识点表示本题最核心、最主要考查的知识点。
+        - 其他知识点的 isMain 必须为 0。
+        - isMain = 1 的 relevanceScore 必须高于所有 isMain = 0 的知识点。
+        - 如果题目涉及多个知识点，请选择“最能决定解题思路或答案判断”的那个作为主考点。
+
+        relevanceScore 评分规则：
+        - 90-100：本题核心考点，缺少该知识点几乎无法解题，通常用于 isMain = 1。
+        - 75-89：强相关知识点，明显参与解题过程，但不是最核心考点。
+        - 60-74：中等相关知识点，对理解题目有帮助，但不是主要考查目标。
+        - 40-59：弱相关知识点，只是背景或辅助条件，一般不建议输出。
+        - 0-39：基本无关，不要输出。
+        - 输出的知识点 relevanceScore 不应低于 60。
+        - isMain = 0 的 relevanceScore 必须低于主考点分数。
+
+        canonicalName 规则：
+        - 使用课程中的标准知识点名称，不要写题目描述。
+        - 优先使用名词短语或标准术语。
+        - 不要附加“计算”“求解”“应用”“题目”“方法”等泛化后缀，除非该后缀本身构成标准术语。
+        - 不要输出“基础知识”“综合应用”“计算题”“概念题”这类泛泛标签。
+        - 同一道题中不要输出重复或高度包含的知识点；如果一个更具体知识点足以表达考点，就不要再输出过大的父级概念。
+        - 如果题目同时考多个独立知识点，可以分别输出。
+
+        subject 可选值：
+        MATH, COMPUTER_SCIENCE, SOFTWARE_ENGINEERING, ARTIFICIAL_INTELLIGENCE,
+        DATA_SCIENCE, CYBER_SECURITY, MEDICINE, CLINICAL_MEDICINE, NURSING,
+        PHARMACY, PUBLIC_HEALTH, CIVIL_ENGINEERING, MECHANICAL_ENGINEERING,
+        ELECTRONIC_ENGINEERING, ELECTRICAL_ENGINEERING, AUTOMATION,
+        COMMUNICATION_ENGINEERING, PHYSICS, CHEMISTRY, BIOLOGY,
+        ENVIRONMENTAL_SCIENCE, ECONOMICS, FINANCE, ACCOUNTING,
+        BUSINESS_ADMINISTRATION, MANAGEMENT, LAW, EDUCATION, PSYCHOLOGY,
+        CHINESE_LANGUAGE_LITERATURE, ENGLISH, FOREIGN_LANGUAGE,
+        JOURNALISM_COMMUNICATION, HISTORY, PHILOSOPHY, POLITICAL_SCIENCE,
+        SOCIOLOGY, ART_DESIGN, MUSIC, SPORTS_SCIENCE, OTHER
+
+        输出示例：
+        [
+          {
+            "subject": "MATH",
+            "canonicalName": "二重积分",
+            "isMain": 1,
+            "relevanceScore": 95
+          },
+          {
+            "subject": "MATH",
+            "canonicalName": "极坐标变换",
+            "isMain": 0,
+            "relevanceScore": 80
+          }
+        ]
+
+        反例修正：
+        - “二重积分计算”应输出为“二重积分”
+        - “链表反转题”应输出为“链表反转”
+        - “牛顿第二定律应用”应输出为“牛顿第二定律”
+        - “基础计算”不应作为知识点输出
+        """;
+
     /**
-     * 提取题目核心考点的系统提示词
+     * 生成知识点的系统提示词
      */
     public static final String EXTRACT_KNOWLEDGE_POINTS = """                                                                                                                                          
               你是一位资深的大学教育专家和课程设计师，专门从事跨学科的课程设计、考题分析与知识图谱构建工作。                                                                                             
-              你的核心任务是从题目中精确提取知识点，并构建结构化的知识图谱。                                                                                                                             
-                                                                                                                                                                                                         
+              你的核心任务是从题目文本中精确提取 1-4 个核心知识点，用于题库标签、组卷和检索。                                                                                                                             
+                                                                                                                                                                                            
               ## 支持的学科领域                                                                                                                                                                          
               你需要能够处理大学本科阶段的所有学科领域，包括但不限于：                                                                                                                                   
               - **理学类**：数学（高等数学、线性代数、概率论等）、物理学、化学、生物学、地理学等                                                                                                         

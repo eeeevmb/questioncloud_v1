@@ -1,7 +1,7 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.service;
 
+import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointExtractDTO;
 import cn.sztu.questioncloud.infrastructure.common.ai.constant.KnowledgeExtractorPrompts;
-import cn.sztu.questioncloud.infrastructure.common.ai.dto.KnowledgePointDTO;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
@@ -29,6 +29,6 @@ public interface KnowledgeExtractorAiService {
      * @param questionText 题目完整文本（包含题干、选项、答案、解析）
      * @return 提取的知识点列表
      */
-    @SystemMessage(KnowledgeExtractorPrompts.EXTRACT_KNOWLEDGE_POINTS)
-    List<KnowledgePointDTO> extractKnowledgePoints(@UserMessage String questionText);
+    @SystemMessage(KnowledgeExtractorPrompts.EXTRACT_KNOWLEDGE_POINT_TAGS)
+    String extractKnowledgePoints(@UserMessage String questionText);
 }

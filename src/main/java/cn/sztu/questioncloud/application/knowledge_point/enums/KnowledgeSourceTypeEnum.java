@@ -1,4 +1,4 @@
-package cn.sztu.questioncloud.application.rag.enums;
+package cn.sztu.questioncloud.application.knowledge_point.enums;
 
 import lombok.Getter;
 

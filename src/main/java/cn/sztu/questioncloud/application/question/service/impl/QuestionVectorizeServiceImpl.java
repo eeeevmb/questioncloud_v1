@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.application.question.service.impl;
 
+import cn.sztu.questioncloud.application.common.enums.VectorDocTypeEnum;
 import cn.sztu.questioncloud.application.question.messaging.QuestionEventMessage;
 import cn.sztu.questioncloud.application.question.port.QuestionStatRepository;
 import cn.sztu.questioncloud.application.question.port.QuestionVersionRepository;
@@ -25,9 +26,9 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
     }
 
     /**
-     * 题目创建时，将相对应的题目向量化入库
+     * 棰樼洰鍒涘缓鏃讹紝灏嗙浉瀵瑰簲鐨勯鐩悜閲忓寲鍏ュ簱
      *
-     * @param message 消息
+     * @param message 娑堟伅
      */
     @Override
     public void onQuestionUpsert(QuestionEventMessage message) {
@@ -36,10 +37,11 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
 
         String vectorId = "Q_" + message.getQuestionId();
 
-        String text = "题干：\n" + versionEntity.getStem() +
-                "\n\n解析：\n" + versionEntity.getSolution();
+        String text = "棰樺共锛歕n" + versionEntity.getStem() +
+                "\n\n瑙ｆ瀽锛歕n" + versionEntity.getSolution();
 
         Map<String, Object> metadata = new HashMap<>();
+        metadata.put("docType", VectorDocTypeEnum.QUESTION.getCode());
         metadata.put("questionId", message.getQuestionId());
         metadata.put("versionId", message.getVersionId());
         metadata.put("collectionId", message.getCollectionId());
@@ -51,9 +53,9 @@ public class QuestionVectorizeServiceImpl implements QuestionVectorizeService {
     }
 
     /**
-     * 题目删除时，删除向量库中的记录
+     * 棰樼洰鍒犻櫎鏃讹紝鍒犻櫎鍚戦噺搴撲腑鐨勮褰?
      *
-     * @param message 消息
+     * @param message 娑堟伅
      */
     @Override
     public void onQuestionDeleted(QuestionEventMessage message) {

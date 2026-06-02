@@ -104,6 +104,14 @@ public class VectorizationToolImpl implements VectorizationTool {
             filterList.add(new IsEqualTo("ownerId", filter.getOwnerId()));
         }
 
+        if (filter.getDocType() != null) {
+            filterList.add(new IsEqualTo("docType", filter.getDocType()));
+        }
+
+        if (filter.getSubject() != null) {
+            filterList.add(new IsEqualTo("subject", filter.getSubject()));
+        }
+
         if (filter.getCollectionId() != null) {
             filterList.add(new IsEqualTo("collectionId", filter.getCollectionId()));
         }
