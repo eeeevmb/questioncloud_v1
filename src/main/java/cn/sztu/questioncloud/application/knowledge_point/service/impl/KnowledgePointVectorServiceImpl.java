@@ -4,8 +4,10 @@ import cn.sztu.questioncloud.application.common.dto.SearchFilter;
 import cn.sztu.questioncloud.application.common.dto.SearchQuery;
 import cn.sztu.questioncloud.application.common.enums.VectorDocTypeEnum;
 import cn.sztu.questioncloud.application.common.port.VectorPort;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepository;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointVectorService;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
+import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorSearchVO;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
@@ -24,6 +26,7 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
     private static final double DEFAULT_MIN_SCORE = 0.5D;
 
     private final VectorPort vectorPort;
+    private final KnowledgePointRepository knowledgePointRepository;
 
     @Override
     public void upsert(KnowledgePointEntity entity) {
@@ -44,7 +47,16 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
     }
 
     @Override
-    public List<Long> searchCandidateIds(String subject, String query, Integer topK, Double minScore) {
+    public int reindexAll() {
+        List<KnowledgePointEntity> entities = knowledgePointRepository.listAllActive();
+        for (KnowledgePointEntity entity : entities) {
+            upsert(entity);
+        }
+        return entities.size();
+    }
+
+    @Override
+    public List<KnowledgePointVectorSearchVO> searchCandidates(String subject, String query, Integer topK, Double minScore) {
         SearchFilter filter = SearchFilter.builder()
                 .docType(VectorDocTypeEnum.KNOWLEDGE_POINT.getCode())
                 .subject(subject)
@@ -58,9 +70,21 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
                 .build());
 
         return result.matches().stream()
-                .map(EmbeddingMatch::embeddingId)
-                .filter(id -> id != null && id.startsWith(VECTOR_ID_PREFIX))
-                .map(id -> Long.parseLong(id.substring(VECTOR_ID_PREFIX.length())))
+                .filter(match -> match.embeddingId() != null)
+                .filter(match -> match.embeddingId().startsWith(VECTOR_ID_PREFIX))
+                .map(match -> {
+                    String vectorId = match.embeddingId();
+                    TextSegment segment = match.embedded();
+
+                    return KnowledgePointVectorSearchVO.builder()
+                            .vectorId(vectorId)
+                            .knowledgePointId(Long.parseLong(vectorId.substring(VECTOR_ID_PREFIX.length())))
+                            .score(match.score())
+                            .subject(segment.metadata().getString("subject"))
+                            .canonicalName(segment.metadata().getString("canonicalName"))
+                            .text(segment.text())
+                            .build();
+                })
                 .toList();
     }
 

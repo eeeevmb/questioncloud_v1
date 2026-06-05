@@ -30,7 +30,7 @@ public class KnowledgeQuestionRelRepositoryImpl implements KnowledgeQuestionRelR
     }
 
     @Override
-    public void deleteRelationsByQuestionId(Long questionVersionId) {
+    public void deleteRelationsByQuestionVersionId(Long questionVersionId) {
         DeleteChain.of(knowledgeQuestionRelMapper)
                 .eq(KnowledgeQuestionRelEntity::getQuestionVersionId, questionVersionId)
                 .execute();
@@ -53,5 +53,26 @@ public class KnowledgeQuestionRelRepositoryImpl implements KnowledgeQuestionRelR
                 entity.setId(HutoolSnowflakeIdGenerator.generateLongId());
         }
         MybatisBatchUtil.batchSave(sqlSessionFactory, KnowledgeQuestionRelMapper.class, entities);
+    }
+
+    @Override
+    public void deleteByKnowledgePointId(Long knowledgePointId) {
+        DeleteChain.of(knowledgeQuestionRelMapper)
+                .eq(KnowledgeQuestionRelEntity::getKnowledgePointId, knowledgePointId)
+                .execute();
+    }
+
+    @Override
+    public void deleteByQuestionVersionId(Long questionVersionId) {
+        DeleteChain.of(knowledgeQuestionRelMapper)
+                .eq(KnowledgeQuestionRelEntity::getQuestionVersionId, questionVersionId)
+                .execute();
+    }
+
+    @Override
+    public void deleteByQuestionId(Long questionId) {
+        DeleteChain.of(knowledgeQuestionRelMapper)
+                .eq(KnowledgeQuestionRelEntity::getQuestionId, questionId)
+                .execute();
     }
 }

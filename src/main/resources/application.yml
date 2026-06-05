@@ -37,6 +37,15 @@ langchain4j:
       embedding-model:
         api-key: ${DASHSCOPE_API_KEY:}
         model-name: text-embedding-v4
+  open-ai:
+    chat-model:
+      api-key: ${DEEPSEEK_API_KEY:}
+      base-url: https://api.deepseek.com
+      model-name: deepseek-v4-flash
+      max-tokens: 1024
+      custom-parameters:
+        thinking:
+          type: disabled
 
 chroma:
   base-url: ${CHROMA_BASE_URL:http://127.0.0.1:8000}

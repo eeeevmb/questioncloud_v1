@@ -51,6 +51,28 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
     }
 
     @Override
+    public List<KnowledgePointEntity> listNeedEnrich(Integer limit) {
+        return QueryChain.of(knowledgePointMapper)
+                .eq(KnowledgePointEntity::getIsDeleted, 0)
+                .andNested(g -> g
+                        .isNull(KnowledgePointEntity::getDescription)
+                        .or().eq(KnowledgePointEntity::getDescription, "")
+                        .or().isNull(KnowledgePointEntity::getExample)
+                        .or().eq(KnowledgePointEntity::getExample, "")
+                        .or().isNull(KnowledgePointEntity::getFormulaOrCode)
+                        .or().eq(KnowledgePointEntity::getFormulaOrCode, ""))
+                .limit(limit)
+                .list();
+    }
+
+    @Override
+    public List<KnowledgePointEntity> listAllActive() {
+        return QueryChain.of(knowledgePointMapper)
+                .eq(KnowledgePointEntity::getIsDeleted, 0)
+                .list();
+    }
+
+    @Override
     public void save(KnowledgePointEntity entity) {
         if (entity.getId() == null) {
             entity.setId(HutoolSnowflakeIdGenerator.generateLongId());
@@ -73,5 +95,13 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
                 .execute();
     }
 
-
+    @Override
+    public void delete(Long id) {
+        UpdateChain.of(knowledgePointMapper)
+                .update(KnowledgePointEntity.class)
+                .set(KnowledgePointEntity::getIsDeleted, 1)
+                .set(KnowledgePointEntity::getUpdatedAt, LocalDateTime.now())
+                .eq(KnowledgePointEntity::getId, id)
+                .execute();
+    }
 }

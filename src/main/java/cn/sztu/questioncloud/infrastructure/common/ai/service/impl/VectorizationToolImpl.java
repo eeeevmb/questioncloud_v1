@@ -56,6 +56,7 @@ public class VectorizationToolImpl implements VectorizationTool {
     public void upsert(String vectorId, VectorizationRequest request) {
         TextSegment segment = TextSegment.from(request.getText(), new Metadata(request.getMetadata()));
         Response<Embedding> embeddingResponse = embeddingModel.embed(segment);
+        embeddingStore.remove(vectorId);
         embeddingStore.addAll(
                 List.of(vectorId),
                 List.of(embeddingResponse.content()),

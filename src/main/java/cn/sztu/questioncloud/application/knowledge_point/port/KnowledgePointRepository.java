@@ -24,7 +24,7 @@ public interface KnowledgePointRepository {
             String subject, String name);
 
     /**
-     * 根据名字尝试地查询知识点实体列表
+     * 根据名字查询知识点实体列表
      *
      * @param subject       学科
      * @param name          查找的名字
@@ -32,6 +32,23 @@ public interface KnowledgePointRepository {
      */
     List<KnowledgePointEntity> listByCanonicalNameOrAlias(
             String subject, String name);
+
+    /**
+     * 查询需要补全的知识点实体列表
+     *
+     * @param limit 查询数量限制
+     * @return 需要补全的知识点实体列表
+     */
+    List<KnowledgePointEntity> listNeedEnrich(Integer limit);
+
+    /**
+     * 查询所有未删除的知识点实体。
+     *
+     * @return 知识点实体列表
+     */
+    List<KnowledgePointEntity> listAllActive();
+
+
 
     /**
      * 保存知识点实体
@@ -46,4 +63,11 @@ public interface KnowledgePointRepository {
      * @param entity 知识点实体
      */
     void update(KnowledgePointEntity entity);
+
+    /**
+     * 删除知识点实体
+     *
+     * @param id 知识点ID
+     */
+    void delete(Long id);
 }

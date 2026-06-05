@@ -18,7 +18,7 @@ public interface KnowledgeQuestionRelRepository {
      *
      * @param questionVersionId 题目ID
      */
-    void deleteRelationsByQuestionId(Long questionVersionId);
+    void deleteRelationsByQuestionVersionId(Long questionVersionId);
 
     /**
      * 保存单条题目知识点关联关系
@@ -35,4 +35,26 @@ public interface KnowledgeQuestionRelRepository {
      * @param entities 题目知识点关联实体列表
      */
     void batchSave(List<KnowledgeQuestionRelEntity> entities);
+
+    /**
+     * 删除题目知识点关联关系
+     * 适合更新题目时，先删除旧关系再新增新关系的场景
+     *
+     * @param knowledgePointId 题目知识点关联关系ID
+     */
+    void deleteByKnowledgePointId(Long knowledgePointId);
+
+    /**
+     * 根据题目版本ID删除关联关系
+     *
+     * @param questionVersionId 题目版本ID
+     */
+    void deleteByQuestionVersionId(Long questionVersionId);
+
+    /**
+     * 根据题目ID删除关联关系
+     *
+     * @param questionId 题目ID
+     */
+    void deleteByQuestionId(Long questionId);
 }

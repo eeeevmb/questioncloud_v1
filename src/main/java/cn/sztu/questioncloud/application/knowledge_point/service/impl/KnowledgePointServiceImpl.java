@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -29,10 +30,17 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public List<KnowledgeQuestionRelEntity> bindExtractedKnowledgePoints(Long questionId, Long questionVersionId, List<KnowledgePointExtractDTO> extractedPoints) {
-        if (extractedPoints == null || extractedPoints.isEmpty()) {
-            return List.of();
+    public void bindExtractedKnowledgePoints(Long questionId, Long questionVersionId, List<KnowledgePointExtractDTO> extractedPoints) {
+        if (questionId == null || questionVersionId == null) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "题目ID和题目版本ID不能为空");
         }
+
+        knowledgeQuestionRelRepository.deleteByQuestionId(questionId);
+
+        if (extractedPoints == null || extractedPoints.isEmpty()) {
+            return;
+        }
+
         List<KnowledgeQuestionRelEntity> newEntities = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
@@ -50,9 +58,7 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
                     .build();
             newEntities.add(relEntity);
         }
-        knowledgeQuestionRelRepository.deleteRelationsByQuestionId(questionVersionId);
         knowledgeQuestionRelRepository.batchSave(newEntities);
-        return newEntities;
     }
 
     @Override
@@ -70,7 +76,7 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
                         CommonResultCodeEnum.PARAM_ERROR,
                         "知识点名称不能为空"
                 ));
-        // candidates大概率只有一个元素，但仍做处理
+        // 处理
         List<KnowledgePointEntity> candidates =
                 knowledgePointRepository.listByCanonicalNameOrAlias(subject, name);
         Optional<KnowledgePointEntity> matched = candidates.stream()
@@ -113,4 +119,26 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
         return entity;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteKnowledgePoints(List<Long> knowledgePointIds) {
+        if (knowledgePointIds == null || knowledgePointIds.isEmpty()) {
+            return;
+        }
+
+        List<Long> distinctIds = knowledgePointIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        for (Long id : distinctIds) {
+            KnowledgePointEntity entity = knowledgePointRepository.getById(id);
+            if (entity == null) {
+                continue;
+            }
+            knowledgeQuestionRelRepository.deleteByKnowledgePointId(id);
+            knowledgePointRepository.delete(id);
+            knowledgePointVectorService.delete(id);
+        }
+    }
 }

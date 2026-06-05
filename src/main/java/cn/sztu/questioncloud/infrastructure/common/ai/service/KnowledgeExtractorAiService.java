@@ -19,7 +19,7 @@ import java.util.List;
  */
 @AiService(
         wiringMode = AiServiceWiringMode.EXPLICIT,
-        chatModel = "qwenChatModel"
+        chatModel = "openAiChatModel"
 )
 public interface KnowledgeExtractorAiService {
 
@@ -31,4 +31,7 @@ public interface KnowledgeExtractorAiService {
      */
     @SystemMessage(KnowledgeExtractorPrompts.EXTRACT_KNOWLEDGE_POINT_TAGS)
     String extractKnowledgePoints(@UserMessage String questionText);
+
+    @SystemMessage(KnowledgeExtractorPrompts.ENRICH_KNOWLEDGE_POINT_DETAIL)
+    String enrichKnowledgePointDetail(@UserMessage String knowledgePointText);
 }

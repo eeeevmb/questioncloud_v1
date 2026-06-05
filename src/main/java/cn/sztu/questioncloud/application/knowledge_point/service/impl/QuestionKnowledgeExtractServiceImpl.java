@@ -1,30 +1,43 @@
 package cn.sztu.questioncloud.application.knowledge_point.service.impl;
 
+import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointDetailDTO;
 import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepository;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeQuestionRelRepository;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointService;
+import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointVectorService;
 import cn.sztu.questioncloud.application.knowledge_point.service.QuestionKnowledgeExtractService;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
+import cn.sztu.questioncloud.application.question.port.CollectionItemRepository;
 import cn.sztu.questioncloud.application.question.port.QuestionVersionRepository;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.ai.service.KnowledgeExtractorAiService;
+import cn.sztu.questioncloud.infrastructure.common.ai.util.AiJsonParser;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeQuestionRelEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class QuestionKnowledgeExtractServiceImpl implements QuestionKnowledgeExtractService {
-    private final ObjectMapper objectMapper;
+    private final AiJsonParser aiJsonParser;
+    private final CollectionItemRepository collectionItemRepository;
     private final QuestionVersionRepository questionVersionRepository;
+    private final KnowledgePointRepository knowledgePointRepository;
+    private final KnowledgeQuestionRelRepository knowledgeQuestionRelRepository;
     private final KnowledgeExtractorAiService knowledgeExtractorAiService;
     private final KnowledgePointService knowledgePointService;
+    private final KnowledgePointVectorService knowledgePointVectorService;
 
     @Override
     public List<KnowledgePointExtractDTO> extractAndBind(Long questionVersionId) {
@@ -33,11 +46,20 @@ public class QuestionKnowledgeExtractServiceImpl implements QuestionKnowledgeExt
             throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND, "题目版本不存在");
         }
 
+        QuestionVersionEntity currentVersion =
+                questionVersionRepository.getCurrentVersionByQuestionId(questionVersion.getQuestionId());
+        if (currentVersion == null || !Objects.equals(currentVersion.getId(), questionVersion.getId())) {
+            return List.of();
+        }
+
         String questionText = buildQuestionText(questionVersion);
         String extractedPointsText = knowledgeExtractorAiService.extractKnowledgePoints(questionText);
         List<KnowledgePointExtractDTO> extractedPoints = parseExtractResult(extractedPointsText);
-        if (extractedPoints == null || extractedPoints.isEmpty()) {
-            return List.of();
+        if (extractedPoints.isEmpty()) {
+            throw new ApplicationException(
+                    CommonResultCodeEnum.PARAM_ERROR,
+                    "AI没有提取到知识点，原始返回: " + extractedPointsText
+            );
         }
 
         knowledgePointService.bindExtractedKnowledgePoints(
@@ -45,7 +67,103 @@ public class QuestionKnowledgeExtractServiceImpl implements QuestionKnowledgeExt
                 questionVersion.getId(),
                 extractedPoints
         );
+        enrichExtractedKnowledgePoints(questionVersion.getId());
         return extractedPoints;
+    }
+
+    private void enrichExtractedKnowledgePoints(Long questionVersionId) {
+        List<Long> knowledgePointIds = knowledgeQuestionRelRepository
+                .listByQuestionVersionId(questionVersionId)
+                .stream()
+                .map(KnowledgeQuestionRelEntity::getKnowledgePointId)
+                .toList();
+        enrichMissingDetails(knowledgePointIds);
+    }
+
+    @Override
+    public List<KnowledgePointExtractDTO> extractAndBindCurrentQuestion(Long questionId) {
+        QuestionVersionEntity currentVersion = questionVersionRepository.getCurrentVersionByQuestionId(questionId);
+        if (currentVersion == null) {
+            throw new ApplicationException(QuestionErrorCodeEnum.QUESTION_NOT_FOUND);
+        }
+        return extractAndBind(currentVersion.getId());
+    }
+
+    @Override
+    public Map<Long, List<KnowledgePointExtractDTO>> extractAndBindCollection(Long collectionId) {
+        List<Long> questionVersionIds =
+                collectionItemRepository.listVersionIdsByCollectionId(collectionId);
+
+        if (questionVersionIds == null || questionVersionIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<KnowledgePointExtractDTO>> result = new LinkedHashMap<>();
+
+        for (Long questionVersionId : questionVersionIds) {
+            List<KnowledgePointExtractDTO> extractedPoints = extractAndBind(questionVersionId);
+            result.put(questionVersionId, extractedPoints);
+        }
+
+        return result;
+    }
+
+    @Override
+    public void enrichMissingDetails(Integer limit) {
+        List<KnowledgePointEntity> entities = knowledgePointRepository.listNeedEnrich(limit);
+        for(KnowledgePointEntity entity : entities) {
+            enrichMissingDetails(entity.getId());
+        };
+    }
+
+    @Override
+    public void enrichMissingDetails(List<Long> knowledgePointIds) {
+        if (knowledgePointIds == null || knowledgePointIds.isEmpty()) {
+            return;
+        }
+        knowledgePointIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(this::enrichMissingDetails);
+    }
+
+    private void enrichMissingDetails(Long knowledgePointId) {
+        KnowledgePointEntity entity = knowledgePointRepository.getById(knowledgePointId);
+        if (entity == null) {
+            throw new ApplicationException(
+                    CommonResultCodeEnum.PARAM_ERROR,
+                    "知识点ID无效，无法补全: " + knowledgePointId
+            );
+        }
+
+        if (!needEnrich(entity)) {
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        appendLine(builder, "科目", entity.getSubject());
+        appendLine(builder, "知识点名称", entity.getCanonicalName());
+        String knowledgeText = builder.toString();
+        String knowledgeDetailsText = knowledgeExtractorAiService.enrichKnowledgePointDetail(knowledgeText);
+        KnowledgePointDetailDTO detailDTO = parseDetailResult(knowledgeDetailsText);
+
+        entity.setDescription(detailDTO.getDescription());
+        entity.setExample(detailDTO.getExample());
+        entity.setFormulaOrCode(detailDTO.getFormulaOrCode());
+        knowledgePointRepository.update(entity);
+        knowledgePointVectorService.upsert(entity);
+    }
+
+
+
+    private boolean needEnrich(KnowledgePointEntity entity) {
+        return isBlank(entity.getDescription())
+                || isBlank(entity.getExample())
+                || isBlank(entity.getFormulaOrCode());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String buildQuestionText(QuestionVersionEntity version) {
@@ -74,10 +192,8 @@ public class QuestionKnowledgeExtractServiceImpl implements QuestionKnowledgeExt
     }
 
     private void appendLine(StringBuilder builder, String label, String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.isBlank())
             return;
-        }
-
         builder.append(label)
                 .append("：\n")
                 .append(value)
@@ -89,31 +205,27 @@ public class QuestionKnowledgeExtractServiceImpl implements QuestionKnowledgeExt
     }
 
     private List<KnowledgePointExtractDTO> parseExtractResult(String text) {
-        if (text == null || text.isBlank()) {
-            return List.of();
-        }
-        String trimmed = text.trim();
-        int start = trimmed.indexOf('[');
-        int end = trimmed.lastIndexOf(']');
+        List<KnowledgePointExtractDTO> result = aiJsonParser.parseArray(
+                text,
+                new TypeReference<List<KnowledgePointExtractDTO>>() {},
+                "AI知识点提取结果"
+        );
 
-        if (start < 0 || end < start) {
+        if (result == null || result.isEmpty()) {
             throw new ApplicationException(
                     CommonResultCodeEnum.PARAM_ERROR,
-                    "AI知识点提取结果不是JSON数组"
+                    "AI知识点提取结果为空数组"
             );
         }
-        String json = trimmed.substring(start, end + 1);
 
-        try {
-            return objectMapper.readValue(
-                    json,
-                    new TypeReference<List<KnowledgePointExtractDTO>>() {}
-            );
-        } catch (JsonProcessingException e) {
-            throw new ApplicationException(
-                    CommonResultCodeEnum.PARAM_ERROR,
-                    "AI知识点提取结果解析失败"
-            );
-        }
+        return result;
+    }
+
+    private KnowledgePointDetailDTO parseDetailResult(String text) {
+        return aiJsonParser.parseObject(
+                text,
+                new TypeReference<KnowledgePointDetailDTO>() {},
+                "AI知识点详情补齐结果"
+        );
     }
 }
