@@ -22,7 +22,7 @@
           </el-menu-item>
           <el-menu-item index="/ai-assistant">
             <el-icon class="nav-icon"><MagicStick /></el-icon>
-            <span>AI 助手</span>
+            <span>Agent演示</span>
           </el-menu-item>
         </el-menu>
         <UserBadge class="user-area" />

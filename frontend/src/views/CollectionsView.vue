@@ -16,6 +16,21 @@
       </div>
     </div>
 
+    <div class="metric-grid" aria-label="题集概览">
+      <div class="metric-item">
+        <span>全部题集</span>
+        <strong>{{ allCollections.length }}</strong>
+      </div>
+      <div class="metric-item">
+        <span>当前页</span>
+        <strong>{{ pagedCollections.length }}</strong>
+      </div>
+      <div class="metric-item">
+        <span>分页</span>
+        <strong>{{ totalPages }}</strong>
+      </div>
+    </div>
+
     <el-card class="list-card" shadow="never">
       <el-table v-loading="listLoading" :data="pagedCollections" row-key="collectionId">
         <el-table-column prop="name" label="题集名称" min-width="220" />
@@ -237,6 +252,7 @@ function enterCollection(collectionId: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: #172033;
 }
 
 .page-heading {
@@ -244,17 +260,20 @@ function enterCollection(collectionId: string) {
   justify-content: space-between;
   gap: 24px;
   align-items: center;
-  padding: 20px 24px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 18px;
-  background: #fff;
+  padding: 22px 24px;
+  border: 1px solid #dce9f9;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(47, 128, 237, 0.1), rgba(86, 204, 242, 0.04) 48%, #fff 100%),
+    #fff;
+  box-shadow: 0 10px 28px rgba(31, 63, 114, 0.05);
 }
 
 .eyebrow {
   margin: 0 0 6px;
-  color: var(--el-color-primary);
+  color: #2f80ed;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.08em;
 }
 
@@ -267,7 +286,7 @@ function enterCollection(collectionId: string) {
 
 .heading-desc {
   margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
+  color: #6b778c;
   line-height: 1.6;
 }
 
@@ -286,8 +305,8 @@ function enterCollection(collectionId: string) {
   height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-regular);
+  background: #eef5ff;
+  color: #64748b;
 }
 
 .count-value {
@@ -300,9 +319,40 @@ function enterCollection(collectionId: string) {
   font-size: 12px;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-item {
+  padding: 14px 16px;
+  border: 1px solid #e4edf8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 8px 22px rgba(31, 63, 114, 0.04);
+}
+
+.metric-item span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-item strong {
+  display: block;
+  margin-top: 5px;
+  color: #172033;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
 .list-card {
-  border-radius: 18px;
-  border-color: var(--el-border-color-lighter);
+  overflow: hidden;
+  border-radius: 8px;
+  border-color: #e3eaf3;
+  box-shadow: 0 10px 28px rgba(31, 63, 114, 0.05);
 }
 
 .list-card :deep(.el-card__body) {
@@ -316,7 +366,7 @@ function enterCollection(collectionId: string) {
 .list-card :deep(.el-table th.el-table__cell) {
   background: #f8fafc;
   color: #475569;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .list-card :deep(.el-table .el-table__cell) {
@@ -348,6 +398,10 @@ function enterCollection(collectionId: string) {
     flex-direction: column;
     align-items: stretch;
     padding: 18px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
   }
 
   .heading-actions {

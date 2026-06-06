@@ -5,7 +5,7 @@
         <div>
           <p class="eyebrow">组卷管理</p>
           <h2>试卷列表</h2>
-          <p class="hero-desc">查看当前登录用户创建的试卷，支持按关键字检索。</p>
+          <p class="hero-desc">按标题检索试卷，快速进入详情继续组题。</p>
         </div>
         <div class="hero-actions">
           <el-button :loading="listLoading" @click="loadPapers">刷新</el-button>
@@ -13,6 +13,21 @@
         </div>
       </div>
     </el-card>
+
+    <div class="metric-grid" aria-label="试卷概览">
+      <div class="metric-item">
+        <span>全部试卷</span>
+        <strong>{{ paperPage?.total ?? 0 }}</strong>
+      </div>
+      <div class="metric-item">
+        <span>平均题数</span>
+        <strong>{{ averageItems }}</strong>
+      </div>
+      <div class="metric-item">
+        <span>最近更新</span>
+        <strong>{{ latestUpdatedText }}</strong>
+      </div>
+    </div>
 
     <el-card shadow="never" class="filter-card">
       <el-form :inline="false" class="filter-form">
@@ -40,8 +55,8 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="never">
-      <el-table v-loading="listLoading" :data="paperPage?.records ?? []" border row-key="id">
+    <el-card shadow="never" class="list-card">
+      <el-table v-loading="listLoading" :data="paperPage?.records ?? []" row-key="id">
         <el-table-column prop="title" label="标题" min-width="220" />
         <el-table-column prop="totalItems" label="题数" width="90" />
         <el-table-column label="总分" width="110">
@@ -143,6 +158,23 @@ const activeQuery = computed(() => ({
   keyword: queryForm.keyword.trim() || undefined
 }));
 
+const averageItems = computed(() => {
+  const records = paperPage.value?.records ?? [];
+  if (records.length === 0) {
+    return 0;
+  }
+  const total = records.reduce((sum, item) => sum + Number(item.totalItems ?? 0), 0);
+  return Math.round(total / records.length);
+});
+
+const latestUpdatedText = computed(() => {
+  const first = paperPage.value?.records?.[0];
+  if (!first?.updatedAt) {
+    return '暂无';
+  }
+  return formatShortDate(first.updatedAt);
+});
+
 async function loadPapers() {
   listLoading.value = true;
   try {
@@ -225,6 +257,14 @@ function formatDateTime(value?: string | null) {
   return value.replace('T', ' ').slice(0, 19);
 }
 
+function formatShortDate(value?: string | null) {
+  if (!value) {
+    return '暂无';
+  }
+  const normalized = value.replace('T', ' ');
+  return normalized.slice(5, 16);
+}
+
 function formatScore(value: number) {
   return Number(value ?? 0).toFixed(2);
 }
@@ -235,12 +275,20 @@ function formatScore(value: number) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: #172033;
 }
 
 .hero-card {
+  border-color: #dce9f9;
+  border-radius: 8px;
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 32%),
-    linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    linear-gradient(90deg, rgba(47, 128, 237, 0.1), rgba(86, 204, 242, 0.04) 48%, #fff 100%),
+    #fff;
+  box-shadow: 0 10px 28px rgba(31, 63, 114, 0.05);
+}
+
+.hero-card :deep(.el-card__body) {
+  padding: 22px 24px;
 }
 
 .hero-grid {
@@ -251,19 +299,24 @@ function formatScore(value: number) {
 }
 
 .eyebrow {
-  margin: 0 0 8px;
-  color: var(--el-color-primary);
-  font-weight: 700;
+  margin: 0 0 6px;
+  color: #2f80ed;
+  font-size: 13px;
+  font-weight: 800;
   letter-spacing: 0.08em;
 }
 
 .hero-grid h2 {
   margin: 0;
+  color: #111827;
+  font-size: 24px;
+  line-height: 1.25;
 }
 
 .hero-desc {
   margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
+  color: #6b778c;
+  line-height: 1.6;
 }
 
 .hero-actions {
@@ -272,11 +325,48 @@ function formatScore(value: number) {
   flex-wrap: wrap;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-item {
+  padding: 14px 16px;
+  border: 1px solid #e4edf8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 8px 22px rgba(31, 63, 114, 0.04);
+}
+
+.metric-item span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-item strong {
+  display: block;
+  margin-top: 5px;
+  color: #172033;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
 .filter-card {
   position: sticky;
   top: 0;
   z-index: 1;
+  border-color: #e3eaf3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(8px);
+  box-shadow: 0 8px 22px rgba(31, 63, 114, 0.04);
+}
+
+.filter-card :deep(.el-card__body) {
+  padding: 16px 18px;
 }
 
 .filter-form {
@@ -306,8 +396,33 @@ function formatScore(value: number) {
   flex-wrap: wrap;
 }
 
+.list-card {
+  overflow: hidden;
+  border-radius: 8px;
+  border-color: #e3eaf3;
+  box-shadow: 0 10px 28px rgba(31, 63, 114, 0.05);
+}
+
+.list-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.list-card :deep(.el-table) {
+  --el-table-border-color: transparent;
+}
+
+.list-card :deep(.el-table th.el-table__cell) {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+}
+
+.list-card :deep(.el-table .el-table__cell) {
+  padding: 13px 18px;
+}
+
 .pagination-wrap {
-  margin-top: 14px;
+  padding: 14px 18px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -329,6 +444,10 @@ function formatScore(value: number) {
   .filter-grid {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

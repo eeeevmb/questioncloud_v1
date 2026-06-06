@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class DashboardActivityVO {
     private String type;
+    private String username;
     private String content;
     private LocalDateTime occurredAt;
     private String timeText;
