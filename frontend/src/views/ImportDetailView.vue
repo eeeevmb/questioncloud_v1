@@ -265,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import {
@@ -336,6 +336,10 @@ const editor = reactive<EditorState>({
 });
 
 const pendingEdits = reactive<Record<string, QuestionDraft>>({});
+let autoRefreshTimer: ReturnType<typeof window.setTimeout> | null = null;
+let autoRefreshAttempts = 0;
+const maxAutoRefreshAttempts = 25;
+const autoRefreshInterval = 1200;
 
 const importId = computed(() => {
   const id = route.params.importId;
@@ -418,6 +422,8 @@ watch(
 watch(
   () => route.params.importId,
   () => {
+    clearAutoRefreshTimer();
+    autoRefreshAttempts = 0;
     clearPendingEdits();
     itemQuery.pageNum = 1;
     void refreshAll();
@@ -425,11 +431,16 @@ watch(
   { immediate: true }
 );
 
+onBeforeUnmount(() => {
+  clearAutoRefreshTimer();
+});
+
 async function refreshAll() {
   if (!importId.value) {
     return;
   }
   await Promise.all([loadSession(), loadItems()]);
+  scheduleAutoRefreshIfNeeded();
 }
 
 async function loadSession() {
@@ -489,6 +500,37 @@ function normalizeImportItemPage(raw: unknown): PageResult<ImportItemVO> {
     hasPrevious: Boolean(payload.hasPrevious ?? pageNum > 1),
     hasNext: Boolean(payload.hasNext ?? pageNum < pages)
   };
+}
+
+function scheduleAutoRefreshIfNeeded() {
+  clearAutoRefreshTimer();
+  if (!shouldAutoRefreshImportItems() || autoRefreshAttempts >= maxAutoRefreshAttempts) {
+    return;
+  }
+  autoRefreshAttempts += 1;
+  autoRefreshTimer = window.setTimeout(() => {
+    void refreshAll();
+  }, autoRefreshInterval);
+}
+
+function shouldAutoRefreshImportItems() {
+  if (!importId.value || pendingCount.value > 0 || actionLoading.value || batchSaving.value) {
+    return false;
+  }
+  if (session.value?.status === 0) {
+    return true;
+  }
+  const loadedPage = itemPage.value;
+  const sessionTotal = Number(session.value?.total ?? 0);
+  return Boolean(loadedPage && loadedPage.total === 0 && sessionTotal > 0);
+}
+
+function clearAutoRefreshTimer() {
+  if (!autoRefreshTimer) {
+    return;
+  }
+  window.clearTimeout(autoRefreshTimer);
+  autoRefreshTimer = null;
 }
 
 function onFilterChange() {

@@ -56,6 +56,7 @@ public class DashboardAppServiceImpl implements DashboardAppService {
                         .stream()
                         .map(activity -> DashboardActivityVO.builder()
                                 .type(activity.getType())
+                                .username(activity.getUsername())
                                 .content(activity.getContent())
                                 .occurredAt(activity.getOccurredAt())
                                 .timeText(activity.getTimeText())

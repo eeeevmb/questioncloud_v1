@@ -62,6 +62,7 @@ public class OperationLogServiceImpl implements OperationLogService {
                 .stream()
                 .map(entity -> OperationLogActivityDTO.builder()
                         .type(entity.getModule() + "_" + entity.getAction())
+                        .username(entity.getUsername())
                         .content(entity.getContent())
                         .occurredAt(entity.getOccurredAt())
                         .timeText(toTimeText(entity.getOccurredAt()))
