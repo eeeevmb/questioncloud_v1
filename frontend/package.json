@@ -12,6 +12,8 @@
     "axios": "^1.6.8",
     "cropperjs": "1.5.13",
     "element-plus": "^2.11.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "katex": "^0.16.38",
     "markdown-it": "^14.1.1",
     "markdown-it-texmath": "^1.0.0",
