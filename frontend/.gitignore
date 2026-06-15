@@ -25,3 +25,5 @@ coverage/
 # lockfiles from other package managers
 *.lock.hold
 
+# skill产出物
+output/

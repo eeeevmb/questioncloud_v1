@@ -60,6 +60,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/papers/:paperId/print',
+      name: 'paper-print',
+      component: () => import('../views/PaperPrintView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/math-sample',
       name: 'math-sample',
       component: () => import('../views/MathSampleView.vue'),

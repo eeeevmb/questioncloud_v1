@@ -4,6 +4,7 @@
       <el-button text class="back-link-button" @click="goBack">返回列表</el-button>
       <div class="toolbar-actions toolbar-actions-compact">
         <el-button :loading="loading" @click="loadPaper">刷新</el-button>
+        <el-button type="primary" plain :disabled="!(paper?.items?.length ?? 0)" @click="goPrintLayout">排版导出</el-button>
         <el-button type="warning" plain :loading="actionLoading" @click="handleClearItems">清空题目</el-button>
         <el-button type="danger" plain :loading="actionLoading" @click="handleDeletePaper">删除试卷</el-button>
       </div>
@@ -2313,6 +2314,13 @@ function goBack() {
   void router.push({ name: 'paper-list' });
 }
 
+function goPrintLayout() {
+  if (!paperId.value) {
+    return;
+  }
+  void router.push({ name: 'paper-print', params: { paperId: paperId.value } });
+}
+
 function draftSourceLabel(source?: PaperDraftItemRow['source']) {
   switch (source) {
     case 'ai':
@@ -3855,8 +3863,6 @@ function bindDraftRowDnD() {
   }
 }
 </style>
-
-
 
 
 
