@@ -1,13 +1,10 @@
 package cn.sztu.questioncloud.infrastructure.common.ai.service;
 
-import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointExtractDTO;
 import cn.sztu.questioncloud.infrastructure.common.ai.constant.KnowledgeExtractorPrompts;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
 import dev.langchain4j.service.spring.AiServiceWiringMode;
-
-import java.util.List;
 
 /**
  * 知识点提取 AI 服务
@@ -30,8 +27,23 @@ public interface KnowledgeExtractorAiService {
      * @return 提取的知识点列表
      */
     @SystemMessage(KnowledgeExtractorPrompts.EXTRACT_KNOWLEDGE_POINT_TAGS)
-    String extractKnowledgePoints(@UserMessage String questionText);
+    String extractKnowledgePointsFromQuestion(@UserMessage String questionText);
 
+    /**
+     * 从目录文本中提取知识点
+     *
+     * @param directoryText 目录文本（包含章节标题、层级等信息）
+     * @return 提取的知识点列表
+     */
+    @SystemMessage(KnowledgeExtractorPrompts.EXTRACT_KNOWLEDGE_POINTS_FROM_DIRECTORY)
+    String extractKnowledgePointsFromDirectory(@UserMessage String directoryText);
+
+    /**
+     * 从题目文本中提取知识点详情
+     *
+     * @param knowledgePointText 知识点文本（通常是知识点名称或简要描述）
+     * @return 知识点详情文本（包含定义、相关概念、应用场景等）
+     */
     @SystemMessage(KnowledgeExtractorPrompts.ENRICH_KNOWLEDGE_POINT_DETAIL)
     String enrichKnowledgePointDetail(@UserMessage String knowledgePointText);
 }

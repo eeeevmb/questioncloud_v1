@@ -1,5 +1,6 @@
 package cn.sztu.questioncloud.application.knowledge_point.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,11 +10,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class KnowledgePointExtractDTO {
+public class QuestionKnowledgeExtractDTO {
     /**
      * 学科/科目
      */
-    private String subject;
+    @JsonAlias("subject")
+    private String knowledgeScope;
 
     /**
      * 标准知识点名称。

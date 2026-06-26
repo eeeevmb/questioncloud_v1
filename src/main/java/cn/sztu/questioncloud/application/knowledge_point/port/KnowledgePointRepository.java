@@ -14,16 +14,6 @@ public interface KnowledgePointRepository {
     KnowledgePointEntity getById(Long id);
 
     /**
-     * 根据学科和名字尝试地查询知识点实体
-     *
-     * @param subject       学科
-     * @param name          查找的名字
-     * @return 知识点实体列表
-     */
-    KnowledgePointEntity searchCanonicalNameOrAlias(
-            String subject, String name);
-
-    /**
      * 根据名字查询知识点实体列表
      *
      * @param subject       学科
@@ -31,7 +21,7 @@ public interface KnowledgePointRepository {
      * @return 知识点实体列表
      */
     List<KnowledgePointEntity> listByCanonicalNameOrAlias(
-            String subject, String name);
+            Long knowledgeScopeId, String name);
 
     /**
      * 查询需要补全的知识点实体列表

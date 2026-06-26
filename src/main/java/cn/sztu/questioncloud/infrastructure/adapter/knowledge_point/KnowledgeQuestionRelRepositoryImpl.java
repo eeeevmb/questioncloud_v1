@@ -4,7 +4,6 @@ import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeQuestionR
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeQuestionRelEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.knowledge_point.KnowledgeQuestionRelMapper;
-import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionMapper;
 import cn.xbatis.core.mybatis.MybatisBatchUtil;
 import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
@@ -63,16 +62,16 @@ public class KnowledgeQuestionRelRepositoryImpl implements KnowledgeQuestionRelR
     }
 
     @Override
-    public void deleteByQuestionVersionId(Long questionVersionId) {
-        DeleteChain.of(knowledgeQuestionRelMapper)
-                .eq(KnowledgeQuestionRelEntity::getQuestionVersionId, questionVersionId)
-                .execute();
-    }
-
-    @Override
     public void deleteByQuestionId(Long questionId) {
         DeleteChain.of(knowledgeQuestionRelMapper)
                 .eq(KnowledgeQuestionRelEntity::getQuestionId, questionId)
                 .execute();
+    }
+
+    @Override
+    public boolean existsByKnowledgePointId(Long knowledgePointId) {
+        return QueryChain.of(knowledgeQuestionRelMapper)
+                .eq(KnowledgeQuestionRelEntity::getKnowledgePointId, knowledgePointId)
+                .exists();
     }
 }

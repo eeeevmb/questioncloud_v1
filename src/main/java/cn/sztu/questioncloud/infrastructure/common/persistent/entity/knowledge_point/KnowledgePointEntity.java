@@ -32,10 +32,10 @@ public class KnowledgePointEntity implements Serializable {
     private Long id;
 
     /**
-     * 科目
+     * 所属知识点空间
      */
     @NotNull
-    private String subject;
+    private Long knowledgeScopeId;
 
     /**
      * 标准知识点名称
@@ -81,9 +81,4 @@ public class KnowledgePointEntity implements Serializable {
     @NotNull
     private LocalDateTime updatedAt;
 
-    /**
-     * 逻辑删除标记
-     */
-    @NotNull
-    private Integer isDeleted;
 }

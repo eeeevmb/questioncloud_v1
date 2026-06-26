@@ -1,16 +1,18 @@
 package cn.sztu.questioncloud.application.knowledge_point.service.impl;
 
-import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeExtractDTO;
 import cn.sztu.questioncloud.application.knowledge_point.enums.KnowledgeSourceTypeEnum;
 import cn.sztu.questioncloud.application.knowledge_point.enums.KnowledgeSubjectEnum;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepository;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeQuestionRelRepository;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeScopeRepository;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointService;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointVectorService;
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeQuestionRelEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeScopeEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +28,27 @@ import java.util.Optional;
 public class KnowledgePointServiceImpl implements KnowledgePointService{
     private final KnowledgePointRepository knowledgePointRepository;
     private final KnowledgeQuestionRelRepository knowledgeQuestionRelRepository;
+    private final KnowledgeScopeRepository knowledgeScopeRepository;
     private final KnowledgePointVectorService knowledgePointVectorService;
 
     @Override
+    public void addKnowledgeScope(String scopeName) {
+        if (scopeName == null || scopeName.isBlank()) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "知识点领域名称不能为空");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        KnowledgeScopeEntity newScope = KnowledgeScopeEntity.builder()
+                .scopeName(scopeName.trim())
+                .createdAt(now)
+                .updatedAt(now)
+                .isDeleted(0)
+                .build();
+        knowledgeScopeRepository.save(newScope);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
-    public void bindExtractedKnowledgePoints(Long questionId, Long questionVersionId, List<KnowledgePointExtractDTO> extractedPoints) {
+    public void bindExtractedKnowledgePoints(Long questionId, Long questionVersionId, List<QuestionKnowledgeExtractDTO> extractedPoints) {
         if (questionId == null || questionVersionId == null) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "题目ID和题目版本ID不能为空");
         }
@@ -44,7 +62,7 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
         List<KnowledgeQuestionRelEntity> newEntities = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
-        for(KnowledgePointExtractDTO dto : extractedPoints) {
+        for(QuestionKnowledgeExtractDTO dto : extractedPoints) {
             KnowledgePointEntity entity = findOrCreateKnowledgePoint(dto);
             KnowledgeQuestionRelEntity relEntity = KnowledgeQuestionRelEntity.builder()
                     .questionId(questionId)
@@ -63,12 +81,13 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public KnowledgePointEntity findOrCreateKnowledgePoint(KnowledgePointExtractDTO dto) {
+    public KnowledgePointEntity findOrCreateKnowledgePoint(QuestionKnowledgeExtractDTO dto) {
         // 过滤 + 格式处理
-        String subject = Optional.ofNullable(dto.getSubject())
+        String knowledgeScope = Optional.ofNullable(dto.getKnowledgeScope())
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .orElse(KnowledgeSubjectEnum.OTHER.getDescription());
+        Long knowledgeScopeId = resolveKnowledgeScopeId(knowledgeScope);
         String name = Optional.ofNullable(dto.getCanonicalName())
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
@@ -78,7 +97,7 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
                 ));
         // 处理
         List<KnowledgePointEntity> candidates =
-                knowledgePointRepository.listByCanonicalNameOrAlias(subject, name);
+                knowledgePointRepository.listByCanonicalNameOrAlias(knowledgeScopeId, name);
         Optional<KnowledgePointEntity> matched = candidates.stream()
                 .filter(candidate -> {
                     String canonicalName = Optional.ofNullable(candidate.getCanonicalName())
@@ -105,10 +124,9 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
         LocalDateTime now = LocalDateTime.now();
 
         KnowledgePointEntity entity = KnowledgePointEntity.builder()
-                .subject(subject)
+                .knowledgeScopeId(knowledgeScopeId)
                 .canonicalName(name)
                 .sourceType(KnowledgeSourceTypeEnum.AI_EXTRACTED.getCode())
-                .isDeleted(0)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
@@ -140,5 +158,16 @@ public class KnowledgePointServiceImpl implements KnowledgePointService{
             knowledgePointRepository.delete(id);
             knowledgePointVectorService.delete(id);
         }
+    }
+
+    private Long resolveKnowledgeScopeId(String knowledgeScope) {
+        KnowledgeScopeEntity entity = knowledgeScopeRepository.getByScopeName(knowledgeScope);
+        if (entity == null) {
+            throw new ApplicationException(
+                    CommonResultCodeEnum.PARAM_ERROR,
+                    "知识点领域不存在: " + knowledgeScope
+            );
+        }
+        return entity.getId();
     }
 }

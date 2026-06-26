@@ -4,6 +4,7 @@ import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepo
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.knowledge_point.KnowledgePointMapper;
+import cn.xbatis.core.sql.executor.chain.DeleteChain;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
 import cn.xbatis.core.sql.executor.chain.UpdateChain;
 import lombok.RequiredArgsConstructor;
@@ -22,28 +23,14 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
     public KnowledgePointEntity getById(Long id) {
         return QueryChain.of(knowledgePointMapper)
                 .eq(KnowledgePointEntity::getId, id)
-                .eq(KnowledgePointEntity::getIsDeleted, 0)
                 .limit(1)
                 .get();
     }
 
     @Override
-    public KnowledgePointEntity searchCanonicalNameOrAlias(String subject, String name) {
+    public List<KnowledgePointEntity> listByCanonicalNameOrAlias(Long knowledgeScopeId, String name) {
         return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getSubject, subject)
-                .eq(KnowledgePointEntity::getIsDeleted, 0)
-                .andNested(g -> g
-                        .eq(KnowledgePointEntity::getCanonicalName, name)
-                        .or().like(KnowledgePointEntity::getAliases, name))
-                .limit(1)
-                .get();
-    }
-
-    @Override
-    public List<KnowledgePointEntity> listByCanonicalNameOrAlias(String subject, String name) {
-        return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getSubject, subject)
-                .eq(KnowledgePointEntity::getIsDeleted, 0)
+                .eq(KnowledgePointEntity::getKnowledgeScopeId, knowledgeScopeId)
                 .andNested(g -> g
                         .eq(KnowledgePointEntity::getCanonicalName, name)
                         .or().like(KnowledgePointEntity::getAliases, name))
@@ -53,7 +40,6 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
     @Override
     public List<KnowledgePointEntity> listNeedEnrich(Integer limit) {
         return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getIsDeleted, 0)
                 .andNested(g -> g
                         .isNull(KnowledgePointEntity::getDescription)
                         .or().eq(KnowledgePointEntity::getDescription, "")
@@ -68,7 +54,6 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
     @Override
     public List<KnowledgePointEntity> listAllActive() {
         return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getIsDeleted, 0)
                 .list();
     }
 
@@ -84,7 +69,6 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
     public void update(KnowledgePointEntity entity) {
         UpdateChain.of(knowledgePointMapper)
                 .update(KnowledgePointEntity.class)
-                .set(KnowledgePointEntity::getSubject, entity.getSubject())
                 .set(KnowledgePointEntity::getCanonicalName, entity.getCanonicalName())
                 .set(KnowledgePointEntity::getDescription, entity.getDescription())
                 .set(KnowledgePointEntity::getAliases, entity.getAliases())
@@ -97,10 +81,7 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
 
     @Override
     public void delete(Long id) {
-        UpdateChain.of(knowledgePointMapper)
-                .update(KnowledgePointEntity.class)
-                .set(KnowledgePointEntity::getIsDeleted, 1)
-                .set(KnowledgePointEntity::getUpdatedAt, LocalDateTime.now())
+        DeleteChain.of(knowledgePointMapper)
                 .eq(KnowledgePointEntity::getId, id)
                 .execute();
     }

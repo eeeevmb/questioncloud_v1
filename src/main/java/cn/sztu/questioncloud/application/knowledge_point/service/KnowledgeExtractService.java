@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.knowledge_point.service;
 
-import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgePointExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.dto.DirectoryKnowledgeExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeExtractDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -8,27 +9,25 @@ import java.util.Map;
 /*
  * 用于从题目版本中提取知识点的服务接口。
  */
-public interface QuestionKnowledgeExtractService {
+public interface KnowledgeExtractService {
+    /**
+     * 从目录文本中提取知识点。
+     */
+    List<DirectoryKnowledgeExtractDTO> extractFromDirectoryText(String directoryText);
+
     /**
      * 从题目版本中提取知识点，并建立题目-知识点关系。
      *
      * @param questionVersionId 题目版本ID
      */
-    List<KnowledgePointExtractDTO> extractAndBind(Long questionVersionId);
-
-    /**
-     * 从题目中提取知识点，并建立题目-知识点关系。
-     *
-     * @param questionId 题目版本ID
-     */
-    List<KnowledgePointExtractDTO> extractAndBindCurrentQuestion(Long questionId);
+    List<QuestionKnowledgeExtractDTO> extractAndBind(Long questionVersionId);
 
     /**
      * 从题集中提取每一道题目的知识点，并建立题目-知识点关系。
      *
      * @param collectionId 题集ID列表
      */
-    Map<Long, List<KnowledgePointExtractDTO>> extractAndBindCollection(Long collectionId);
+    Map<Long, List<QuestionKnowledgeExtractDTO>> extractAndBindCollection(Long collectionId);
 
     /**
      * AI补充缺乏详细信息的知识点。

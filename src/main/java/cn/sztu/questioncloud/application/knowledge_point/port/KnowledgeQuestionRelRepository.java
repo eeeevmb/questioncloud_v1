@@ -45,16 +45,17 @@ public interface KnowledgeQuestionRelRepository {
     void deleteByKnowledgePointId(Long knowledgePointId);
 
     /**
-     * 根据题目版本ID删除关联关系
-     *
-     * @param questionVersionId 题目版本ID
-     */
-    void deleteByQuestionVersionId(Long questionVersionId);
-
-    /**
      * 根据题目ID删除关联关系
      *
      * @param questionId 题目ID
      */
     void deleteByQuestionId(Long questionId);
+
+    /**
+     * 判断某知识点是否仍被题目引用
+     *
+     * @param knowledgePointId 知识点ID
+     * @return 是否存在题目关联
+     */
+    boolean existsByKnowledgePointId(Long knowledgePointId);
 }

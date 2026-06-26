@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.knowledge_point.service;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
+import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorSearchVO;
 
 import java.util.List;
@@ -20,16 +21,29 @@ public interface KnowledgePointVectorService {
      */
     void delete(Long knowledgePointId);
 
+    /**
+     * 重新上传所有知识点
+     *
+     * @return 索引的知识点数量
+     */
     int reindexAll();
 
     /**
-     * 查询相关知识点ID列表
+     * 查询相关知识点
      *
      * @param subject  学科
      * @param query    用户的自然语言描述
-     * @param topK     可 null,返回的候选知识点数量上限，默认为 5
-     * @param minScore 可 null,候选知识点的最小相似度分数，默认为 0.5
-     * @return 命中的知识点ID列表，按照相似度从高到低排序
+     * @param topK     返回数量上限，可为null
+     * @param minScore 最小相似度阈值，可为null
+     * @return 命中的知识点列表
      */
     List<KnowledgePointVectorSearchVO> searchCandidates(String subject, String query, Integer topK, Double minScore);
+
+    /**
+     * 根据知识点ID查询向量库中实际保存的文档和元数据，仅调试使用
+     *
+     * @param knowledgePointId 知识点ID
+     * @return 向量明细
+     */
+    KnowledgePointVectorDetailVO getVectorDetail(Long knowledgePointId);
 }
