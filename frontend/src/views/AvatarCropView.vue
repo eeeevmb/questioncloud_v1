@@ -1,7 +1,7 @@
 <template>
-  <section class="card">
+  <el-card>
     <h2>更换头像</h2>
-    <p>上传并裁剪图片，建议使用清晰的人像照片。</p>
+    <p class="subtitle">上传并裁剪图片，建议使用清晰的人像照片。</p>
     <input type="file" accept="image/png,image/jpeg" @change="handleFileChange" />
 
     <div class="editor" v-if="previewUrl">
@@ -11,25 +11,25 @@
       <div class="preview-panel">
         <div class="preview" ref="previewRef"></div>
         <p>预览</p>
-        <label>导出尺寸
-          <select v-model.number="outputSize">
-            <option :value="256">256 × 256</option>
-            <option :value="320">320 × 320</option>
-          </select>
-        </label>
-        <label>导出格式
-          <select v-model="outputFormat">
-            <option value="image/png">PNG</option>
-            <option value="image/jpeg">JPEG</option>
-          </select>
-        </label>
-        <button class="primary-btn" type="button" :disabled="uploading" @click="submit">
-          {{ uploading ? '上传中...' : '上传头像' }}
-        </button>
+        <el-form label-position="top">
+          <el-form-item label="导出尺寸">
+            <el-select v-model="outputSize">
+              <el-option :value="256" label="256 × 256" />
+              <el-option :value="320" label="320 × 320" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="导出格式">
+            <el-select v-model="outputFormat">
+              <el-option value="image/png" label="PNG" />
+              <el-option value="image/jpeg" label="JPEG" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <el-button type="primary" :loading="uploading" @click="submit">上传头像</el-button>
       </div>
     </div>
     <p class="hint">支持 png / jpg，文件 ≤ 5MB，裁剪区域固定为 1:1。</p>
-  </section>
+  </el-card>
 </template>
 
 <script setup lang="ts">
@@ -143,6 +143,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.subtitle {
+  margin: 8px 0 16px;
+  color: var(--el-text-color-secondary);
+}
+
 .editor {
   display: flex;
   gap: 24px;
@@ -171,7 +176,7 @@ onBeforeUnmount(() => {
   height: 160px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--el-border-color);
 }
 
 .preview img {
@@ -181,7 +186,7 @@ onBeforeUnmount(() => {
 .hint {
   margin-top: 12px;
   font-size: 13px;
-  color: #475569;
+  color: var(--el-text-color-secondary);
 }
 
 @media (max-width: 768px) {

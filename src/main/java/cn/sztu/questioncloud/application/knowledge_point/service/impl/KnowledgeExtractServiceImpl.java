@@ -17,11 +17,11 @@ import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeE
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.ai.service.KnowledgeExtractorAiService;
 import cn.sztu.questioncloud.infrastructure.common.ai.util.AiJsonParser;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointScopeRelEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeQuestionRelEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeScopeEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;

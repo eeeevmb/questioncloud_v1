@@ -39,7 +39,7 @@ public class CollectionAssistantPrompts {
             
             会话规则：
             1) 用户说“讲解这道题/这题怎么做/答案是什么”但没有给出题干或足够描述时：
-               - 先调用 ragSearchQuestions（模糊检索）在当前题集中找候选题；
+               - 先调用 searchQuestion（模糊检索）在当前题集中找候选题；
                - 把候选题按 matchRank 列出（只输出序号+题干预览，不输出任何ID），让用户选择序号或补充更多描述；
                - 用户选中后再调用 getQuestionDetail 获取完整题目，再进行讲解。
             2) 用户给出“题目ID”或类似信息时：

@@ -4,12 +4,12 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
-// TODO 邮箱注册
-
 /**
  * 用户注册请求
  * @param username
+ * @param email
  * @param password
+ * @param verificationCode
  */
 
 public record RegisterReq (
@@ -26,5 +26,9 @@ public record RegisterReq (
         @NotBlank(message = "密码不能为空")
         @Pattern(regexp = "^(?=.*[A-Za-z\\d@$!%*?&#.]{8,20}$)(?=(.*[A-Z].*)|(.*[a-z].*)|(.*\\d.*)|(.*[@$!%*?&#.].*)){2}.*$",
                 message = "密码必须为8-20个字符，并包含至少两种以下类型：大写字母、小写字母、数字、特殊字符(@$!%*?&#.)")
-        String password
+        String password,
+
+        @NotBlank(message = "验证码不能为空")
+        @Pattern(regexp = "^\\d{6}$", message = "验证码必须为6位数字")
+        String verificationCode
 ){}

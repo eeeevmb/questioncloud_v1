@@ -15,6 +15,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.filter.Filter;
 import dev.langchain4j.store.embedding.filter.comparison.IsEqualTo;
 import dev.langchain4j.store.embedding.filter.comparison.IsGreaterThanOrEqualTo;
+import dev.langchain4j.store.embedding.filter.comparison.IsIn;
 import dev.langchain4j.store.embedding.filter.comparison.IsLessThanOrEqualTo;
 import dev.langchain4j.store.embedding.filter.logical.And;
 import org.springframework.stereotype.Component;
@@ -33,12 +34,6 @@ public class VectorizationToolImpl implements VectorizationTool {
         this.embeddingModel = embeddingModel;
     }
 
-    /**
-     * 对单个文本向量化并存储
-     *
-     * @param request        向量化请求，包含text和metadata
-     * @return 存储在向量数据库的ID
-     */
     @Override
     public String add(VectorizationRequest request) {
         TextSegment segment = TextSegment.from(request.getText(), new Metadata(request.getMetadata()));
@@ -46,12 +41,6 @@ public class VectorizationToolImpl implements VectorizationTool {
         return embeddingStore.add(embeddingResponse.content(), segment);
     }
 
-    /**
-     * 更新已存在的向量，不存在则执行添加操作
-     *
-     * @param vectorId 向量ID
-     * @param request  向量化请求，包含text和metadata
-     */
     @Override
     public void upsert(String vectorId, VectorizationRequest request) {
         TextSegment segment = TextSegment.from(request.getText(), new Metadata(request.getMetadata()));
@@ -60,44 +49,33 @@ public class VectorizationToolImpl implements VectorizationTool {
         embeddingStore.addAll(
                 List.of(vectorId),
                 List.of(embeddingResponse.content()),
-                List.of(segment));
+                List.of(segment)
+        );
     }
 
-    /**
-     * 根据向量ID删除单个向量
-     *
-     * @param vectorId 向量ID
-     */
     @Override
     public void delete(String vectorId) {
         embeddingStore.remove(vectorId);
     }
 
-    /**
-     * 向量搜索请求，包含元数据过滤等高级功能
-     *
-     * @param query 搜索请求
-     * @return 搜索结果
-     */
     @Override
     public EmbeddingSearchResult<TextSegment> search(SearchQuery query) {
-        // 对查询语句向量化处理
         Response<Embedding> embeddingResponse = embeddingModel.embed(query.getQuery());
-
-        // 转换筛选条件
         Filter filter = toFilter(query.getFilter());
 
         return embeddingStore.search(EmbeddingSearchRequest.builder()
-                        .query(query.getQuery())
-                        .queryEmbedding(embeddingResponse.content())
-                        .maxResults(query.getMaxResult())
-                        .minScore(query.getMinScore())
-                        .filter(filter)
-                        .build());
+                .query(query.getQuery())
+                .queryEmbedding(embeddingResponse.content())
+                .maxResults(query.getMaxResult())
+                .minScore(query.getMinScore())
+                .filter(filter)
+                .build());
     }
 
     private Filter toFilter(SearchFilter filter) {
-        if (filter == null) { return null; }
+        if (filter == null) {
+            return null;
+        }
 
         List<Filter> filterList = new ArrayList<>();
 
@@ -117,6 +95,10 @@ public class VectorizationToolImpl implements VectorizationTool {
             filterList.add(new IsEqualTo("collectionId", filter.getCollectionId()));
         }
 
+        if (filter.getCollectionIds() != null && !filter.getCollectionIds().isEmpty()) {
+            filterList.add(new IsIn("collectionId", filter.getCollectionIds()));
+        }
+
         if (filter.getDifficultyMin() != null) {
             filterList.add(new IsGreaterThanOrEqualTo("difficulty", filter.getDifficultyMin()));
         }
@@ -131,14 +113,15 @@ public class VectorizationToolImpl implements VectorizationTool {
 
         if (filterList.isEmpty()) {
             return null;
-        } else if (filterList.size() == 1) {
-            return filterList.getFirst();
-        } else {
-            Filter result = filterList.getFirst();
-            for (int i = 1; i < filterList.size(); i++) {
-                result = new And(result, filterList.get(i));
-            }
-            return result;
         }
+        if (filterList.size() == 1) {
+            return filterList.getFirst();
+        }
+
+        Filter result = filterList.getFirst();
+        for (int i = 1; i < filterList.size(); i++) {
+            result = new And(result, filterList.get(i));
+        }
+        return result;
     }
 }

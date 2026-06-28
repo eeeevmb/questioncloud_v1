@@ -7,32 +7,28 @@ import cn.sztu.questioncloud.application.question.port.QuestionQueryRepository;
 import cn.sztu.questioncloud.common.enums.SortDirectionEnum;
 import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.infrastructure.adapter.utils.RepositoryUtils;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionEntity;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionStat;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.QuestionVersionEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.*;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.CollectionItemMapper;
+import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionCollectionMapper;
 import cn.sztu.questioncloud.infrastructure.common.persistent.mapper.question.QuestionMapper;
 import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import cn.xbatis.core.mybatis.mapper.context.Pager;
 import cn.xbatis.core.sql.executor.chain.QueryChain;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Repository
+@RequiredArgsConstructor
 public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
     private final CollectionItemMapper collectionItemMapper;
     private final QuestionMapper questionMapper;
-
-    public QuestionQueryRepositoryImpl(CollectionItemMapper collectionItemMapper, QuestionMapper questionMapper) {
-        this.collectionItemMapper = collectionItemMapper;
-        this.questionMapper = questionMapper;
-    }
+    private final QuestionCollectionMapper questionCollectionMapper;
 
     /**
      * 查询题集内题目总数
@@ -45,6 +41,52 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
         return QueryChain.of(collectionItemMapper)
                 .eq(CollectionItem::getCollectionId, collectionId)
                 .count();
+    }
+
+    /**
+     * 查询题目ID-题集实体映射表
+     *
+     * @return 映射表
+     */
+    @Override
+    public Map<Long, QuestionCollectionEntity> getQuestionIdToCollectionMap(List<Long> questionIds) {
+        if (questionIds == null || questionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<CollectionItem> relationList = QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionId, CollectionItem::getCollectionId)
+                .in(CollectionItem::getQuestionId, questionIds)
+                // 保证同一题在多个题集时映射结果稳定（取最小 collection_id）
+                .orderBy(CollectionItem::getCollectionId)
+                .list();
+        if (relationList == null || relationList.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> collectionIds = relationList.stream()
+                .map(CollectionItem::getCollectionId)
+                .distinct()
+                .toList();
+
+        Map<Long, QuestionCollectionEntity> collectionById = QueryChain.of(questionCollectionMapper)
+                .in(QuestionCollectionEntity::getId, collectionIds)
+                .list()
+                .stream()
+                .collect(Collectors.toMap(
+                        QuestionCollectionEntity::getId,
+                        Function.identity(),
+                        (left, right) -> left
+                ));
+
+        Map<Long, QuestionCollectionEntity> result = new LinkedHashMap<>();
+        for (CollectionItem relation : relationList) {
+            QuestionCollectionEntity collection = collectionById.get(relation.getCollectionId());
+            if (collection != null) {
+                result.putIfAbsent(relation.getQuestionId(), collection);
+            }
+        }
+        return result;
     }
 
     /**
@@ -164,20 +206,29 @@ public class QuestionQueryRepositoryImpl implements QuestionQueryRepository {
             return Collections.emptyList();
         }
 
-        return QueryChain.of(questionMapper)
-                .select(QuestionSummaryVO.class)
+        // 1. 正常执行连表查询（不加 groupBy）
+        // 此时查出来的数据已经按难度排好了序，但是会有重复记录
+        List<QuestionDetailVO> rawList = QueryChain.of(questionMapper)
+                .select(QuestionDetailVO.class) // 💡 提醒：既然返回 DetailVO，这里最好也 Select 它，否则会丢字段
                 .from(QuestionEntity.class)
                 .join(QuestionEntity::getId, CollectionItem::getQuestionId)
                 .join(QuestionEntity::getCurrentVersionId, QuestionVersionEntity::getId)
                 .leftJoin(QuestionEntity::getCurrentVersionId, QuestionStat::getVersionId)
-                // 条件筛选
                 .in(CollectionItem::getCollectionId, collectionIds)
                 .eq(QuestionVersionEntity::getTypeCode, typeCode)
                 .eq(QuestionEntity::getStatus, QuestionStatusEnum.ACTIVE.getCode())
-                .groupBy(QuestionEntity::getId)
-                // 暂定按照难度升序排序
-                .orderBy(QuestionStat::getDifficulty)
+                .orderBy(QuestionStat::getDifficulty) // 依然交由数据库排序
                 .returnType(QuestionDetailVO.class)
                 .list();
+
+        // 2. 在 Java 内存中去重，并保留 SQL 的排序结果
+        Map<Long, QuestionDetailVO> distinctMap = new LinkedHashMap<>();
+        for (QuestionDetailVO vo : rawList) {
+            // 如果 map 里还没存过这个题目 ID，就放进去。后续查出来的重复题目会直接被忽略。
+            distinctMap.putIfAbsent(vo.getId(), vo);
+        }
+
+        // 3. 返回去重后的纯净列表
+        return new ArrayList<>(distinctMap.values());
     }
 }

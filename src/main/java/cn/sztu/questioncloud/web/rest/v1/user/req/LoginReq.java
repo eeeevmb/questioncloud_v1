@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Pattern;
 
 /**
  * 用户登陆请求
+ * @param account 用户名或邮箱
+ * @param password 密码
  */
 
 public record LoginReq (

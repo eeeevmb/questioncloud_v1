@@ -5,7 +5,7 @@ import cn.sztu.questioncloud.application.importer.dto.ImportErrorReport;
 import cn.sztu.questioncloud.application.importer.dto.ImportExcelRow;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
 import cn.sztu.questioncloud.application.importer.port.ImportItemRepository;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.ImportItemEntity;
 import cn.sztu.questioncloud.infrastructure.common.id.HutoolSnowflakeIdGenerator;
 import com.alibaba.excel.context.AnalysisContext;

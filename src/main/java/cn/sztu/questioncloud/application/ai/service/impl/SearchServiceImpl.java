@@ -1,6 +1,5 @@
 package cn.sztu.questioncloud.application.ai.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
 import cn.sztu.questioncloud.application.ai.dto.QuestionHitDTO;
 import cn.sztu.questioncloud.application.ai.port.QuestionSearchPort;
 import cn.sztu.questioncloud.application.ai.service.SearchService;
@@ -13,31 +12,23 @@ import java.util.List;
 
 @Service
 public class SearchServiceImpl implements SearchService {
+
     private final QuestionSearchPort questionSearchPort;
 
     public SearchServiceImpl(QuestionSearchPort questionSearchPort) {
         this.questionSearchPort = questionSearchPort;
     }
 
-
-    /**
-     * RAG妫€绱㈤闆嗗唴鐩稿叧棰樼洰
-     * @param userId         鐢ㄦ埛ID
-     * @param collectionId   棰橀泦ID
-     * @param query          鐢ㄦ埛鐨勮嚜鐒惰瑷€鎻忚堪
-     * @param ragSearchParam 绛涢€夋潯浠?
-     * @return 鍛戒腑鐨勯鐩垪琛?
-     */
     @Override
-    public List<QuestionHitDTO> RAGSearch(Long userId, Long collectionId, String query, RAGSearchParam ragSearchParam) {
-        // 鏋勫缓RAG妫€绱㈣姹?
+    public List<QuestionHitDTO> searchQuestions(Long userId, List<Long> collectionIds, String query, RAGSearchParam ragSearchParam) {
+        RAGSearchParam safeParam = ragSearchParam == null ? RAGSearchParam.builder().build() : ragSearchParam;
         SearchFilter filter = SearchFilter.builder()
                 .docType(VectorDocTypeEnum.QUESTION.getCode())
                 .ownerId(userId)
-                .collectionId(collectionId)
-                .difficultyMin(ragSearchParam.getDifficultyMin())
-                .difficultyMax(ragSearchParam.getDifficultyMax())
-                .typeCode(ragSearchParam.getTypeCode())
+                .collectionIds(collectionIds)
+                .difficultyMin(safeParam.getDifficultyMin())
+                .difficultyMax(safeParam.getDifficultyMax())
+                .typeCode(safeParam.getTypeCode())
                 .build();
 
         return questionSearchPort.searchQuestions(query, filter);

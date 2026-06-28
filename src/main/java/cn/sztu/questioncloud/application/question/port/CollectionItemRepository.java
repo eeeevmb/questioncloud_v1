@@ -3,6 +3,7 @@ package cn.sztu.questioncloud.application.question.port;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.CollectionItem;
 
 import java.util.List;
+import java.util.Map;
 
 public interface CollectionItemRepository {
 

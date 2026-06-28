@@ -2,17 +2,14 @@ package cn.sztu.questioncloud.web.rest.v1.paper;
 
 import cn.sztu.questioncloud.application.paper.service.PaperAppService;
 import cn.sztu.questioncloud.application.paper.service.PaperItemService;
+import cn.sztu.questioncloud.common.model.vo.PageResult;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperItemSaveReq;
-import cn.sztu.questioncloud.web.rest.v1.paper.req.PaperSaveReq;
-import cn.sztu.questioncloud.web.rest.v1.paper.req.RandomBuildReq;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperBasicVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperCreatedVO;
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperDetailVO;
+import cn.sztu.questioncloud.web.rest.v1.paper.req.*;
+import cn.sztu.questioncloud.web.rest.v1.paper.vo.*;
 
 import java.util.List;
 
-import cn.sztu.questioncloud.web.rest.v1.paper.vo.PaperItemSaveVO;
+import cn.xbatis.core.mybatis.mapper.context.Pager;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -47,13 +44,58 @@ public class PaperController {
      * 全量保存试卷题目
      * 编辑页面点击"保存"时调用，会覆盖之前的题目列表(delete+save)
      *
-     * @param paperId 试卷ID
-     * @param reqs    题目列表 (试题顺序由题目列表题目顺序决定)
+     * @param paperId     试卷ID
+     * @param batchReq    题目列表 (试题顺序由题目列表题目顺序决定)
      */
     @PostMapping("/{paperId}/items")
-    public ResultVO<List<PaperItemSaveVO>> savePaperItems(@Valid @RequestBody List<PaperItemSaveReq> reqs,
-                                                          @PathVariable Long paperId) {
-        return ResultVO.success(paperItemService.savePaperItems(paperId, reqs));
+    public ResultVO<List<PaperItemVO>> savePaperItems(@Valid @RequestBody PaperItemBatchSaveReq batchReq,
+                                                      @PathVariable Long paperId) {
+        return ResultVO.success(paperItemService.savePaperItems(paperId, batchReq.getItems()));
+    }
+
+    /**
+     * 新增试卷题目
+     * 不覆盖原有题目列表，在原有题目列表末尾追加新题目
+     *
+     * @param paperId 试卷ID
+     * @param batchReq 题目列表 (试题顺序由题目列表题目顺序决定)
+     */
+    @PostMapping("/{paperId}/items/add")
+    public ResultVO<List<PaperItemVO>> addPaperItems(@Valid @RequestBody PaperItemBatchSaveReq batchReq,
+                                                      @PathVariable Long paperId) {
+        return ResultVO.success(paperItemService.addPaperItems(paperId, batchReq.getItems()));
+    }
+
+    // === 随机组卷 ===
+
+    /**
+     * 接口 1: 随机组卷 - 纯随机返回
+     * (仅返回随机生成的题目列表，不保存到数据库，不覆盖原有试卷)
+     */
+    @PostMapping("/actions/random-preview")
+    public ResultVO<List<PaperItemDetailVO>> previewRandomBuild(@RequestBody @Valid RandomBuildReq req) {
+        return ResultVO.success(paperItemService.previewRandomItems(req));
+    }
+
+    /**
+     * 接口 2: 随机换题
+     */
+    @PostMapping("/actions/replace-item")
+    public ResultVO<PaperItemDetailVO> randomReplaceItem(@RequestBody @Valid RandomReplaceReq req) {
+        return ResultVO.success(paperItemService.randomReplaceItem(req));
+    }
+
+    // =================== 公共接口 ===================
+
+    /**
+     * 分页搜索登录用户试卷列表
+     *
+     * @param query 查询请求参数
+     * @return 试卷视图列表
+     */
+    @GetMapping
+    public ResultVO<PageResult<PaperBasicVO>> searchPapers(@Valid PaperPageQuery query) {
+        return ResultVO.success(paperAppService.searchPapers(query));
     }
 
     /**
@@ -101,17 +143,5 @@ public class PaperController {
     public ResultVO<Void> clearPaperItems(@PathVariable Long paperId) {
         paperItemService.deleteItemsByPaperId(paperId);
         return ResultVO.success();
-    }
-
-    // === 随机组卷 ===
-
-    /**
-     * 随机组卷 - 纯随机返回
-     * (仅返回随机生成的题目列表，不保存到数据库，不覆盖原有试卷)
-     */
-    @PostMapping("/{paperId}/random-preview")
-    public ResultVO<List<PaperItemSaveVO>> previewRandomBuild(@RequestBody @Valid RandomBuildReq req,
-                                                              @PathVariable("paperId") Long paperId) {
-        return ResultVO.success(paperItemService.previewRandomItems(paperId, req));
     }
 }

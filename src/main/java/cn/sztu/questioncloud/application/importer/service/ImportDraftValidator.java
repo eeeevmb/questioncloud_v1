@@ -3,7 +3,7 @@ package cn.sztu.questioncloud.application.importer.service;
 import cn.hutool.core.util.StrUtil;
 import cn.sztu.questioncloud.application.importer.dto.ImportErrorReport;
 import cn.sztu.questioncloud.application.importer.dto.QuestionDraft;
-import cn.sztu.questioncloud.infrastructure.common.persistent.entity.dto.QuestionOption;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.question.dto.QuestionOption;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

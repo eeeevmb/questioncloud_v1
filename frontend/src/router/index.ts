@@ -48,6 +48,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/papers',
+      name: 'paper-list',
+      component: () => import('../views/PapersView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/papers/:paperId',
+      name: 'paper-detail',
+      component: () => import('../views/PaperDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/math-sample',
       name: 'math-sample',
       component: () => import('../views/MathSampleView.vue'),
@@ -57,6 +69,24 @@ const router = createRouter({
       path: '/avatar/edit',
       name: 'avatar-edit',
       component: () => import('../views/AvatarCropView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/agent-demo',
+      name: 'agent-demo',
+      component: () => import('../views/AgentDemoView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/imports',
+      name: 'imports',
+      component: () => import('../views/ImportsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/imports/:importId',
+      name: 'import-detail',
+      component: () => import('../views/ImportDetailView.vue'),
       meta: { requiresAuth: true }
     }
   ]

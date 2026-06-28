@@ -24,6 +24,23 @@ spring:
       host: 127.0.0.1
       port: 6379
       timeout: 3s
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: # CHANGE_ME  用于测试发送邮件的邮箱，未来会改为系统邮箱地址
+    password: # CHANGE_ME  SMTP授权码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+            port: 465
+        transport:
+          protocol: smtp
+  #        debug: true
 
 langchain4j:
   community:

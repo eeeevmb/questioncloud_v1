@@ -1,8 +1,11 @@
 package cn.sztu.questioncloud.web.rest.v1.user;
 
 
+import cn.sztu.questioncloud.application.user.enums.VerificationTypeEnum;
 import cn.sztu.questioncloud.application.user.service.UserAccountService;
 import cn.sztu.questioncloud.application.user.dto.AvatarDTO;
+import cn.sztu.questioncloud.web.rest.v1.user.req.ResetPasswordReq;
+import cn.sztu.questioncloud.web.rest.v1.user.req.SendVerificationCodeReq;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.AvatarVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.LoginVO;
 import cn.sztu.questioncloud.web.rest.v1.user.vo.RegisterVO;
@@ -45,6 +48,42 @@ public class UserController {
     @PostMapping("/register")
     public ResultVO<RegisterVO> registerUser(@Valid @RequestBody RegisterReq request) {
         return ResultVO.success(userAccountService.register(request));
+    }
+
+    /**
+     * 发送注册验证码
+     *
+     * @param request 发送验证码请求
+     * @return 无内容响应
+     */
+    @PostMapping("/send-register-code")
+    public ResultVO<Void> sendRegisterCode(@Valid @RequestBody SendVerificationCodeReq request) {
+        userAccountService.sendRegisterCode(request);
+        return ResultVO.success();
+    }
+
+    /**
+     * 发送密码重置验证码
+     *
+     * @param request 发送验证码请求
+     * @return 无内容响应
+     */
+    @PostMapping("/send-reset-password-code")
+    public ResultVO<Void> sendResetPasswordCode(@Valid @RequestBody SendVerificationCodeReq request) {
+        userAccountService.sendResetPasswordCode(request);
+        return ResultVO.success();
+    }
+
+    /**
+     * 重置密码
+     *
+     * @param request 重置密码请求
+     * @return 无内容响应
+     */
+    @PostMapping("/reset-password")
+    public ResultVO<Void> resetPassword(@Valid @RequestBody ResetPasswordReq request) {
+        userAccountService.resetPassword(request);
+        return ResultVO.success();
     }
 
     /**

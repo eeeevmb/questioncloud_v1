@@ -1,52 +1,58 @@
 <template>
-  <section class="card" v-if="user">
-    <header class="section-header">
+  <el-card v-if="user">
+    <div class="top-row">
       <div class="hero">
-        <img :src="profileAvatar" alt="用户头像" @error="handleAvatarError" />
+        <el-avatar :size="72" :src="profileAvatar" @error="handleAvatarError" />
         <div>
           <h2>欢迎回来，{{ user.username }}</h2>
-          <p>下面是您的基本资料。</p>
+          <p>下面是您的基础资料。</p>
         </div>
       </div>
-      <button class="secondary-btn" @click="handleLogout" :disabled="loading">
-        {{ loading ? '退出中...' : '退出登录' }}
-      </button>
-    </header>
-    <div class="info-grid">
-      <div><strong>用户名</strong><span>{{ user.username }}</span></div>
-      <div><strong>邮箱</strong><span>{{ user.email || '未填写' }}</span></div>
-      <div><strong>手机号</strong><span>{{ user.phone || '未填写' }}</span></div>
-      <div><strong>状态</strong><span>{{ formatStatus(user.status) }}</span></div>
+      <el-button :loading="loading" @click="handleLogout">退出登录</el-button>
     </div>
+
+    <el-descriptions :column="2" border>
+      <el-descriptions-item label="用户名">{{ user.username }}</el-descriptions-item>
+      <el-descriptions-item label="邮箱">{{ user.email || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="手机号">{{ user.phone || '未填写' }}</el-descriptions-item>
+      <el-descriptions-item label="状态">{{ formatStatus(user.status) }}</el-descriptions-item>
+      <el-descriptions-item label="用户 ID">{{ user.userId }}</el-descriptions-item>
+    </el-descriptions>
+
     <div class="actions">
-      <RouterLink to="/collections" class="primary-btn">进入题集管理</RouterLink>
-      <RouterLink to="/avatar/edit" class="secondary-btn">更换头像</RouterLink>
+      <el-button type="primary" @click="router.push('/collections')">进入题集管理</el-button>
+      <el-button @click="router.push('/avatar/edit')">更换头像</el-button>
+      <el-button @click="openResetPasswordDialog">修改密码</el-button>
     </div>
-    <details class="debug">
-      <summary>调试信息</summary>
-      <p>用户 ID：{{ user.userId }}</p>
-    </details>
-  </section>
-  <section class="card empty" v-else>
-    <h2>尚未登录</h2>
-    <p>登录后即可管理题集与题目。</p>
-    <RouterLink to="/auth" class="primary-btn">前往登录</RouterLink>
-  </section>
+  </el-card>
+
+  <el-empty v-else description="尚未登录，登录后即可管理题集与题目。">
+    <el-button type="primary" @click="router.push('/auth')">前往登录</el-button>
+  </el-empty>
+
+  <ResetPasswordDialog
+    v-model="resetPasswordDialogVisible"
+    :initial-email="user?.email ?? ''"
+    :email-readonly="true"
+    @success="handleResetPasswordSuccess"
+  />
 </template>
 
 <script setup lang="ts">
-import { RouterLink, useRouter } from 'vue-router';
-import { storeToRefs } from 'pinia';
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
+import ResetPasswordDialog from '../components/ResetPasswordDialog.vue';
 import { useAuthStore } from '../stores/auth';
 import { logoutUser } from '../api/user';
-import { showSuccess } from '../utils/messages';
+import { showInfo, showSuccess } from '../utils/messages';
 import defaultAvatar from '../assets/default-avatar.svg';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 const loading = ref(false);
+const resetPasswordDialogVisible = ref(false);
 
 function formatStatus(status: number) {
   if (status === 1) {
@@ -70,6 +76,26 @@ function handleAvatarError(event: Event) {
   (event.target as HTMLImageElement).src = defaultAvatar;
 }
 
+function openResetPasswordDialog() {
+  if (!user.value?.email) {
+    showInfo('当前账号未绑定邮箱，暂时无法通过邮箱验证码修改密码');
+    return;
+  }
+  resetPasswordDialogVisible.value = true;
+}
+
+async function handleResetPasswordSuccess() {
+  loading.value = true;
+  try {
+    await logoutUser();
+    authStore.clear();
+    showSuccess('密码已更新，请重新登录');
+    router.replace('/auth');
+  } finally {
+    loading.value = false;
+  }
+}
+
 async function handleLogout() {
   loading.value = true;
   try {
@@ -77,8 +103,6 @@ async function handleLogout() {
     authStore.clear();
     showSuccess('已退出登录');
     router.replace('/auth');
-  } catch (error) {
-    // 统一拦截
   } finally {
     loading.value = false;
   }
@@ -86,11 +110,11 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.section-header {
+.top-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .hero {
@@ -99,52 +123,25 @@ async function handleLogout() {
   gap: 16px;
 }
 
-.hero img {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #e2e8f0;
+.hero h2 {
+  margin: 0;
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.info-grid div {
-  background: #f1f5f9;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.info-grid strong {
-  font-size: 12px;
-  color: #475569;
-}
-
-.info-grid span {
-  display: block;
-  margin-top: 6px;
+.hero p {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
 }
 
 .actions {
-  margin-top: 18px;
-  display: flex;
-  gap: 12px;
-}
-
-.debug {
   margin-top: 16px;
-  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.empty {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+@media (max-width: 768px) {
+  .top-row {
+    flex-direction: column;
+  }
 }
 </style>

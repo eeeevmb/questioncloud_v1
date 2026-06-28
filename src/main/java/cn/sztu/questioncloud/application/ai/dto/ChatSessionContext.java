@@ -14,7 +14,7 @@ import java.util.List;
 public class ChatSessionContext {
     private Long userId;
 
-    private Long collectionId;
+    private List<Long> collectionIds;
 
     private List<Long> questionIds;
 }
