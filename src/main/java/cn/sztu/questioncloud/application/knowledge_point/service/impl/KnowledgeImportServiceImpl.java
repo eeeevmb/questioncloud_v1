@@ -4,10 +4,11 @@ import cn.sztu.questioncloud.application.knowledge_point.dto.DirectoryKnowledgeE
 import cn.sztu.questioncloud.application.knowledge_point.dto.TextbookCheckDTO;
 import cn.sztu.questioncloud.application.knowledge_point.enums.KnowledgeSourceTypeEnum;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepository;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointScopeRelRepository;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeQuestionRelRepository;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeScopeRepository;
-import cn.sztu.questioncloud.application.knowledge_point.port.TextbookRepository;
 import cn.sztu.questioncloud.application.knowledge_point.port.TextbookKnowledgeRelRepository;
+import cn.sztu.questioncloud.application.knowledge_point.port.TextbookRepository;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgeExtractService;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgeImportService;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointService;
@@ -15,6 +16,7 @@ import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointV
 import cn.sztu.questioncloud.common.constant.enums.result.impl.CommonResultCodeEnum;
 import cn.sztu.questioncloud.common.exception.ApplicationException;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
+import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointScopeRelEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgeScopeEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.TextbookEntity;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.TextbookKnowledgeRelEntity;
@@ -43,6 +45,7 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
     private final TextbookRepository textbookRepository;
     private final TextbookKnowledgeRelRepository textbookKnowledgeRelRepository;
     private final KnowledgePointRepository knowledgePointRepository;
+    private final KnowledgePointScopeRelRepository knowledgePointScopeRelRepository;
     private final KnowledgeQuestionRelRepository knowledgeQuestionRelRepository;
     private final KnowledgePointVectorService knowledgePointVectorService;
     private final KnowledgePointService knowledgePointService;
@@ -50,7 +53,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public KnowledgeImportPreviewVO preview(KnowledgeImportPreviewReq req) {
-        // 1. 验证知识范围是否存在
         KnowledgeScopeEntity knowledgeScope = getOrCreateKnowledgeScope(req.getKnowledgeScope());
         TextbookCheckDTO duplicateCheckDTO = buildTextbookDuplicateCheckDTO(
                 knowledgeScope.getId(),
@@ -59,7 +61,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         );
         TextbookEntity duplicateTextbook = textbookRepository.getDuplicate(duplicateCheckDTO);
 
-        // 2. 渲染目录文本并提取知识点
         String directoryText = renderDirectoryText(
                 req.getKnowledgeScope(),
                 req.getTextbookName(),
@@ -71,7 +72,7 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         );
         List<DirectoryKnowledgeExtractDTO> knowledgePoints =
                 knowledgeExtractService.extractFromDirectoryText(directoryText);
-        // 3. 构建预览结果
+
         return KnowledgeImportPreviewVO.builder()
                 .textbookName(req.getTextbookName())
                 .knowledgeScope(req.getKnowledgeScope())
@@ -89,10 +90,10 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public KnowledgeImportConfirmVO confirm(KnowledgeImportConfirmReq req, Long userId) {
-        // 1. 验证请求参数
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "确认导入的知识点不能为空");
         }
+
         KnowledgeScopeEntity knowledgeScope = getOrCreateKnowledgeScope(req.getKnowledgeScope());
         TextbookCheckDTO duplicateCheckDTO = buildTextbookDuplicateCheckDTO(
                 knowledgeScope.getId(),
@@ -101,7 +102,7 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         );
         TextbookEntity textbook = textbookRepository.getDuplicate(duplicateCheckDTO);
         LocalDateTime now = LocalDateTime.now();
-        // 2. 创建或更新教材信息
+
         if (textbook == null) {
             textbook = TextbookEntity.builder()
                     .knowledgeScopeId(knowledgeScope.getId())
@@ -124,26 +125,30 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
             textbook.setUpdatedAt(now);
             textbookRepository.update(textbook);
         }
-        // 3. 创建知识点并建立教材-知识点关系
+
         int newKnowledgePointCount = 0;
         int reusedKnowledgePointCount = 0;
         int relationSavedCount = 0;
         Set<Long> savedKnowledgePointIds = new LinkedHashSet<>();
 
         for (KnowledgeImportConfirmReq.Item item : req.getItems()) {
-            if (item == null || item.getCanonicalName() == null || item.getCanonicalName().isBlank())
+            if (item == null || item.getCanonicalName() == null || item.getCanonicalName().isBlank()) {
                 continue;
+            }
+
             FindOrCreateKnowledgePointResult result = findOrCreateKnowledgePoint(
                     knowledgeScope.getId(),
                     item.getCanonicalName()
             );
-            if (result.created())
+            if (result.created()) {
                 newKnowledgePointCount++;
-            else
+            } else {
                 reusedKnowledgePointCount++;
+            }
 
-            if (!savedKnowledgePointIds.add(result.entity().getId()))
+            if (!savedKnowledgePointIds.add(result.entity().getId())) {
                 continue;
+            }
 
             textbookKnowledgeRelRepository.save(TextbookKnowledgeRelEntity.builder()
                     .textbookId(textbook.getId())
@@ -156,7 +161,7 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
                     .build());
             relationSavedCount++;
         }
-        // 4. 构建确认结果
+
         return KnowledgeImportConfirmVO.builder()
                 .textbookId(textbook.getId())
                 .knowledgeScopeId(knowledgeScope.getId())
@@ -167,8 +172,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
                 .build();
     }
 
-    // ==================== Private Helper Methods ==================== //
-    // 获取或创建知识点领域
     private KnowledgeScopeEntity getOrCreateKnowledgeScope(String knowledgeScopeName) {
         String normalizedScopeName = Optional.ofNullable(knowledgeScopeName)
                 .map(String::trim)
@@ -184,7 +187,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         return knowledgeScopeRepository.getByScopeName(normalizedScopeName);
     }
 
-    // 建立教材重复检查 DTO
     private TextbookCheckDTO buildTextbookDuplicateCheckDTO(Long knowledgeScopeId,
                                                             String textbookName,
                                                             String author) {
@@ -195,7 +197,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
                 .build();
     }
 
-    // 覆盖教材与知识点的关系，并删除不再使用的知识点
     private void overwriteTextbookKnowledgeRelations(Long textbookId) {
         List<TextbookKnowledgeRelEntity> oldRelations = textbookKnowledgeRelRepository.listByTextbookId(textbookId);
         if (oldRelations == null || oldRelations.isEmpty()) {
@@ -218,7 +219,6 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
         }
     }
 
-    // 获取或创建知识点
     private FindOrCreateKnowledgePointResult findOrCreateKnowledgePoint(Long knowledgeScopeId, String canonicalName) {
         String normalizedName = Optional.ofNullable(canonicalName)
                 .map(String::trim)
@@ -226,31 +226,48 @@ public class KnowledgeImportServiceImpl implements KnowledgeImportService {
                 .orElseThrow(() -> new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "知识点名称不能为空"));
 
         List<KnowledgePointEntity> candidates = Optional.ofNullable(
-                knowledgePointRepository.listByCanonicalNameOrAlias(knowledgeScopeId, normalizedName)
+                knowledgePointRepository.listByCanonicalNameOrAlias(normalizedName)
         ).orElse(List.of());
 
         Optional<KnowledgePointEntity> matched = candidates.stream()
                 .filter(candidate -> hasSameCanonicalOrAlias(candidate, normalizedName))
                 .findFirst();
 
+        LocalDateTime now = LocalDateTime.now();
         if (matched.isPresent()) {
-            return new FindOrCreateKnowledgePointResult(matched.get(), false);
+            KnowledgePointEntity entity = matched.get();
+            bindKnowledgePointToScope(entity.getId(), knowledgeScopeId, now);
+            knowledgePointVectorService.upsert(entity);
+            return new FindOrCreateKnowledgePointResult(entity, false);
         }
 
-        LocalDateTime now = LocalDateTime.now();
         KnowledgePointEntity entity = KnowledgePointEntity.builder()
-                .knowledgeScopeId(knowledgeScopeId)
                 .canonicalName(normalizedName)
                 .sourceType(KnowledgeSourceTypeEnum.AI_REVIEWED_IMPORT.getCode())
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
         knowledgePointRepository.save(entity);
+        bindKnowledgePointToScope(entity.getId(), knowledgeScopeId, now);
         knowledgePointVectorService.upsert(entity);
         return new FindOrCreateKnowledgePointResult(entity, true);
     }
 
-    // 判断知识点实体的规范名称或别名是否与给定的规范名称相同
+    private void bindKnowledgePointToScope(Long knowledgePointId, Long knowledgeScopeId, LocalDateTime now) {
+        if (knowledgePointId == null || knowledgeScopeId == null) {
+            return;
+        }
+        if (knowledgePointScopeRelRepository.exists(knowledgePointId, knowledgeScopeId)) {
+            return;
+        }
+        knowledgePointScopeRelRepository.save(KnowledgePointScopeRelEntity.builder()
+                .knowledgePointId(knowledgePointId)
+                .knowledgeScopeId(knowledgeScopeId)
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+    }
+
     private boolean hasSameCanonicalOrAlias(KnowledgePointEntity entity, String normalizedName) {
         String canonicalName = Optional.ofNullable(entity.getCanonicalName())
                 .map(String::trim)

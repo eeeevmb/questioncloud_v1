@@ -19,6 +19,14 @@ import dev.langchain4j.service.spring.AiServiceWiringMode;
         chatModel = "openAiChatModel"
 )
 public interface KnowledgeExtractorAiService {
+    /**
+     * 从题目文本中确定知识点领域
+     *
+     * @param questionText 题目完整文本（包含题干、选项、答案、解析）
+     * @return 提取的知识点列表
+     */
+    @SystemMessage(KnowledgeExtractorPrompts.ROUTE_QUESTION_KNOWLEDGE_SCOPE)
+    String routeQuestionKnowledgeScope(@UserMessage String questionText);
 
     /**
      * 从题目文本中提取知识点

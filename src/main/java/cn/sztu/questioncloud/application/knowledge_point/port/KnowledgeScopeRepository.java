@@ -12,7 +12,15 @@ public interface KnowledgeScopeRepository {
      */
     List<String> getAllScopeNames();
 
+    /**
+     * 根据知识点范围名称获取知识点范围实体
+     *
+     * @param scopeName 知识点范围名称
+     * @return 知识点范围实体
+     */
     KnowledgeScopeEntity getByScopeName(String scopeName);
+
+    // === BASIC ===
 
     KnowledgeScopeEntity getById(Long id);
 

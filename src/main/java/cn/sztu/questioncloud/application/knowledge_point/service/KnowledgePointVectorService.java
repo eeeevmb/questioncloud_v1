@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.knowledge_point.service;
 
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
+import cn.sztu.questioncloud.web.rest.v1.knowledge_point.testDTO.KnowledgePointVectorOverviewVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorSearchVO;
 
@@ -46,4 +47,18 @@ public interface KnowledgePointVectorService {
      * @return 向量明细
      */
     KnowledgePointVectorDetailVO getVectorDetail(Long knowledgePointId);
+
+    /**
+     * 清空知识点相关向量，仅删除知识点向量，不影响题目向量
+     *
+     * @return 删除的向量数量
+     */
+    int clearKnowledgePointVectors();
+
+    /**
+     * 查询知识点向量库概览
+     *
+     * @return 总行数及最近更新的十条数据
+     */
+    KnowledgePointVectorOverviewVO getKnowledgePointVectorOverview();
 }

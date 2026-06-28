@@ -15,22 +15,13 @@ import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
-public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
+public class KnowledgePointRepositoryImpl implements KnowledgePointRepository {
 
     private final KnowledgePointMapper knowledgePointMapper;
 
     @Override
-    public KnowledgePointEntity getById(Long id) {
+    public List<KnowledgePointEntity> listByCanonicalNameOrAlias(String name) {
         return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getId, id)
-                .limit(1)
-                .get();
-    }
-
-    @Override
-    public List<KnowledgePointEntity> listByCanonicalNameOrAlias(Long knowledgeScopeId, String name) {
-        return QueryChain.of(knowledgePointMapper)
-                .eq(KnowledgePointEntity::getKnowledgeScopeId, knowledgeScopeId)
                 .andNested(g -> g
                         .eq(KnowledgePointEntity::getCanonicalName, name)
                         .or().like(KnowledgePointEntity::getAliases, name))
@@ -53,8 +44,17 @@ public class KnowledgePointRepositoryImpl implements KnowledgePointRepository{
 
     @Override
     public List<KnowledgePointEntity> listAllActive() {
+        return QueryChain.of(knowledgePointMapper).list();
+    }
+
+    /// === BASIC ===
+
+    @Override
+    public KnowledgePointEntity getById(Long id) {
         return QueryChain.of(knowledgePointMapper)
-                .list();
+                .eq(KnowledgePointEntity::getId, id)
+                .limit(1)
+                .get();
     }
 
     @Override

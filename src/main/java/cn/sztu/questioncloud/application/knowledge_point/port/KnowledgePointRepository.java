@@ -6,22 +6,12 @@ import java.util.List;
 
 public interface KnowledgePointRepository {
     /**
-     * 根据ID获取知识点实体
+     * 根据标准名或别名查询知识点实体列表
      *
-     * @param id 知识点ID
-     * @return 知识点实体
-     */
-    KnowledgePointEntity getById(Long id);
-
-    /**
-     * 根据名字查询知识点实体列表
-     *
-     * @param subject       学科
-     * @param name          查找的名字
+     * @param name 查找的名称
      * @return 知识点实体列表
      */
-    List<KnowledgePointEntity> listByCanonicalNameOrAlias(
-            Long knowledgeScopeId, String name);
+    List<KnowledgePointEntity> listByCanonicalNameOrAlias(String name);
 
     /**
      * 查询需要补全的知识点实体列表
@@ -32,32 +22,19 @@ public interface KnowledgePointRepository {
     List<KnowledgePointEntity> listNeedEnrich(Integer limit);
 
     /**
-     * 查询所有未删除的知识点实体。
+     * 查询所有未删除的知识点实体
      *
      * @return 知识点实体列表
      */
     List<KnowledgePointEntity> listAllActive();
 
+    // === BASIC ===
 
+    KnowledgePointEntity getById(Long id);
 
-    /**
-     * 保存知识点实体
-     *
-     * @param entity 知识点实体
-     */
     void save(KnowledgePointEntity entity);
 
-    /**
-     * 更新知识点实体
-     *
-     * @param entity 知识点实体
-     */
     void update(KnowledgePointEntity entity);
 
-    /**
-     * 删除知识点实体
-     *
-     * @param id 知识点ID
-     */
     void delete(Long id);
 }

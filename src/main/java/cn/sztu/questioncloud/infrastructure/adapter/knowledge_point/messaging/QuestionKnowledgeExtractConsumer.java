@@ -20,6 +20,6 @@ public class QuestionKnowledgeExtractConsumer {
         if (message == null || message.getVersionId() == null) {
             return;
         }
-        questionKnowledgeExtractService.extractAndBind(message.getVersionId());
+        questionKnowledgeExtractService.extractFromQuestionAndBind(message.getVersionId());
     }
 }
