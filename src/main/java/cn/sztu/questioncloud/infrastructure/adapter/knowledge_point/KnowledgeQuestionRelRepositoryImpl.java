@@ -29,6 +29,20 @@ public class KnowledgeQuestionRelRepositoryImpl implements KnowledgeQuestionRelR
     }
 
     @Override
+    public List<KnowledgeQuestionRelEntity> listByKnowledgePointIdsAndQuestionVersionIds(List<Long> knowledgePointIds,
+                                                                                          List<Long> questionVersionIds) {
+        if (knowledgePointIds == null || knowledgePointIds.isEmpty()
+                || questionVersionIds == null || questionVersionIds.isEmpty()) {
+            return List.of();
+        }
+        return QueryChain.of(knowledgeQuestionRelMapper)
+                .in(KnowledgeQuestionRelEntity::getKnowledgePointId, knowledgePointIds)
+                .in(KnowledgeQuestionRelEntity::getQuestionVersionId, questionVersionIds)
+                .returnType(KnowledgeQuestionRelEntity.class)
+                .list();
+    }
+
+    @Override
     public void deleteRelationsByQuestionVersionId(Long questionVersionId) {
         DeleteChain.of(knowledgeQuestionRelMapper)
                 .eq(KnowledgeQuestionRelEntity::getQuestionVersionId, questionVersionId)

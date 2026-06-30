@@ -5,7 +5,10 @@ import cn.sztu.questioncloud.application.ai.dto.ChatSessionContext;
 import cn.sztu.questioncloud.application.ai.port.ToolExecutionPort;
 import cn.sztu.questioncloud.common.util.CacheKeyUtil;
 import cn.sztu.questioncloud.infrastructure.common.ai.dto.CreateQuestionArgs;
+import cn.sztu.questioncloud.infrastructure.common.ai.dto.SearchKnowledgePointArgs;
 import cn.sztu.questioncloud.infrastructure.common.ai.dto.SearchQuestionArgs;
+import cn.sztu.questioncloud.infrastructure.common.ai.dto.SearchQuestionsByKnowledgePointsArgs;
+import cn.sztu.questioncloud.infrastructure.common.ai.tool.KnowledgePointTool;
 import cn.sztu.questioncloud.infrastructure.common.ai.tool.QuestionDomainTool;
 import cn.sztu.questioncloud.infrastructure.common.cache.service.CacheService;
 import com.fasterxml.jackson.core.io.JsonEOFException;
@@ -33,6 +36,7 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
     private final CacheService cacheService;
     private final ObjectMapper objectMapper;
     private final QuestionDomainTool questionDomainTool;
+    private final KnowledgePointTool knowledgePointTool;
 
     @Override
     public List<ToolExecutionResultMessage> executeTool(Long sessionId, List<ToolExecutionRequest> requests, AgentDefinition definition) {
@@ -50,10 +54,16 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
         // 遍历工具请求列表
         for (ToolExecutionRequest request : requests) {
             try {
+                log.info("准备执行工具, sessionId={}, toolName={}, args={}",
+                        sessionId,
+                        request.name(),
+                        request.arguments());
                 String executionResult = switch (request.name()) {
                     case "createQuestion" -> createQuestion(context, request.arguments());
                     case "searchQuestion" -> searchQuestion(context, request.arguments());
                     case "getQuestionDetail" -> getQuestionDetail(context);
+                    case "searchKnowledgePoints" -> searchKnowledgePoints(context, request.arguments());
+                    case "searchQuestionsByKnowledgePoints" -> searchQuestionsByKnowledgePoints(context, request.arguments());
                     // 工具扩展
                     default -> "不支持的工具";
                 };
@@ -111,6 +121,27 @@ public class ToolExecutionAdapter implements ToolExecutionPort {
         SearchQuestionArgs searchQuestionArgs = objectMapper.treeToValue(payload, SearchQuestionArgs.class);
         // 序列化执行结果
         return objectMapper.writeValueAsString(questionDomainTool.searchQuestion(context, searchQuestionArgs));
+    }
+
+    private String searchKnowledgePoints(
+            ChatSessionContext context, String argsJson) throws Exception{
+        // 兼容两种入参格式：
+        // 1) { "query":"...", "ragSearchParam":{...} }
+        // 2) { "args": { "query":"...", "ragSearchParam":{...} } }
+        JsonNode payload = unwrapPayload(argsJson);
+        SearchKnowledgePointArgs searchKnowledgePointArgs = objectMapper.treeToValue(payload, SearchKnowledgePointArgs.class);
+        // 序列化执行结果
+        return objectMapper.writeValueAsString(knowledgePointTool.searchKnowledgePoints(context, searchKnowledgePointArgs));
+    }
+
+    private String searchQuestionsByKnowledgePoints(
+            ChatSessionContext context, String argsJson) throws Exception {
+        JsonNode payload = unwrapPayload(argsJson);
+        SearchQuestionsByKnowledgePointsArgs searchArgs =
+                objectMapper.treeToValue(payload, SearchQuestionsByKnowledgePointsArgs.class);
+        return objectMapper.writeValueAsString(
+                knowledgePointTool.searchQuestionsByKnowledgePoints(context, searchArgs)
+        );
     }
 
     private JsonNode unwrapPayload(String rawArgs) throws JsonProcessingException {

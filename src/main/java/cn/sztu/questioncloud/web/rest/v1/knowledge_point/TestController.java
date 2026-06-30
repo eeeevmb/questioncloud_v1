@@ -63,7 +63,7 @@ public class TestController {
     public ResultVO<List<KnowledgePointVectorSearchVO>> testSearch(@RequestBody KnowledgePointVectorSearchReq req) {
         return ResultVO.success(
                 knowledgePointVectorService.searchCandidates(
-                        req.getSubject(),
+                        req.getKnowledgeScopes(),
                         req.getQuery(),
                         req.getTopK(),
                         req.getMinScore()

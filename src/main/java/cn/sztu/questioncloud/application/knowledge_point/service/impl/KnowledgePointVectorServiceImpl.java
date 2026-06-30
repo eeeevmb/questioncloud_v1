@@ -40,12 +40,11 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorService {
-
     private static final String VECTOR_ID_PREFIX = "KP_";
-    private static final int DEFAULT_TOP_K = 5;
-    private static final double DEFAULT_MIN_SCORE = 0.5D;
     private static final String CHROMA_TENANT = "default";
     private static final String CHROMA_DATABASE = "default";
+    private static final int DEFAULT_TOP_K = 20;
+    private static final double DEFAULT_MIN_SCORE = 0.5D;
 
     private final VectorPort vectorPort;
     private final KnowledgePointRepository knowledgePointRepository;
@@ -88,9 +87,12 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
     }
 
     @Override
-    public List<KnowledgePointVectorSearchVO> searchCandidates(String subject, String query, Integer topK, Double minScore) {
+    public List<KnowledgePointVectorSearchVO> searchCandidates(List<String> knowledgeScopes,
+                                                               String query,
+                                                               Integer topK,
+                                                               Double minScore) {
         int requestedTopK = topK == null ? DEFAULT_TOP_K : topK;
-        int actualTopK = isBlank(subject) ? requestedTopK : Math.max(requestedTopK * 5, requestedTopK);
+        int actualTopK = isEmpty(knowledgeScopes) ? requestedTopK : Math.max(requestedTopK * 5, requestedTopK);
 
         SearchFilter filter = SearchFilter.builder()
                 .docType(VectorDocTypeEnum.KNOWLEDGE_POINT.getCode())
@@ -106,7 +108,7 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
         return result.matches().stream()
                 .filter(match -> match.embeddingId() != null)
                 .filter(match -> match.embeddingId().startsWith(VECTOR_ID_PREFIX))
-                .filter(match -> metadataMatchesSubject(match.embedded(), subject))
+                .filter(match -> metadataMatchesScopes(match.embedded(), knowledgeScopes))
                 .map(match -> {
                     String vectorId = match.embeddingId();
                     TextSegment segment = match.embedded();
@@ -214,21 +216,36 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
         return scopeNames.isEmpty() ? List.of() : scopeNames;
     }
 
-    private boolean metadataMatchesSubject(TextSegment segment, String subject) {
-        if (isBlank(subject)) {
+    private boolean metadataMatchesScopes(TextSegment segment, List<String> knowledgeScopes) {
+        if (isEmpty(knowledgeScopes)) {
             return true;
         }
-        String normalizedSubject = subject.trim();
-        String scopeNames = segment.metadata().getString("scopeNames");
-        if (!isBlank(scopeNames)) {
-            for (String item : scopeNames.split(",")) {
-                if (normalizedSubject.equals(item.trim())) {
+
+        List<String> normalizedScopes = knowledgeScopes.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .distinct()
+                .toList();
+        if (normalizedScopes.isEmpty()) {
+            return true;
+        }
+
+        String scopeNamesText = segment.metadata().getString("scopeNames");
+        if (!isBlank(scopeNamesText)) {
+            List<String> segmentScopes = List.of(scopeNamesText.split(",")).stream()
+                    .map(String::trim)
+                    .filter(item -> !item.isBlank())
+                    .toList();
+            for (String normalizedScope : normalizedScopes) {
+                if (segmentScopes.contains(normalizedScope)) {
                     return true;
                 }
             }
         }
+
         String primarySubject = segment.metadata().getString("subject");
-        return normalizedSubject.equals(primarySubject);
+        return !isBlank(primarySubject) && normalizedScopes.contains(primarySubject.trim());
     }
 
     private String readDisplaySubject(TextSegment segment) {
@@ -418,5 +435,9 @@ public class KnowledgePointVectorServiceImpl implements KnowledgePointVectorServ
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isEmpty(List<String> values) {
+        return values == null || values.isEmpty();
     }
 }

@@ -14,6 +14,16 @@ public interface KnowledgeQuestionRelRepository {
     List<KnowledgeQuestionRelEntity> listByQuestionVersionId(Long questionVersionId);
 
     /**
+     * 根据知识点ID列表与题目版本ID列表查询关联关系
+     *
+     * @param knowledgePointIds 知识点ID列表
+     * @param questionVersionIds 题目版本ID列表
+     * @return 关联关系列表
+     */
+    List<KnowledgeQuestionRelEntity> listByKnowledgePointIdsAndQuestionVersionIds(List<Long> knowledgePointIds,
+                                                                                   List<Long> questionVersionIds);
+
+    /**
      * 根据题目ID删除关联的知识点关系
      *
      * @param questionVersionId 题目ID

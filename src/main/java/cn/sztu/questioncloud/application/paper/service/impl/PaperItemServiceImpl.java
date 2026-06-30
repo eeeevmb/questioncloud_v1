@@ -149,6 +149,7 @@ public class PaperItemServiceImpl implements PaperItemService {
     @Override
     public List<PaperItemDetailVO> previewRandomItems(RandomBuildReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
+        boolean ignoreExposure = Boolean.TRUE.equals(req.getIgnoreExposure());
 
         // 1. 权限校验
         for (Long collectionId : req.getCollectionIds()) {
@@ -183,8 +184,8 @@ public class PaperItemServiceImpl implements PaperItemService {
                         if (u <= 0) u = 1e-10;
                         double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
                                 vo.getExposureFactor(), vo.getLastExposedAt(), LocalDateTime.now());
-                        double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(
-                                effectiveExp, vo.getDifficulty(), targetDiff);
+                        double weight = PaperWeightAlgorithmUtil.calcCombinedWeight(
+                                effectiveExp, vo.getDifficulty(), targetDiff, ignoreExposure);
                         double key = PaperWeightAlgorithmUtil.calcGumbelKey(weight, u);
                         return new AbstractMap.SimpleEntry<>(key, vo);
                     })
@@ -220,6 +221,7 @@ public class PaperItemServiceImpl implements PaperItemService {
     @Override
     public PaperItemDetailVO randomReplaceItem(RandomReplaceReq req) {
         Long userId = StpUtil.getLoginIdAsLong();
+        boolean ignoreExposure = Boolean.TRUE.equals(req.getIgnoreExposure());
 
         // 1. 权限校验
         for (Long collectionId : req.getCollectionIds()) {
@@ -257,8 +259,8 @@ public class PaperItemServiceImpl implements PaperItemService {
                     if (ran <= 0) ran = 1e-10;
                     double effectiveExp = ExposureFactorUtil.calcEffectiveExposure(
                             p.getExposureFactor(), p.getLastExposedAt(), LocalDateTime.now());
-                    double weight = PaperWeightAlgorithmUtil.calcExponentialWeight(
-                            effectiveExp, p.getDifficulty(), targetDiff);
+                    double weight = PaperWeightAlgorithmUtil.calcCombinedWeight(
+                            effectiveExp, p.getDifficulty(), targetDiff, ignoreExposure);
                     double key = PaperWeightAlgorithmUtil.calcGumbelKey(weight, ran);
                     return new AbstractMap.SimpleEntry<>(key, p);
                 })
