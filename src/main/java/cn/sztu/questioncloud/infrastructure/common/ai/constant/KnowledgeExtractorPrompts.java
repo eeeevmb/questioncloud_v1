@@ -62,6 +62,9 @@ public class KnowledgeExtractorPrompts {
         3. aliases 中优先返回 1 个与 canonicalName 对应的英文标准术语；如果没有稳定、常见、明确的英文术语，则返回空数组 []。
         4. 不要把中文别名放进 aliases；当前 aliases 主要留给英文名。
         5. 不要为了凑英文名而生造翻译；不确定时宁可不给。
+        6. If the input already provides an existing knowledge point candidate list, you must try to reuse one of those candidate names first.
+        7. Reuse the exact candidate canonicalName when the meaning matches; do not rewrite it into a near-synonym.
+        8. Only create a new canonicalName when none of the provided candidates can accurately represent the tested knowledge point.
 
         规则：
         1. 输出数组中必须且只能有一个知识点的 isMain = 1。

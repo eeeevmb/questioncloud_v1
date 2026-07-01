@@ -32,11 +32,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class KnowledgeExtractServiceImpl implements KnowledgeExtractService {
+    private static final int MAX_EXISTING_KNOWLEDGE_POINT_CANDIDATES = 100;
 
     private final AiJsonParser aiJsonParser;
     private final CollectionItemRepository collectionItemRepository;
@@ -78,9 +80,14 @@ public class KnowledgeExtractServiceImpl implements KnowledgeExtractService {
 
         // 1. 先识别题目所属的知识点领域
         List<String> knowledgeDomains = identifyKnowledgeDomains(questionVersionId);
+        List<String> existingKnowledgePointNames = listExistingKnowledgePointNamesByDomains(knowledgeDomains);
 
         // 2. 直接提取知识点，后续再由后端做查重、复用与保存
-        String questionText = buildQuestionExtractText(questionVersion, knowledgeDomains);
+        String questionText = buildQuestionExtractText(
+                questionVersion,
+                knowledgeDomains,
+                existingKnowledgePointNames
+        );
         String extractedPointsText = knowledgeExtractorAiService.extractKnowledgePointsFromQuestion(questionText);
         List<QuestionKnowledgeExtractDTO> extractedPoints = parseExtractResult(extractedPointsText);
         if (extractedPoints.isEmpty()) {
@@ -420,11 +427,39 @@ public class KnowledgeExtractServiceImpl implements KnowledgeExtractService {
         return builder.toString();
     }
 
+    private List<String> listExistingKnowledgePointNamesByDomains(List<String> knowledgeDomains) {
+        List<Long> knowledgeScopeIds = Optional.ofNullable(knowledgeDomains)
+                .orElse(List.of())
+                .stream()
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .map(knowledgeScopeRepository::getByScopeName)
+                .filter(Objects::nonNull)
+                .map(KnowledgeScopeEntity::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (knowledgeScopeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return knowledgePointScopeRelRepository.listKnowledgePointNamesByKnowledgeScopeIds(knowledgeScopeIds)
+                .stream()
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .distinct()
+                .limit(MAX_EXISTING_KNOWLEDGE_POINT_CANDIDATES)
+                .toList();
+    }
+
     private String buildQuestionExtractText(QuestionVersionEntity version,
-                                            List<String> knowledgeDomains) {
+                                            List<String> knowledgeDomains,
+                                            List<String> existingKnowledgePointNames) {
         StringBuilder builder = new StringBuilder();
 
         appendStringListSection(builder, "已识别知识点领域", knowledgeDomains);
+        appendStringListSection(builder, "当前领域已有知识点候选", existingKnowledgePointNames);
         builder.append("下面是题目内容:\n\n");
         builder.append(buildQuestionText(version));
 

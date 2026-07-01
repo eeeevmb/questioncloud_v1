@@ -4,12 +4,15 @@ import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeEx
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgeExtractService;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointService;
 import cn.sztu.questioncloud.application.knowledge_point.service.KnowledgePointVectorService;
+import cn.sztu.questioncloud.application.question.service.QuestionAppService;
 import cn.sztu.questioncloud.common.model.vo.ResultVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.req.KnowledgePointDeleteReq;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.testDTO.KnowledgePointVectorOverviewVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.req.KnowledgePointVectorSearchReq;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorDetailVO;
 import cn.sztu.questioncloud.web.rest.v1.knowledge_point.vo.KnowledgePointVectorSearchVO;
+import cn.sztu.questioncloud.web.rest.v1.question.req.QuestionInCollectionPageQuery;
+import cn.sztu.questioncloud.web.rest.v1.question.vo.QuestionSummaryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +38,7 @@ public class TestController {
     private final KnowledgeExtractService questionKnowledgeExtractService;
     private final KnowledgePointService knowledgePointService;
     private final KnowledgePointVectorService knowledgePointVectorService;
+    private final QuestionAppService questionAppService;
 
     @PostMapping("/knowledge-scope")
     public ResultVO<Void> testAddKnowledgeScope(@RequestParam String scopeName) {
@@ -45,6 +49,12 @@ public class TestController {
     @GetMapping("/identify-scope/{questionVersionId}")
     public ResultVO<List<String>> testIdentifyKnowledgeScope(@PathVariable Long questionVersionId) {
         return ResultVO.success(questionKnowledgeExtractService.identifyKnowledgeDomains(questionVersionId));
+    }
+
+    @PostMapping("/extract/{questionVersionId}")
+    public ResultVO<List<QuestionKnowledgeExtractDTO>> testExtract(
+            @PathVariable Long questionVersionId) {
+        return ResultVO.success(questionKnowledgeExtractService.extractFromQuestionAndBind(questionVersionId));
     }
 
     @PostMapping("/extract/collection/{collectionId}")
@@ -96,5 +106,29 @@ public class TestController {
     public ResultVO<Void> testDeleteKnowledgePoints(@RequestBody KnowledgePointDeleteReq req) {
         knowledgePointService.deleteKnowledgePoints(req.getKnowledgePointIds());
         return ResultVO.success();
+    }
+
+    @DeleteMapping("/collections/{collectionId}/questions")
+    public ResultVO<Integer> testClearCollectionQuestions(@PathVariable Long collectionId) {
+        QuestionInCollectionPageQuery query = new QuestionInCollectionPageQuery();
+        query.setPageNum(1);
+        query.setPageSize(200);
+
+        int deletedCount = 0;
+        while (true) {
+            List<QuestionSummaryVO> records = questionAppService
+                    .getQuestionSummariesByCollectionId(collectionId, query)
+                    .getRecords();
+            if (records == null || records.isEmpty()) {
+                break;
+            }
+
+            for (QuestionSummaryVO record : records) {
+                questionAppService.deleteQuestionById(record.getId());
+                deletedCount++;
+            }
+        }
+
+        return ResultVO.success(deletedCount);
     }
 }

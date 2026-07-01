@@ -50,6 +50,10 @@ public class QuestionSearchAdapter implements QuestionSearchPort {
                 .toList();
 
 
+        if (questionIds.isEmpty()) {
+            return List.of();
+        }
+
         Map<Long, QuestionCollectionEntity> collectionEntityMap = questionQueryRepository.getQuestionIdToCollectionMap(questionIds);
         Map<Long, QuestionVersionEntity> versionEntityMap = questionVersionRepository.getCurrentVersionsByQuestionIds(questionIds);
         Map<Long, QuestionStat> questionStatMap = questionStatRepository.getByQuestionIds(questionIds);

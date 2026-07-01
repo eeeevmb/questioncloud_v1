@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.knowledge_point.service.impl;
 
 import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgeQuestionSearchDTO;
 import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeTagDTO;
 import cn.sztu.questioncloud.application.knowledge_point.enums.KnowledgeSourceTypeEnum;
 import cn.sztu.questioncloud.application.knowledge_point.enums.KnowledgeSubjectEnum;
 import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgePointRepository;
@@ -153,6 +154,39 @@ public class KnowledgePointServiceImpl implements KnowledgePointService {
         bindKnowledgePointToScope(entity.getId(), knowledgeScopeId, now);
         knowledgePointVectorService.upsert(entity);
         return entity;
+    }
+
+    @Override
+    public List<QuestionKnowledgeTagDTO> listQuestionKnowledgeTags(Long questionVersionId) {
+        if (questionVersionId == null) {
+            throw new ApplicationException(CommonResultCodeEnum.PARAM_ERROR, "题目版本ID不能为空");
+        }
+
+        List<KnowledgeQuestionRelEntity> relEntities =
+                knowledgeQuestionRelRepository.listByQuestionVersionId(questionVersionId);
+        if (relEntities == null || relEntities.isEmpty()) {
+            return List.of();
+        }
+
+        return relEntities.stream()
+                .map(relEntity -> {
+                    KnowledgePointEntity entity = knowledgePointRepository.getById(relEntity.getKnowledgePointId());
+                    if (entity == null) {
+                        return null;
+                    }
+                    return QuestionKnowledgeTagDTO.builder()
+                            .knowledgePointId(entity.getId())
+                            .canonicalName(entity.getCanonicalName())
+                            .isMain(relEntity.getIsMain())
+                            .relevanceScore(relEntity.getRelevanceScore())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .sorted(Comparator
+                        .comparing(QuestionKnowledgeTagDTO::getIsMain, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(QuestionKnowledgeTagDTO::getRelevanceScore, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(QuestionKnowledgeTagDTO::getKnowledgePointId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
     }
 
     @Override

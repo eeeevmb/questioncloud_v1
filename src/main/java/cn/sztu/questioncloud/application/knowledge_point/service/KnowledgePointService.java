@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.knowledge_point.service;
 
 import cn.sztu.questioncloud.application.knowledge_point.dto.KnowledgeQuestionSearchDTO;
 import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeExtractDTO;
+import cn.sztu.questioncloud.application.knowledge_point.dto.QuestionKnowledgeTagDTO;
 import cn.sztu.questioncloud.infrastructure.common.persistent.entity.knowledge_point.KnowledgePointEntity;
 
 import java.util.List;
@@ -47,6 +48,8 @@ public interface KnowledgePointService {
      * @return 找到或创建的知识点实体
      */
     KnowledgePointEntity findOrCreateKnowledgePoint(QuestionKnowledgeExtractDTO dto);
+
+    List<QuestionKnowledgeTagDTO> listQuestionKnowledgeTags(Long questionVersionId);
 
     /**
      * 根据知识点列表在指定题集中查询关联题目
