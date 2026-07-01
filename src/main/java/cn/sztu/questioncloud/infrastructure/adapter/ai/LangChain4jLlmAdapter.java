@@ -63,11 +63,13 @@ public class LangChain4jLlmAdapter implements LlmPort {
     public LangChain4jLlmAdapter(
             @Qualifier("qwenChatModel") ChatModel chatModel,
             @Qualifier("qwenStreamingChatModel") StreamingChatModel streamingChatModel,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            LlmModelProperties llmModelProperties
     ) {
         this.chatModel = chatModel;
         this.streamingChatModel = streamingChatModel;
         this.objectMapper = objectMapper;
+        this.llmModelProperties = llmModelProperties;
     }
 
 
