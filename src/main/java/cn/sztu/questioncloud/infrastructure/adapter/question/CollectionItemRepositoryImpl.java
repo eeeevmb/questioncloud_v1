@@ -40,6 +40,31 @@ public class CollectionItemRepositoryImpl implements CollectionItemRepository {
     }
 
     /**
+     * 根据题集ID查询题目版本ID列表
+     *
+     * @param collectionId 题集ID
+     * @return 题目版本ID列表
+     */
+    @Override
+    public List<Long> listVersionIdsByCollectionId(Long collectionId) {
+        return QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionVersionId)
+                .eq(CollectionItem::getCollectionId, collectionId)
+                .returnType(Long.class)
+                .list();
+    }
+
+    @Override
+    public List<Long> listVersionIdsByCollectionId(Long collectionId, Integer limit) {
+        return QueryChain.of(collectionItemMapper)
+                .select(CollectionItem::getQuestionVersionId)
+                .eq(CollectionItem::getCollectionId, collectionId)
+                .limit(limit)
+                .returnType(Long.class)
+                .list();
+    }
+
+    /**
      * 将试题存入题集
      *
      * @param collectionItem 题集内容

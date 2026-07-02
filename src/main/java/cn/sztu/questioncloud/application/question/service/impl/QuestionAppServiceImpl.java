@@ -1,6 +1,7 @@
 package cn.sztu.questioncloud.application.question.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.sztu.questioncloud.application.knowledge_point.port.KnowledgeQuestionRelRepository;
 import cn.sztu.questioncloud.application.question.enums.QuestionErrorCodeEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionStatusEnum;
 import cn.sztu.questioncloud.application.question.enums.QuestionTypeEnum;
@@ -46,6 +47,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
     private final QuestionStatRepository questionStatRepository;
     private final CollectionItemRepository collectionItemRepository;
     private final QuestionEventPublisher questionEventPublisher;
+    private final KnowledgeQuestionRelRepository knowledgeQuestionRelRepository;
     public static final Integer INITIAL_VERSION = 1;
     public static final Integer INITIAL_COUNT = 0;
     public static final Double INITIAL_EXP = 1.00;
@@ -310,6 +312,7 @@ public class QuestionAppServiceImpl implements QuestionAppService {
                         .build());
 
         // 4. 删除实体
+        knowledgeQuestionRelRepository.deleteByQuestionId(questionId);
         collectionItemRepository.deleteByQuestionId(questionId);
         questionStatRepository.deleteByQuestionId(questionId);
         questionVersionRepository.deleteByQuestionId(questionId);

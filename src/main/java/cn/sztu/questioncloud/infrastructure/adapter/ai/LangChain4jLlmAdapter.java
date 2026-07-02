@@ -26,7 +26,7 @@ import dev.langchain4j.model.chat.request.json.JsonSchema;
 import dev.langchain4j.model.chat.request.json.JsonStringSchema;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -40,7 +40,6 @@ import java.util.List;
  * LLM适配器，提供大模型对话能力
  */
 @Component
-@RequiredArgsConstructor
 public class LangChain4jLlmAdapter implements LlmPort {
     private static final Logger AI_LOG = LoggerFactory.getLogger("AI_LOG");
 
@@ -60,6 +59,18 @@ public class LangChain4jLlmAdapter implements LlmPort {
     private static final List<String> OPTION_KEYS = List.of(
             "A", "B", "C", "D", "E", "F", "G", "H"
     );
+
+    public LangChain4jLlmAdapter(
+            @Qualifier("qwenChatModel") ChatModel chatModel,
+            @Qualifier("qwenStreamingChatModel") StreamingChatModel streamingChatModel,
+            ObjectMapper objectMapper,
+            LlmModelProperties llmModelProperties
+    ) {
+        this.chatModel = chatModel;
+        this.streamingChatModel = streamingChatModel;
+        this.objectMapper = objectMapper;
+        this.llmModelProperties = llmModelProperties;
+    }
 
 
     /**

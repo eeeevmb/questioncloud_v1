@@ -2,6 +2,7 @@ package cn.sztu.questioncloud.application.ai.service.impl;
 
 import cn.sztu.questioncloud.application.ai.dto.BucketCandidateItem;
 import cn.sztu.questioncloud.application.ai.dto.CandidateBucket;
+import cn.sztu.questioncloud.application.ai.dto.KnowledgePointHitDTO;
 import cn.sztu.questioncloud.application.ai.dto.PaperGenerationPlan;
 import cn.sztu.questioncloud.application.ai.dto.QuestionHitDTO;
 import cn.sztu.questioncloud.application.ai.enums.AgentErrorCodeEnum;
@@ -26,6 +27,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class AiGenerateServiceImpl implements AiGenerateService {
+    private static final Integer KNOWLEDGE_POINT_TOP_K = 3;
+    private static final Double KNOWLEDGE_POINT_MIN_SCORE = 0.65D;
+    private static final Integer KNOWLEDGE_POINT_QUESTION_TOP_K = 10;
+
     private final LlmPort llmPort;
     private final SearchService searchService;
 
@@ -95,8 +100,13 @@ public class AiGenerateServiceImpl implements AiGenerateService {
                     .build();
 
             // 添加不同topic的搜索结果，并在桶内聚合同一题目的命中信息
-            for (String topic : bucket.getTopics()) {
-                List<QuestionHitDTO> ragResult = searchService.searchQuestions(userId, req.getCollectionIds(), topic, searchParam);
+            for (String topic : Optional.ofNullable(bucket.getTopics()).orElse(List.of())) {
+                List<QuestionHitDTO> ragResult = searchQuestionsForTopic(
+                        userId,
+                        req.getCollectionIds(),
+                        topic,
+                        searchParam
+                );
                 if (ragResult.isEmpty()) {
                     continue;
                 }
@@ -190,5 +200,43 @@ public class AiGenerateServiceImpl implements AiGenerateService {
         // bestMatchRank 次之
         // exposureFactor 最后
         return 0.5 * hitCount + 0.3 * (1.0 / bestMatchRank) + 0.2 * (1 - exposureFactor);
+    }
+
+    private List<QuestionHitDTO> searchQuestionsForTopic(Long userId,
+                                                         List<Long> collectionIds,
+                                                         String topic,
+                                                         RAGSearchParam searchParam) {
+        if (topic == null || topic.isBlank()) {
+            return List.of();
+        }
+
+        List<KnowledgePointHitDTO> knowledgePointHits = searchService.searchKnowledgePoints(
+                null,
+                topic,
+                KNOWLEDGE_POINT_TOP_K,
+                KNOWLEDGE_POINT_MIN_SCORE
+        );
+
+        List<Long> knowledgePointIds = knowledgePointHits.stream()
+                .map(KnowledgePointHitDTO::getKnowledgePointId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (!knowledgePointIds.isEmpty()) {
+            List<QuestionHitDTO> matchedQuestions = searchService.searchQuestionsByKnowledgePoints(
+                    knowledgePointIds,
+                    collectionIds,
+                    KNOWLEDGE_POINT_QUESTION_TOP_K,
+                    searchParam.getTypeCode(),
+                    searchParam.getDifficultyMin(),
+                    searchParam.getDifficultyMax()
+            );
+            if (!matchedQuestions.isEmpty()) {
+                return matchedQuestions;
+            }
+        }
+
+        return searchService.searchQuestions(userId, collectionIds, topic, searchParam);
     }
 }

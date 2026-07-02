@@ -21,6 +21,7 @@ public class RabbitMQConfig {
 
     public static final String QUESTION_EXCHANGE_NAME = "question.topic";
     public static final String QUESTION_QUEUE_NAME = "question.vector.queue";
+    public static final String QUESTION_KNOWLEDGE_EXTRACT_QUEUE_NAME = "question.knowledge.extract.queue";
     public static final String QUESTION_ALL_KEY = "question.*";
     public static final String QUESTION_CREATED_KEY = "question.created";
     public static final String QUESTION_DELETED_KEY = "question.deleted";
@@ -81,6 +82,11 @@ public class RabbitMQConfig {
         return new Queue(QUESTION_QUEUE_NAME, true, false, false);
     }
 
+    @Bean
+    public Queue questionKnowledgeExtractQueue() {
+        return new Queue(QUESTION_KNOWLEDGE_EXTRACT_QUEUE_NAME, true, false, false);
+    }
+
     /**
      * 声明注册用户队列绑定关系
      * @param userEventExchange 交换机
@@ -101,5 +107,21 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(questionVectorQueue)
                 .to(questionEventExchange)
                 .with(QUESTION_ALL_KEY);
+    }
+
+    @Bean
+    public Binding questionKnowledgeCreatedBinding(TopicExchange questionEventExchange,
+                                                   Queue questionKnowledgeExtractQueue) {
+        return BindingBuilder.bind(questionKnowledgeExtractQueue)
+                .to(questionEventExchange)
+                .with(QUESTION_CREATED_KEY);
+    }
+
+    @Bean
+    public Binding questionKnowledgeUpdatedBinding(TopicExchange questionEventExchange,
+                                                   Queue questionKnowledgeExtractQueue) {
+        return BindingBuilder.bind(questionKnowledgeExtractQueue)
+                .to(questionEventExchange)
+                .with(QUESTION_UPDATED_KEY);
     }
 }

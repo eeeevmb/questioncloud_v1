@@ -8,7 +8,14 @@ import java.util.List;
 @Data
 @Builder
 public class SearchFilter {
+
     private Long ownerId;
+
+    private String docType;
+
+    private String subject;
+
+    private Long collectionId;
 
     private List<Long> collectionIds;
 
