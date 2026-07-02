@@ -5,6 +5,18 @@
         <div class="title-block">
           <el-button v-if="fromCollectionId" link type="primary" class="back-button" @click="goBack">返回题集</el-button>
           <h1>{{ detail.title }}</h1>
+          <div v-if="knowledgeTags.length" v-loading="knowledgeTagsLoading" class="knowledge-tag-row">
+            <el-tag
+              v-for="tag in knowledgeTags"
+              :key="`${tag.canonicalName}_${tag.isMain}`"
+              size="small"
+              effect="light"
+              class="knowledge-tag-chip"
+              :class="tag.isMain === 1 ? 'knowledge-tag-chip--main' : 'knowledge-tag-chip--secondary'"
+            >
+              {{ tag.canonicalName }}
+            </el-tag>
+          </div>
           <div class="meta-row">
             <el-tag effect="light" class="type-tag" :class="typeTagClass">{{ typeLabel }}</el-tag>
             <el-tag effect="plain" class="version-tag">v{{ detail.versionNo }}</el-tag>
@@ -163,7 +175,9 @@ import type { Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import { Aim, Clock, DataLine, Histogram, Odometer, View } from '@element-plus/icons-vue';
+import { fetchQuestionKnowledgeTags } from '../api/knowledge';
 import { fetchQuestionDetail, deleteQuestion } from '../api/question';
+import type { QuestionKnowledgeTag } from '../types/knowledge';
 import type { QuestionDetail } from '../types/question';
 import { showSuccess } from '../utils/messages';
 import MathView from '../components/MathView.vue';
@@ -187,6 +201,8 @@ const route = useRoute();
 const router = useRouter();
 const detail = ref<QuestionDetail | null>(null);
 const loading = ref(false);
+const knowledgeTags = ref<QuestionKnowledgeTag[]>([]);
+const knowledgeTagsLoading = ref(false);
 
 const questionId = computed(() => {
   const id = route.params.questionId;
@@ -365,13 +381,31 @@ watch(() => route.params.questionId, loadDetail);
 
 async function loadDetail() {
   if (!questionId.value) {
+    detail.value = null;
+    knowledgeTags.value = [];
     return;
   }
   loading.value = true;
   try {
     detail.value = await fetchQuestionDetail(questionId.value);
+    await loadKnowledgeTags(detail.value.currentVersionId);
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadKnowledgeTags(questionVersionId?: string | null) {
+  if (!questionVersionId) {
+    knowledgeTags.value = [];
+    return;
+  }
+  knowledgeTagsLoading.value = true;
+  try {
+    knowledgeTags.value = await fetchQuestionKnowledgeTags(questionVersionId);
+  } catch {
+    knowledgeTags.value = [];
+  } finally {
+    knowledgeTagsLoading.value = false;
   }
 }
 
@@ -549,6 +583,30 @@ function formatProgressWidth(value?: number) {
   font-size: 34px;
   line-height: 1.2;
   font-weight: 750;
+}
+
+.knowledge-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.knowledge-tag-chip {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.knowledge-tag-chip--main {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.knowledge-tag-chip--secondary {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #e2e8f0;
 }
 
 .meta-row {
