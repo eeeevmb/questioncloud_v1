@@ -16,6 +16,19 @@ public interface CollectionItemRepository {
      */
     CollectionItem findByQuestionIdAndVersionId(Long questionId, Long versionId);
 
+    /**
+     * 根据题集ID查询题目版本ID列表
+     *
+     * @param collectionId 题集ID
+     * @return 题目版本ID列表
+     */
+    List<Long> listVersionIdsByCollectionId(Long collectionId);
+
+    /**
+     * @param limit 查询限制数量
+     */
+    List<Long> listVersionIdsByCollectionId(Long collectionId, Integer limit);
+
     // ===== 写入操作 =====
 
     /**

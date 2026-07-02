@@ -17,6 +17,18 @@
             <p class="eyebrow">试卷详情</p>
             <div class="paper-title-row">
               <h2>{{ paper?.title || '试卷详情' }}</h2>
+              <el-dropdown trigger="click" @command="handleBuildEntryCommand">
+                <el-button class="paper-build-entry-btn" plain>
+                  开始组卷
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="manual">自由组卷</el-dropdown-item>
+                    <el-dropdown-item command="random">随机组卷</el-dropdown-item>
+                    <el-dropdown-item command="ai">AI组卷</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </div>
           <el-button circle class="paper-edit-icon-btn" @click="openBasicInfoDrawer">
@@ -62,1018 +74,121 @@
       </template>
     </el-drawer>
 
-    <div class="builder-workspace">
-      <el-card shadow="never" class="workspace-shell-card">
-        <div class="workspace-shell">
-          <aside class="mode-sidebar">
-            <div class="mode-sidebar-head">
-              <div>
-                <h3>组卷方式</h3>
-                <span class="hint">像目录一样切换方式，再在弹窗里完成配置。</span>
-              </div>
-              <span class="mode-sidebar-badge">草稿 {{ draftRows.length }}</span>
-            </div>
-
-            <div class="mode-launcher-list">
-              <button class="mode-launcher-btn" :class="{ active: buildMode === 'manual' }" type="button" @click="openManualBuildDrawer">
-                <span class="mode-launcher-accent"></span>
-                <span class="mode-launcher-content">
-                  <strong>自由组卷</strong>
-                  <span>按题集手动选题</span>
-                </span>
-                <span class="mode-launcher-arrow">›</span>
-              </button>
-              <button class="mode-launcher-btn" :class="{ active: buildMode === 'random' }" type="button" @click="openRandomBuildDrawer">
-                <span class="mode-launcher-accent"></span>
-                <span class="mode-launcher-content">
-                  <strong>随机组卷</strong>
-                  <span>按规则预览候选题</span>
-                </span>
-                <span class="mode-launcher-arrow">›</span>
-              </button>
-              <button class="mode-launcher-btn" :class="{ active: buildMode === 'ai' }" type="button" @click="openAiBuildDrawer">
-                <span class="mode-launcher-accent"></span>
-                <span class="mode-launcher-content">
-                  <strong>AI组卷</strong>
-                  <span>输入需求生成候选题</span>
-                </span>
-                <span class="mode-launcher-arrow">›</span>
-              </button>
-            </div>
-          </aside>
-
-          <div class="workspace-main-pane">
-            <div class="workspace-shell-head">
-              <div>
-                <h3>编辑工作台</h3>
-                <span class="hint">草稿和已保存内容集中在这里编辑，不再分散跳转。</span>
-              </div>
-            </div>
-
-          <el-tabs v-model="workspacePanel" class="workspace-tabs">
-            <el-tab-pane name="draft">
-              <template #label>
-                <div class="workspace-tab-label">
-                  <span class="workspace-tab-title">草稿区域</span>
-                  <span class="workspace-tab-count">{{ draftRows.length }}</span>
-                </div>
-              </template>
-              <div class="workspace-panel-head">
-                <div class="draft-head-main">
-                  <div>
-                    <h4>草稿区域</h4>
-                    <p class="hint">可从自由组卷或随机预览加入题目，拖拽行即可调整顺序。</p>
-                  </div>
-                  <el-tooltip :content="hasDraftFilters ? '请先重置筛选后再整理顺序' : '按单选→多选→填空→判断→简答的顺序整理草稿'">
-                    <span class="draft-organize-wrap">
-                      <el-button
-                        size="small"
-                        class="draft-organize-btn draft-organize-inline-btn"
-                        :icon="MagicStick"
-                        :disabled="draftRows.length < 2 || hasDraftFilters"
-                        @click="sortDraftRowsByType"
-                      >
-                        整理
-                      </el-button>
-                    </span>
-                  </el-tooltip>
-                </div>
-                <div class="card-actions">
-                  <el-button size="small" :disabled="!draftRows.length" @click="clearDraftRows">清空</el-button>
-                  <el-button size="small" type="primary" :loading="submittingItems" @click="handleSaveItems">保存</el-button>
-                </div>
-              </div>
-
-              <div class="workspace-meta draft-workspace-meta">
-                <span class="workspace-meta-item">草稿题数 {{ draftRows.length }}</span>
-                <span class="workspace-meta-item">当前筛选 {{ filteredDraftRows.length }}</span>
-                <span class="workspace-meta-item">草稿总分 {{ draftTotalScore }}</span>
-              </div>
-
-              <div class="draft-tools-card draft-tools-card-spaced">
-                <div class="draft-tools-inline">
-                  <div class="draft-tools-grid">
-                    <el-form-item label="来源筛选" class="draft-tool-field">
-                      <el-select v-model="draftFilters.source" placeholder="全部来源">
-                        <el-option label="全部来源" value="all" />
-                        <el-option label="试卷原有" value="paper" />
-                        <el-option label="自由组卷" value="manual" />
-                        <el-option label="随机预览" value="preview" />
-                        <el-option label="AI组卷" value="ai" />
-                      </el-select>
-                    </el-form-item>
-
-                    <el-form-item label="题型筛选" class="draft-tool-field">
-                      <el-select v-model="draftFilters.typeCode" placeholder="全部题型">
-                        <el-option label="全部题型" value="all" />
-                        <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
-                      </el-select>
-                    </el-form-item>
-
-                    <el-form-item label="批量分值" class="draft-tool-field">
-                      <el-input-number
-                        v-model="draftBatchScore"
-                        :min="0.5"
-                        :step="0.5"
-                        :precision="2"
-                        controls-position="right"
-                      />
-                    </el-form-item>
-                  </div>
-
-                  <div class="draft-tools-actions draft-tools-inline-actions">
-                    <el-button size="small" :disabled="!hasDraftFilters" @click="resetDraftFilters">重置</el-button>
-                    <el-button size="small" type="primary" plain :disabled="!filteredDraftRows.length" @click="applyBatchScoreToFilteredRows">
-                      应用
-                    </el-button>
-                  </div>
-                </div>
-                <span class="hint draft-tools-hint" v-if="!isDraftReorderEnabled">筛选开启时暂不支持拖拽排序，请先重置筛选。</span>
-              </div>
-
-              <div class="table-panel table-panel-tall draft-table-panel">
-                <el-table ref="draftTableRef" :data="filteredDraftRows" border row-key="key" size="small">
-                  <el-table-column label="" width="52" align="center">
-                    <template #default>
-                      <span class="drag-handle" :class="{ disabled: !isDraftReorderEnabled }" :title="isDraftReorderEnabled ? '拖拽排序' : '筛选时暂不支持拖拽排序'">☰</span>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="来源" width="100">
-                    <template #default="{ row }">
-                      <el-tag size="small" effect="plain" :type="draftSourceTagType(row.source)">
-                        {{ draftSourceLabel(row.source) }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="questionTitle" label="标题" width="156">
-                    <template #default="{ row }">
-                      <el-tooltip :show-after="250" placement="top" :content="row.questionTitle || '无标题'">
-                        <button type="button" class="draft-preview-trigger" @click="openDraftPreview(row)">
-                          <span class="table-title-text table-title-text-single">{{ row.questionTitle || '无标题' }}</span>
-                        </button>
-                      </el-tooltip>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="题干" width="204">
-                    <template #default="{ row }">
-                      <el-tooltip :show-after="250" placement="top" :content="formatDraftStemTooltip(row.stem)">
-                        <button type="button" class="draft-preview-trigger draft-stem-trigger" @click="openDraftPreview(row)">
-                          <span class="table-stem-math-single">
-                            <MathView :content="row.stem || '—'" />
-                          </span>
-                        </button>
-                      </el-tooltip>
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="难度" width="84">
-                    <template #default="{ row }">
-                      {{ row.difficulty !== undefined && row.difficulty !== null ? Number(row.difficulty).toFixed(2) : '—' }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="题型" width="92">
-                    <template #default="{ row }">{{ questionTypeLabel(row.typeCode) }}</template>
-                  </el-table-column>
-                  <el-table-column label="分值" width="168">
-                    <template #default="{ row }">
-                      <el-input-number v-model="row.score" :min="0.5" :step="0.5" :precision="2" controls-position="right" />
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="72" fixed="right" align="center">
-                    <template #default="{ row, $index }">
-                      <el-dropdown trigger="click" @command="(command) => handleDraftAction(command, row, $index)">
-                        <button type="button" class="draft-action-trigger" aria-label="更多操作">
-                          <span></span>
-                          <span></span>
-                        </button>
-                        <template #dropdown>
-                          <el-dropdown-menu>
-                            <el-dropdown-item command="replace" :disabled="row.replacing">换题</el-dropdown-item>
-                            <el-dropdown-item command="delete" class="draft-action-danger">删除</el-dropdown-item>
-                          </el-dropdown-menu>
-                        </template>
-                      </el-dropdown>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-
-              <el-empty v-if="!draftRows.length" class="compact-empty" description="先添加题目" />
-              <el-empty v-else-if="!filteredDraftRows.length" class="compact-empty" description="无匹配题目" />
-              <el-dialog v-model="draftPreviewVisible" title="题目预览" width="760px" :close-on-click-modal="false">
-                <div v-loading="draftPreviewLoading" class="selector-detail-card draft-preview-detail-card">
-                  <el-empty v-if="!activeDraftPreviewQuestionId" class="compact-empty" description="请选择题目查看详情" />
-                  <el-empty
-                    v-else-if="!activeDraftPreviewDetail && !draftPreviewLoading"
-                    class="compact-empty"
-                    description="题目详情加载失败"
-                  />
-                  <template v-else-if="activeDraftPreviewDetail">
-                    <div class="selector-detail-head">
-                      <div>
-                        <h4>{{ activeDraftPreviewDetail.title || '未命名题目' }}</h4>
-                        <p class="hint">草稿题目详情预览</p>
-                      </div>
-                      <div class="detail-tags">
-                        <el-tag size="small" effect="plain">{{ questionTypeLabel(activeDraftPreviewDetail.typeCode) }}</el-tag>
-                        <el-tag size="small" type="success" effect="plain">
-                          难度 {{ Number(activeDraftPreviewDetail.difficulty ?? 0).toFixed(2) }}
-                        </el-tag>
-                        <el-tag size="small" type="warning" effect="plain">
-                          正确率 {{ formatPercent(activeDraftPreviewDetail.correctRate) }}
-                        </el-tag>
-                      </div>
-                    </div>
-
-                    <div class="selector-detail-section">
-                      <p class="expand-label">题干</p>
-                      <AssistantMessageContent :content="activeDraftPreviewDetail.stem || '—'" />
-                    </div>
-
-                    <div v-if="activeDraftPreviewDetail.options?.length" class="selector-detail-section">
-                      <p class="expand-label">选项</p>
-                      <ol class="detail-option-list">
-                        <li v-for="option in activeDraftPreviewDetail.options" :key="`${option.key}_${option.content}`">
-                          <span class="detail-option-key">{{ option.key }}.</span>
-                          <AssistantMessageContent :content="option.content || '（无内容）'" />
-                        </li>
-                      </ol>
-                    </div>
-
-                    <div class="selector-detail-section">
-                      <p class="expand-label">答案</p>
-                      <AssistantMessageContent :content="activeDraftPreviewAnswer" />
-                    </div>
-
-                    <div class="selector-detail-section">
-                      <p class="expand-label">解析</p>
-                      <AssistantMessageContent :content="activeDraftPreviewDetail.solution || '暂无解析'" />
-                    </div>
-                  </template>
-                </div>
-              </el-dialog>
-            </el-tab-pane>
-
-            <el-tab-pane name="saved">
-              <template #label>
-                <div class="workspace-tab-label">
-                  <span class="workspace-tab-title">已保存题目</span>
-                  <span class="workspace-tab-count">{{ paper?.items?.length ?? 0 }}</span>
-                </div>
-              </template>
-              <div class="workspace-panel-head">
-                <div>
-                  <h4>当前已保存题目</h4>
-                  <p class="hint">这里展示的是已经写入试卷的题目列表。</p>
-                </div>
-              </div>
-
-              <div class="workspace-meta">
-                <span class="workspace-meta-item">已保存 {{ paper?.items?.length ?? 0 }}</span>
-                <span class="workspace-meta-item">当前总分 {{ formatScore(paper?.totalScore) }}</span>
-                <span class="workspace-meta-item">平均难度 {{ savedAverageDifficulty }}</span>
-              </div>
-
-              <div v-if="loading || (paper?.items?.length ?? 0)" class="saved-preview-workspace selector-workspace">
-                <div class="selector-list-pane">
-                  <div class="selector-pane-head">
-                    <div>
-                      <p class="section-subtitle">试卷题目</p>
-                      <span class="hint">左侧点击题目，右侧查看完整预览。</span>
-                    </div>
-                  </div>
-
-                  <div class="table-panel selector-table-panel saved-table-panel">
-                    <el-table
-                      v-loading="loading"
-                      :data="paper?.items ?? []"
-                      border
-                      row-key="questionId"
-                      size="small"
-                      highlight-current-row
-                      :current-row-key="activeSavedPreviewQuestionId"
-                      @current-change="handleSavedPreviewCurrentChange"
-                      @row-click="handleSavedPreviewRowClick"
-                    >
-                      <el-table-column prop="seq" label="序号" width="72" />
-                      <el-table-column label="标题" min-width="240">
-                        <template #default="{ row }">
-                          <span class="table-title-text">{{ row.questionTitle || '无标题' }}</span>
-                        </template>
-                      </el-table-column>
-                      <el-table-column label="题型" width="120">
-                        <template #default="{ row }">{{ questionTypeLabel(row.typeCode) }}</template>
-                      </el-table-column>
-                      <el-table-column label="分值" width="90">
-                        <template #default="{ row }">{{ formatScore(row.score) }}</template>
-                      </el-table-column>
-                      <el-table-column label="难度" width="90">
-                        <template #default="{ row }">{{ formatScore(row.difficulty) }}</template>
-                      </el-table-column>
-                    </el-table>
-                  </div>
-                </div>
-
-                <div class="selector-detail-pane">
-                  <div class="selector-pane-head">
-                    <div>
-                      <p class="section-subtitle">题目预览</p>
-                      <span class="hint">这里展示试卷中当前选中题目的完整内容。</span>
-                    </div>
-                  </div>
-
-                  <div v-loading="savedPreviewLoading" class="selector-detail-card saved-preview-detail-card">
-                    <el-empty v-if="!activeSavedPreviewQuestionId" class="compact-empty" description="请选择题目查看详情" />
-                    <el-empty
-                      v-else-if="!activeSavedPreviewDetail && !savedPreviewLoading"
-                      class="compact-empty"
-                      description="题目详情加载失败"
-                    />
-                    <template v-else-if="activeSavedPreviewDetail">
-                      <div class="selector-detail-head">
-                        <div>
-                          <h4>{{ activeSavedPreviewDetail.title || '未命名题目' }}</h4>
-                          <p class="hint">试卷题目详情预览</p>
-                        </div>
-                        <div class="detail-tags">
-                          <el-tag size="small" effect="plain">{{ questionTypeLabel(activeSavedPreviewDetail.typeCode) }}</el-tag>
-                          <el-tag size="small" type="success" effect="plain">
-                            难度 {{ Number(activeSavedPreviewDetail.difficulty ?? 0).toFixed(2) }}
-                          </el-tag>
-                          <el-tag size="small" type="warning" effect="plain">
-                            正确率 {{ formatPercent(activeSavedPreviewDetail.correctRate) }}
-                          </el-tag>
-                        </div>
-                      </div>
-
-                      <div class="selector-detail-section">
-                        <p class="expand-label">题干</p>
-                        <AssistantMessageContent :content="activeSavedPreviewDetail.stem || '—'" />
-                      </div>
-
-                      <div v-if="activeSavedPreviewDetail.options?.length" class="selector-detail-section">
-                        <p class="expand-label">选项</p>
-                        <ol class="detail-option-list">
-                          <li v-for="option in activeSavedPreviewDetail.options" :key="`${option.key}_${option.content}`">
-                            <span class="detail-option-key">{{ option.key }}.</span>
-                            <AssistantMessageContent :content="option.content || '（无内容）'" />
-                          </li>
-                        </ol>
-                      </div>
-
-                      <div class="selector-detail-section">
-                        <p class="expand-label">答案</p>
-                        <AssistantMessageContent :content="activeSavedPreviewAnswer" />
-                      </div>
-
-                      <div class="selector-detail-section">
-                        <p class="expand-label">解析</p>
-                        <AssistantMessageContent :content="activeSavedPreviewDetail.solution || '暂无解析'" />
-                      </div>
-                    </template>
-                  </div>
-                </div>
-              </div>
-
-              <el-empty v-else-if="!loading && !(paper?.items?.length ?? 0)" class="compact-empty" description="暂无已保存题目" />
-            </el-tab-pane>
-          </el-tabs>
+    <div class="paper-preview-grid" :class="{ 'paper-preview-grid--single': !(paper?.items?.length ?? 0) }">
+      <el-card shadow="never" class="paper-items-card paper-items-list-card">
+        <template #header>
+          <div class="card-title-row">
+            <h3>当前试卷题目</h3>
+            <span class="hint">点击左侧题目，右侧查看完整详情。</span>
           </div>
+        </template>
+
+        <el-empty v-if="!(paper?.items?.length ?? 0)" description="当前试卷还没有题目" />
+        <div v-else class="paper-items-list">
+          <div class="paper-items-list-head">
+            <span>题目</span>
+            <span>题型</span>
+          </div>
+          <button
+            v-for="item in paper?.items ?? []"
+            :key="item.questionVersionId"
+            type="button"
+            class="paper-item-row"
+            :class="{ active: item.questionId === activeSavedPreviewQuestionId }"
+            @click="handleSavedPreviewRowClick(item)"
+          >
+            <div class="paper-item-row-main">
+              <strong class="paper-item-row-title">{{ item.questionTitle || '未命名题目' }}</strong>
+            </div>
+            <el-tag
+              size="small"
+              effect="plain"
+              class="paper-item-type-tag"
+              :class="paperItemTypeTagClass(item.typeCode)"
+              :type="paperItemTypeTagType(item.typeCode)"
+            >
+              {{ questionTypeLabel(item.typeCode) }}
+            </el-tag>
+          </button>
+        </div>
+      </el-card>
+
+      <el-card v-if="paper?.items?.length ?? 0" shadow="never" class="paper-items-card paper-detail-preview-card">
+        <template #header>
+          <div class="card-title-row">
+            <h3>题目预览</h3>
+            <span class="hint">默认展示第一题，点击左侧可切换。</span>
+          </div>
+        </template>
+
+        <div v-loading="savedPreviewLoading" class="paper-detail-preview-body">
+          <el-empty v-if="!activeSavedPreviewQuestionId" class="compact-empty" description="请选择题目查看详情" />
+          <el-empty
+            v-else-if="!activeSavedPreviewDetail && !savedPreviewLoading"
+            class="compact-empty"
+            description="题目详情加载失败"
+          />
+          <template v-else-if="activeSavedPreviewDetail">
+            <div class="selector-detail-head paper-detail-preview-head">
+              <div>
+                <h4>{{ activeSavedPreviewDetail.title || '未命名题目' }}</h4>
+                <p class="hint">试卷题目详情预览</p>
+                <div
+                  v-if="savedPreviewKnowledgeTags.length"
+                  v-loading="savedPreviewKnowledgeTagsLoading"
+                  class="knowledge-tag-row knowledge-tag-row--compact"
+                >
+                  <el-tag
+                    v-for="tag in savedPreviewKnowledgeTags"
+                    :key="`${tag.canonicalName}_${tag.isMain}`"
+                    size="small"
+                    effect="light"
+                    class="knowledge-tag-chip"
+                    :class="tag.isMain === 1 ? 'knowledge-tag-chip--main' : 'knowledge-tag-chip--secondary'"
+                  >
+                    {{ tag.canonicalName }}
+                  </el-tag>
+                </div>
+              </div>
+              <div class="detail-tags">
+                <el-tag size="small" effect="plain">{{ questionTypeLabel(activeSavedPreviewDetail.typeCode) }}</el-tag>
+                <el-tag size="small" type="success" effect="plain">
+                  难度 {{ Number(activeSavedPreviewDetail.difficulty ?? 0).toFixed(2) }}
+                </el-tag>
+                <el-tag size="small" type="warning" effect="plain">
+                  正确率 {{ formatPercent(activeSavedPreviewDetail.correctRate) }}
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="selector-detail-section">
+              <p class="expand-label">题干</p>
+              <AssistantMessageContent :content="activeSavedPreviewDetail.stem || '—'" />
+            </div>
+
+            <div v-if="activeSavedPreviewDetail.options?.length" class="selector-detail-section">
+              <p class="expand-label">选项</p>
+              <ol class="detail-option-list">
+                <li v-for="option in activeSavedPreviewDetail.options" :key="`${option.key}_${option.content}`">
+                  <span class="detail-option-key">{{ option.key }}.</span>
+                  <AssistantMessageContent :content="option.content || '（无内容）'" />
+                </li>
+              </ol>
+            </div>
+
+            <div class="selector-detail-section">
+              <p class="expand-label">答案</p>
+              <AssistantMessageContent :content="activeSavedPreviewAnswer" />
+            </div>
+
+            <div class="selector-detail-section">
+              <p class="expand-label">解析</p>
+              <AssistantMessageContent :content="activeSavedPreviewDetail.solution || '暂无解析'" />
+            </div>
+          </template>
         </div>
       </el-card>
     </div>
-
-    <el-dialog v-model="randomBuildDrawerVisible" title="随机组卷" width="92%" :close-on-click-modal="false">
-      <div class="mode-panel question-selector">
-        <div class="mode-panel-head">
-          <div>
-            <p class="hint">按题集范围和题型规则生成候选题目，再填充到草稿区域。</p>
-          </div>
-          <div class="card-actions">
-            <el-button :loading="previewLoading" @click="handlePreviewRandomBuild">
-              {{ randomPreviewRows.length ? '重新抽题' : '随机预览' }}
-            </el-button>
-            <el-button type="primary" plain :disabled="!randomPreviewRows.length" @click="fillDraftItemsFromPreview">
-              填充到草稿区域
-            </el-button>
-          </div>
-        </div>
-
-        <el-form label-position="top" class="single-column-form">
-          <el-form-item label="题集">
-            <el-select
-              v-model="randomForm.collectionIds"
-              multiple
-              filterable
-              clearable
-              placeholder="请选择题集"
-              :loading="collectionLoading"
-              @change="handleRandomCollectionChange"
-            >
-              <el-option
-                v-for="collection in collectionOptions"
-                :key="collection.collectionId"
-                :label="collection.name"
-                :value="collection.collectionId"
-              />
-            </el-select>
-            <div class="field-tip">支持多选，预览结果会从选中的题集范围内生成。</div>
-          </el-form-item>
-
-          <div class="rule-block">
-            <div class="rule-block-header">
-              <span>规则列表</span>
-              <el-button @click="addRandomRule">新增规则</el-button>
-            </div>
-
-            <div class="rule-preset-strip">
-              <div class="rule-preset-actions">
-                <el-button
-                  v-for="preset in randomRulePresets"
-                  :key="preset.key"
-                  size="small"
-                  :type="activeRandomPreset === preset.key ? 'primary' : 'default'"
-                  :plain="activeRandomPreset !== preset.key"
-                  @click="applyRandomRulePreset(preset.key)"
-                >
-                  {{ preset.label }}
-                </el-button>
-                <el-button size="small" text @click="resetRandomRules">重置规则</el-button>
-              </div>
-              <span v-if="currentRandomPresetDescription" class="hint">{{ currentRandomPresetDescription }}</span>
-            </div>
-
-            <div class="constraint-tip-card">
-              <span>题数表示该题型希望抽取多少道题。</span>
-              <span>期望难度使用 0.00 到 1.00，数值越大通常越难。</span>
-            </div>
-
-            <div class="rule-list">
-              <div v-for="(rule, index) in randomForm.rules" :key="index" class="rule-row">
-                <div class="rule-cell rule-type-cell">
-                  <span class="ai-constrain-mini-label">题型</span>
-                  <el-select v-model="rule.typeCode" placeholder="题型" @change="handleRandomRuleFieldChange">
-                    <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
-                  </el-select>
-                </div>
-                <div class="rule-cell">
-                  <span class="ai-constrain-mini-label">题数</span>
-                  <el-input-number v-model="rule.count" :min="1" :step="1" :precision="0" controls-position="right" @change="handleRandomRuleFieldChange" />
-                </div>
-                <div class="rule-cell">
-                  <span class="ai-constrain-mini-label">期望难度（0-1）</span>
-                  <el-input-number
-                    v-model="rule.expectedDifficulty"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :precision="1"
-                    controls-position="right"
-                    placeholder="期望难度"
-                    @change="handleRandomRuleFieldChange"
-                  />
-                </div>
-                <div class="rule-cell rule-delete-wrap">
-                  <span class="ai-constrain-mini-label">操作</span>
-                  <el-button class="rule-delete-button" type="danger" plain :disabled="randomForm.rules.length === 1" @click="removeRandomRule(index)">
-                    删除
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-form>
-
-        <div class="workspace-meta">
-          <span class="workspace-meta-item">已选题集 {{ randomRuleSummary.selectedCollections }}</span>
-          <span class="workspace-meta-item">有效规则 {{ randomRuleSummary.validRules }}</span>
-          <span class="workspace-meta-item">目标题数 {{ randomRuleSummary.targetQuestions }}</span>
-        </div>
-
-        <div class="selector-workspace random-preview-workspace">
-          <div class="selector-list-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">候选题目</p>
-                <span class="hint">预览结果会显示在这里，点击左侧题目可在右侧查看完整内容。</span>
-              </div>
-              <el-tag effect="plain">候选 {{ randomPreviewRows.length }}</el-tag>
-            </div>
-
-            <div v-if="previewLoading || randomPreviewRows.length" class="table-panel selector-table-panel random-preview-table-panel">
-              <el-table
-                v-loading="previewLoading"
-                :data="randomPreviewRows"
-                border
-                size="small"
-                row-key="key"
-                highlight-current-row
-                :current-row-key="activeRandomPreviewKey"
-                @current-change="handleRandomPreviewCurrentChange"
-                @row-click="handleRandomPreviewRowClick"
-              >
-                <el-table-column prop="questionTitle" label="标题" min-width="240">
-                  <template #default="{ row }">
-                    <span class="stem-preview">{{ row.questionTitle || '无标题' }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="题型" width="130">
-                  <template #default="{ row }">{{ questionTypeLabel(row.typeCode) }}</template>
-                </el-table-column>
-                <el-table-column label="难度" width="100">
-                  <template #default="{ row }">
-                    {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '—' }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="分值" width="100">
-                  <template #default="{ row }">{{ formatScore(row.score) }}</template>
-                </el-table-column>
-                <el-table-column label="操作" width="120" fixed="right">
-                  <template #default="{ row, $index }">
-                    <el-button type="primary" link size="small" :loading="row.replacing" @click.stop="handleReplacePreviewItem(row, $index)">
-                      换一题
-                    </el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-            <el-empty
-              v-else
-              class="compact-empty"
-              :description="canPreviewRandomBuild ? '点击上方随机预览生成候选题' : '请先完善规则配置'"
-            />
-          </div>
-
-          <div class="selector-detail-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">题目预览</p>
-                <span class="hint">右侧预览帮助你先判断题目内容，再决定是否填充到草稿。</span>
-              </div>
-            </div>
-
-            <div v-loading="randomPreviewDetailLoading" class="selector-detail-card random-preview-detail-card">
-              <el-empty v-if="!activeRandomPreviewKey" class="compact-empty" description="请选择候选题查看详情" />
-              <el-empty
-                v-else-if="!activeRandomPreviewDetail && !randomPreviewDetailLoading"
-                class="compact-empty"
-                description="题目详情加载失败"
-              />
-              <template v-else-if="activeRandomPreviewDetail">
-                <div class="selector-detail-head">
-                  <div>
-                    <h4>{{ activeRandomPreviewDetail.title || '未命名题目' }}</h4>
-                    <p class="hint">候选题详情预览</p>
-                  </div>
-                  <div class="detail-tags">
-                    <el-tag size="small" effect="plain">{{ questionTypeLabel(activeRandomPreviewDetail.typeCode) }}</el-tag>
-                    <el-tag size="small" type="success" effect="plain">
-                      难度 {{ Number(activeRandomPreviewDetail.difficulty ?? 0).toFixed(2) }}
-                    </el-tag>
-                    <el-tag size="small" type="warning" effect="plain">
-                      正确率 {{ formatPercent(activeRandomPreviewDetail.correctRate) }}
-                    </el-tag>
-                  </div>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">题干</p>
-                  <AssistantMessageContent :content="activeRandomPreviewDetail.stem || '—'" />
-                </div>
-
-                <div v-if="activeRandomPreviewDetail.options?.length" class="selector-detail-section">
-                  <p class="expand-label">选项</p>
-                  <ol class="detail-option-list">
-                    <li v-for="option in activeRandomPreviewDetail.options" :key="`${option.key}_${option.content}`">
-                      <span class="detail-option-key">{{ option.key }}.</span>
-                      <AssistantMessageContent :content="option.content || '（无内容）'" />
-                    </li>
-                  </ol>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">答案</p>
-                  <AssistantMessageContent :content="activeRandomPreviewAnswer" />
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">解析</p>
-                  <AssistantMessageContent :content="activeRandomPreviewDetail.solution || '暂无解析'" />
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-
-    <el-dialog v-model="aiBuildDrawerVisible" title="AI组卷" width="84%" :close-on-click-modal="false">
-      <div class="mode-panel question-selector">
-        <div class="mode-panel-head">
-          <div>
-            <p class="hint">输入组卷目标、题集范围和题型约束，生成候选题后再填充到草稿区域。</p>
-          </div>
-          <div class="card-actions">
-            <el-button :loading="generatingAiDraft" @click="handleGenerateAiPaperDraft">生成候选题</el-button>
-            <el-button type="primary" plain :disabled="!aiDraftRows.length" @click="fillDraftItemsFromAi">
-              填充到草稿区域
-            </el-button>
-          </div>
-        </div>
-
-        <el-form label-position="top" class="single-column-form">
-          <el-form-item label="组卷需求" class="ai-form-item-narrow">
-            <el-input
-              v-model="aiForm.message"
-              type="textarea"
-              :rows="4"
-              maxlength="2000"
-              show-word-limit
-              placeholder="例如：生成一套基础难度的函数与导数小测，覆盖单选、多选和判断题。"
-              @input="clearAiDraftState"
-            />
-            <div class="field-tip">这里尽量写清楚目标、场景、难度和希望覆盖的知识点。</div>
-          </el-form-item>
-
-          <el-form-item label="题集范围" class="ai-form-item-narrow">
-            <el-select
-              v-model="aiForm.collectionIds"
-              multiple
-              filterable
-              clearable
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择题集"
-              :loading="collectionLoading"
-              @change="handleAiCollectionChange"
-            >
-              <el-option
-                v-for="collection in collectionOptions"
-                :key="collection.collectionId"
-                :label="collection.name"
-                :value="collection.collectionId"
-              />
-            </el-select>
-            <div class="field-tip">AI 会在这些题集内挑选候选题，不会直接创建新题。</div>
-          </el-form-item>
-
-          <div class="rule-block">
-            <div class="rule-block-header">
-              <span>题型约束</span>
-              <el-button @click="addAiConstrain">新增约束</el-button>
-            </div>
-
-            <div class="constraint-tip-card">
-              <span>题数表示该题型希望生成多少道题。</span>
-              <span>难度范围使用 0.00 到 1.00，数值越大通常越难。</span>
-            </div>
-
-            <div class="ai-constrain-list">
-              <div v-for="(constrain, index) in aiForm.constrains" :key="`ai_constrain_${index}`" class="ai-constrain-row">
-                <div class="ai-constrain-cell ai-constrain-type-cell">
-                  <span class="ai-constrain-mini-label">题型</span>
-                  <el-select v-model="constrain.typeCode" placeholder="题型" @change="handleAiConstraintFieldChange">
-                    <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
-                  </el-select>
-                </div>
-                <div class="ai-constrain-cell">
-                  <span class="ai-constrain-mini-label">题数</span>
-                  <el-input-number
-                    v-model="constrain.count"
-                    :min="1"
-                    :step="1"
-                    :precision="0"
-                    controls-position="right"
-                    placeholder="题数"
-                    @change="handleAiConstraintFieldChange"
-                  />
-                </div>
-                <div class="ai-constrain-cell">
-                  <span class="ai-constrain-mini-label">下限（0-1）</span>
-                  <el-input-number
-                    v-model="constrain.difficultyMin"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :precision="2"
-                    controls-position="right"
-                    placeholder="难度下限"
-                    @change="handleAiConstraintFieldChange"
-                  />
-                </div>
-                <div class="ai-constrain-cell">
-                  <span class="ai-constrain-mini-label">上限（0-1）</span>
-                  <el-input-number
-                    v-model="constrain.difficultyMax"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    :precision="2"
-                    controls-position="right"
-                    placeholder="难度上限"
-                    @change="handleAiConstraintFieldChange"
-                  />
-                </div>
-                <div class="ai-constrain-cell ai-constrain-delete-wrap">
-                  <span class="ai-constrain-mini-label">操作</span>
-                  <el-button class="ai-constrain-delete" type="danger" plain :disabled="aiForm.constrains.length === 1" @click="removeAiConstrain(index)">
-                    删除
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-form>
-
-        <div class="workspace-meta">
-          <span class="workspace-meta-item">已选题集 {{ aiRuleSummary.selectedCollections }}</span>
-          <span class="workspace-meta-item">有效约束 {{ aiRuleSummary.validConstrains }}</span>
-          <span class="workspace-meta-item">目标题数 {{ aiRuleSummary.targetQuestions }}</span>
-          <span class="workspace-meta-item">预计总分 {{ aiRuleSummary.estimatedScore }}</span>
-        </div>
-
-        <el-alert v-if="aiDraftError" :title="aiDraftError" type="error" :closable="false" />
-
-        <el-card v-if="aiDraftResult?.reason" shadow="never" class="reason-card">
-          <template #header>
-            <div class="card-title-row">
-              <h4>AI 组卷说明</h4>
-            </div>
-          </template>
-          <p class="reason-text">{{ aiDraftResult.reason }}</p>
-        </el-card>
-
-        <div v-if="generatingAiDraft || aiDraftRows.length" class="selector-workspace ai-preview-workspace">
-          <div class="selector-list-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">候选题目</p>
-                <span class="hint">左侧点击候选题，右侧查看完整预览。</span>
-              </div>
-              <el-tag effect="plain">候选 {{ aiDraftRows.length }}</el-tag>
-            </div>
-
-            <div class="table-panel selector-table-panel ai-preview-table-panel">
-              <el-table
-                v-loading="generatingAiDraft"
-                :data="aiDraftRows"
-                border
-                row-key="key"
-                size="small"
-                highlight-current-row
-                :current-row-key="activeAiPreviewKey"
-                @current-change="handleAiPreviewCurrentChange"
-                @row-click="handleAiPreviewRowClick"
-              >
-                <el-table-column prop="questionTitle" label="标题" min-width="180">
-                  <template #default="{ row }">
-                    <span class="table-title-text">{{ row.questionTitle || '无标题' }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="题型" width="130">
-                  <template #default="{ row }">{{ questionTypeLabel(row.typeCode) }}</template>
-                </el-table-column>
-                <el-table-column label="难度" width="100">
-                  <template #default="{ row }">
-                    {{ row.difficulty !== undefined && row.difficulty !== null ? row.difficulty.toFixed(2) : '—' }}
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-          </div>
-
-          <div class="selector-detail-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">题目预览</p>
-                <span class="hint">这里展示 AI 候选题的完整题干、选项、答案和解析。</span>
-              </div>
-            </div>
-
-            <div v-loading="aiPreviewDetailLoading" class="selector-detail-card ai-preview-detail-card">
-              <el-empty v-if="!activeAiPreviewKey" class="compact-empty" description="请选择候选题查看详情" />
-              <el-empty
-                v-else-if="!activeAiPreviewDetail && !aiPreviewDetailLoading"
-                class="compact-empty"
-                description="题目详情加载失败"
-              />
-              <template v-else-if="activeAiPreviewDetail">
-                <div class="selector-detail-head">
-                  <div>
-                    <h4>{{ activeAiPreviewDetail.title || '未命名题目' }}</h4>
-                    <p class="hint">AI 候选题详情预览</p>
-                  </div>
-                  <div class="detail-tags">
-                    <el-tag size="small" effect="plain">{{ questionTypeLabel(activeAiPreviewDetail.typeCode) }}</el-tag>
-                    <el-tag size="small" type="success" effect="plain">
-                      难度 {{ Number(activeAiPreviewDetail.difficulty ?? 0).toFixed(2) }}
-                    </el-tag>
-                    <el-tag size="small" type="warning" effect="plain">
-                      正确率 {{ formatPercent(activeAiPreviewDetail.correctRate) }}
-                    </el-tag>
-                  </div>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">题干</p>
-                  <AssistantMessageContent :content="activeAiPreviewDetail.stem || '—'" />
-                </div>
-
-                <div v-if="activeAiPreviewDetail.options?.length" class="selector-detail-section">
-                  <p class="expand-label">选项</p>
-                  <ol class="detail-option-list">
-                    <li v-for="option in activeAiPreviewDetail.options" :key="`${option.key}_${option.content}`">
-                      <span class="detail-option-key">{{ option.key }}.</span>
-                      <AssistantMessageContent :content="option.content || '（无内容）'" />
-                    </li>
-                  </ol>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">答案</p>
-                  <AssistantMessageContent :content="activeAiPreviewAnswer" />
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">解析</p>
-                  <AssistantMessageContent :content="activeAiPreviewDetail.solution || '暂无解析'" />
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <el-empty v-if="!generatingAiDraft && !aiDraftRows.length" class="compact-empty" description="先生成候选题" />
-      </div>
-    </el-dialog>
-
-    <el-dialog v-model="showQuestionSelector" title="自由组卷" width="92%" :close-on-click-modal="false">
-      <div class="question-selector">
-        <div class="selector-toolbar-card">
-          <div class="selector-pane-head">
-            <div>
-              <p class="section-subtitle">筛选条件</p>
-              <span class="hint">先选题集和筛选条件，再从下方题目列表中勾选要加入草稿的题目。</span>
-            </div>
-          </div>
-
-          <div class="selector-toolbar-grid selector-toolbar-grid-manual">
-            <el-form-item label="题集范围" class="selector-tool-field selector-tool-field-collection">
-              <el-select
-                v-model="manualQuestionCollectionId"
-                placeholder="请选择题集"
-                clearable
-                filterable
-                @change="handleManualCollectionChange"
-              >
-                <el-option
-                  v-for="collection in collectionOptions"
-                  :key="collection.collectionId"
-                  :label="collection.name"
-                  :value="collection.collectionId"
-                />
-              </el-select>
-              <div class="field-tip">手动选题会从这里选中的题集内分页检索题目。</div>
-            </el-form-item>
-
-            <el-form-item label="题型筛选" class="selector-tool-field selector-tool-field-type">
-              <el-select v-model="questionQuery.typeCode" placeholder="全部题型" clearable @change="handleQuestionQueryChange">
-                <el-option v-for="option in typeOptions" :key="option.value" :label="option.label" :value="option.value" />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="关键词" class="selector-tool-field selector-tool-field-keyword">
-              <el-input v-model="questionQuery.keyword" placeholder="搜索标题" clearable @keyup.enter="handleQuestionQueryChange" />
-            </el-form-item>
-
-            <div class="selector-toolbar-actions selector-toolbar-actions-manual">
-              <el-button type="primary" :disabled="!manualQuestionCollectionId" @click="handleQuestionQueryChange">搜索题目</el-button>
-            </div>
-          </div>
-        </div>
-
-        <div class="selector-workspace manual-selector-workspace">
-          <div class="selector-list-pane manual-selector-list-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">题目列表</p>
-                <span class="hint">勾选要加入草稿的题目，点击行可在右侧查看详情。</span>
-              </div>
-              <el-tag effect="plain">已选 {{ selectedQuestions.length }}</el-tag>
-            </div>
-
-            <div class="table-panel selector-table-panel manual-selector-table-panel">
-              <el-table
-                v-loading="questionSelectorLoading"
-                :data="questionList"
-                border
-                size="small"
-                row-key="id"
-                highlight-current-row
-                :current-row-key="activeQuestionPreviewId"
-                @selection-change="handleQuestionSelectionChange"
-                @current-change="handleQuestionCurrentChange"
-                @row-click="handleQuestionRowClick"
-              >
-                <el-table-column type="selection" width="55" />
-                <el-table-column prop="title" label="标题" min-width="180">
-                  <template #default="{ row }">
-                    <span class="stem-preview">{{ row.title }}</span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="题型" width="130">
-                  <template #default="{ row }">{{ questionTypeLabel(row.typeCode) }}</template>
-                </el-table-column>
-                <el-table-column label="难度" width="100">
-                  <template #default="{ row }">{{ Number(row.difficulty ?? 0).toFixed(2) }}</template>
-                </el-table-column>
-                <el-table-column label="正确率" width="110">
-                  <template #default="{ row }">{{ formatPercent(row.correctRate) }}</template>
-                </el-table-column>
-              </el-table>
-            </div>
-
-            <div class="pagination-container manual-selector-pagination">
-              <el-pagination
-                v-model:current-page="questionQuery.pageNum"
-                v-model:page-size="questionQuery.pageSize"
-                :total="questionTotal"
-                :page-sizes="[10, 20, 50, 100]"
-                layout="total, sizes, prev, pager, next, jumper"
-                @current-change="loadQuestions"
-                @size-change="loadQuestions"
-              />
-            </div>
-          </div>
-
-          <div class="selector-detail-pane manual-selector-detail-pane">
-            <div class="selector-pane-head">
-              <div>
-                <p class="section-subtitle">题目详情</p>
-                <span class="hint">右侧预览帮助你先判断题目内容，再决定是否加入草稿。</span>
-              </div>
-            </div>
-
-            <div v-loading="questionPreviewLoading" class="selector-detail-card manual-selector-detail-card">
-              <el-empty v-if="!activeQuestionPreviewId" class="compact-empty" description="请选择题目查看详情" />
-              <el-empty
-                v-else-if="!activeQuestionPreviewDetail && !questionPreviewLoading"
-                class="compact-empty"
-                description="题目详情加载失败"
-              />
-              <template v-else-if="activeQuestionPreviewDetail">
-                <div class="selector-detail-head">
-                  <div>
-                    <h4>{{ activeQuestionPreviewDetail.title || '未命名题目' }}</h4>
-                    <p class="hint">题目详情预览</p>
-                  </div>
-                  <div class="detail-tags">
-                    <el-tag size="small" effect="plain">{{ questionTypeLabel(activeQuestionPreviewDetail.typeCode) }}</el-tag>
-                    <el-tag size="small" type="success" effect="plain">
-                      难度 {{ Number(activeQuestionPreviewDetail.difficulty ?? 0).toFixed(2) }}
-                    </el-tag>
-                    <el-tag size="small" type="warning" effect="plain">
-                      正确率 {{ formatPercent(activeQuestionPreviewDetail.correctRate) }}
-                    </el-tag>
-                  </div>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">题干</p>
-                  <AssistantMessageContent :content="activeQuestionPreviewDetail.stem || '—'" />
-                </div>
-
-                <div v-if="activeQuestionPreviewDetail.options?.length" class="selector-detail-section">
-                  <p class="expand-label">选项</p>
-                  <ol class="detail-option-list">
-                    <li v-for="option in activeQuestionPreviewDetail.options" :key="`${option.key}_${option.content}`">
-                      <span class="detail-option-key">{{ option.key }}.</span>
-                      <AssistantMessageContent :content="option.content || '（无内容）'" />
-                    </li>
-                  </ol>
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">答案</p>
-                  <AssistantMessageContent :content="activeQuestionAnswer" />
-                </div>
-
-                <div class="selector-detail-section">
-                  <p class="expand-label">解析</p>
-                  <AssistantMessageContent :content="activeQuestionPreviewDetail.solution || '暂无解析'" />
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="showQuestionSelector = false">取消</el-button>
-        <el-button type="primary" :disabled="!selectedQuestions.length" @click="handleAddSelectedQuestions">
-          添加选中题目 ({{ selectedQuestions.length }})
-        </el-button>
-      </template>
-    </el-dialog>
 
   </section>
 </template>
@@ -1082,9 +197,9 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
-import { Edit, MagicStick } from '@element-plus/icons-vue';
+import { Edit } from '@element-plus/icons-vue';
 import AssistantMessageContent from '../components/AssistantMessageContent.vue';
-import MathView from '../components/MathView.vue';
+import { fetchQuestionKnowledgeTags } from '../api/knowledge';
 import { generateAgentPaperDraft } from '../api/ai';
 import {
   clearPaperItems,
@@ -1102,6 +217,7 @@ import type {
   GeneratePaperDraftBucketConstrain,
   GeneratePaperDraftReq
 } from '../types/ai';
+import type { QuestionKnowledgeTag } from '../types/knowledge';
 import type {
   PaperDetailVO,
   PaperDraftItemRow,
@@ -1150,15 +266,14 @@ const aiPreviewDetailLoading = ref(false);
 const activeSavedPreviewQuestionId = ref('');
 const activeSavedPreviewDetail = ref<QuestionDetail | null>(null);
 const savedPreviewLoading = ref(false);
+const savedPreviewKnowledgeTags = ref<QuestionKnowledgeTag[]>([]);
+const savedPreviewKnowledgeTagsLoading = ref(false);
 const draftPreviewVisible = ref(false);
 const activeDraftPreviewQuestionId = ref('');
 const activeDraftPreviewDetail = ref<QuestionDetail | null>(null);
 const draftPreviewLoading = ref(false);
 
-const showQuestionSelector = ref(false);
 const basicInfoDrawerVisible = ref(false);
-const randomBuildDrawerVisible = ref(false);
-const aiBuildDrawerVisible = ref(false);
 const buildMode = ref<'manual' | 'random' | 'ai'>('manual');
 const workspacePanel = ref<'draft' | 'saved'>('draft');
 const draftTableRef = ref();
@@ -1329,7 +444,6 @@ const currentRandomPresetDescription = computed(() => {
 
 onMounted(() => {
   void loadPaper();
-  void loadCollections();
 });
 
 onUnmounted(() => {
@@ -1384,18 +498,6 @@ watch(draftPreviewVisible, (visible) => {
   activeDraftPreviewDetail.value = null;
 });
 
-watch(showQuestionSelector, (visible) => {
-  if (visible && manualQuestionCollectionId.value) {
-    questionQuery.pageNum = 1;
-    void loadQuestions();
-    return;
-  }
-  if (!visible) {
-    activeQuestionPreviewId.value = '';
-    activeQuestionPreviewDetail.value = null;
-  }
-});
-
 watch(workspacePanel, async (panel) => {
   if (panel === 'saved') {
     syncSavedPreviewSelection();
@@ -1406,14 +508,6 @@ watch(workspacePanel, async (panel) => {
   }
   await nextTick();
   bindDraftRowDnD();
-});
-
-watch(randomBuildDrawerVisible, (visible) => {
-  if (!visible) {
-    activeRandomPreviewKey.value = '';
-    activeRandomPreviewDetail.value = null;
-    return;
-  }
 });
 
 async function loadPaper() {
@@ -1447,24 +541,43 @@ async function loadCollections() {
   }
 }
 
+async function ensureCollectionsLoaded() {
+  if (collectionOptions.value.length) {
+    return;
+  }
+  await loadCollections();
+}
+
 function syncEditForm() {
   editForm.title = paper.value?.title || '';
   editForm.description = paper.value?.description || '';
 }
 
-function openManualBuildDrawer() {
+async function openManualBuildDrawer() {
   buildMode.value = 'manual';
-  showQuestionSelector.value = true;
+  await ensureCollectionsLoaded();
+  if (!manualQuestionCollectionId.value && collectionOptions.value.length) {
+    manualQuestionCollectionId.value = collectionOptions.value[0].collectionId;
+  }
+  if (!manualQuestionCollectionId.value) {
+    questionList.value = [];
+    questionTotal.value = 0;
+    activeQuestionPreviewId.value = '';
+    activeQuestionPreviewDetail.value = null;
+    return;
+  }
+  questionQuery.pageNum = 1;
+  await loadQuestions();
 }
 
-function openRandomBuildDrawer() {
+async function openRandomBuildDrawer() {
   buildMode.value = 'random';
-  randomBuildDrawerVisible.value = true;
+  await ensureCollectionsLoaded();
 }
 
-function openAiBuildDrawer() {
+async function openAiBuildDrawer() {
   buildMode.value = 'ai';
-  aiBuildDrawerVisible.value = true;
+  await ensureCollectionsLoaded();
 }
 
 function openBasicInfoDrawer() {
@@ -1694,7 +807,6 @@ function fillDraftItemsFromAi() {
     }))
   ];
   workspacePanel.value = 'draft';
-  aiBuildDrawerVisible.value = false;
   showSuccess('AI 候选题已填充到草稿区域');
 }
 
@@ -1769,7 +881,6 @@ function fillDraftItemsFromPreview() {
     }))
   ];
   workspacePanel.value = 'draft';
-  randomBuildDrawerVisible.value = false;
   showSuccess('已填充到草稿区域');
 }
 
@@ -1802,8 +913,8 @@ function sortDraftRowsByType() {
   draftRows.value = draftRows.value
     .map((row, index) => ({ row, index }))
     .sort((a, b) => {
-      const orderA = draftTypeOrder[a.row.typeCode] ?? Number.MAX_SAFE_INTEGER;
-      const orderB = draftTypeOrder[b.row.typeCode] ?? Number.MAX_SAFE_INTEGER;
+      const orderA = a.row.typeCode ? draftTypeOrder[a.row.typeCode] ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
+      const orderB = b.row.typeCode ? draftTypeOrder[b.row.typeCode] ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
       if (orderA !== orderB) {
         return orderA - orderB;
       }
@@ -2166,11 +1277,12 @@ function syncSavedPreviewSelection() {
   if (!nextActive) {
     activeSavedPreviewQuestionId.value = '';
     activeSavedPreviewDetail.value = null;
+    savedPreviewKnowledgeTags.value = [];
     return;
   }
 
   activeSavedPreviewQuestionId.value = nextActive.questionId;
-  void loadSavedPreviewDetail(nextActive.questionId);
+  void loadSavedPreviewDetail(nextActive.questionId, nextActive.questionVersionId);
 }
 
 function handleSavedPreviewCurrentChange(currentRow?: PaperItemVO | null) {
@@ -2178,12 +1290,12 @@ function handleSavedPreviewCurrentChange(currentRow?: PaperItemVO | null) {
     return;
   }
   activeSavedPreviewQuestionId.value = currentRow.questionId;
-  void loadSavedPreviewDetail(currentRow.questionId);
+  void loadSavedPreviewDetail(currentRow.questionId, currentRow.questionVersionId);
 }
 
 function handleSavedPreviewRowClick(row: PaperItemVO) {
   activeSavedPreviewQuestionId.value = row.questionId;
-  void loadSavedPreviewDetail(row.questionId);
+  void loadSavedPreviewDetail(row.questionId, row.questionVersionId);
 }
 
 function openDraftPreview(row: PaperDraftItemRow) {
@@ -2224,9 +1336,10 @@ async function loadDraftPreviewDetail(questionId: string) {
   }
 }
 
-async function loadSavedPreviewDetail(questionId: string) {
+async function loadSavedPreviewDetail(questionId: string, questionVersionId?: string) {
   if (!questionId) {
     activeSavedPreviewDetail.value = null;
+    savedPreviewKnowledgeTags.value = [];
     return;
   }
   if (savedPreviewLoading.value) {
@@ -2238,11 +1351,28 @@ async function loadSavedPreviewDetail(questionId: string) {
   savedPreviewLoading.value = true;
   try {
     activeSavedPreviewDetail.value = await fetchQuestionDetail(questionId);
+    await loadSavedPreviewKnowledgeTags(questionVersionId || activeSavedPreviewDetail.value.currentVersionId);
   } catch (error) {
     activeSavedPreviewDetail.value = null;
+    savedPreviewKnowledgeTags.value = [];
     showError(error instanceof Error ? error.message : '加载题目详情失败');
   } finally {
     savedPreviewLoading.value = false;
+  }
+}
+
+async function loadSavedPreviewKnowledgeTags(questionVersionId?: string | null) {
+  if (!questionVersionId) {
+    savedPreviewKnowledgeTags.value = [];
+    return;
+  }
+  savedPreviewKnowledgeTagsLoading.value = true;
+  try {
+    savedPreviewKnowledgeTags.value = await fetchQuestionKnowledgeTags(questionVersionId);
+  } catch {
+    savedPreviewKnowledgeTags.value = [];
+  } finally {
+    savedPreviewKnowledgeTagsLoading.value = false;
   }
 }
 
@@ -2301,7 +1431,6 @@ async function handleAddSelectedQuestions() {
     draftRows.value = [...draftRows.value, ...newRows];
     selectedQuestions.value = [];
     workspacePanel.value = 'draft';
-    showQuestionSelector.value = false;
     showSuccess(`已添加 ${newRows.length} 道题目到草稿区域`);
   } catch (error) {
     showError(error instanceof Error ? error.message : '添加题目失败');
@@ -2312,6 +1441,23 @@ async function handleAddSelectedQuestions() {
 
 function goBack() {
   void router.push({ name: 'paper-list' });
+}
+
+function goPaperBuild(mode: 'manual' | 'random' | 'ai') {
+  if (!paperId.value) {
+    return;
+  }
+  void router.push({
+    name: 'paper-build',
+    params: { paperId: paperId.value },
+    query: { mode }
+  });
+}
+
+function handleBuildEntryCommand(command: string | number | object) {
+  if (command === 'manual' || command === 'random' || command === 'ai') {
+    goPaperBuild(command);
+  }
 }
 
 function goPrintLayout() {
@@ -2413,6 +1559,27 @@ function resolveQuestionAnswer(detail?: QuestionDetail | null) {
 
 function questionTypeLabel(typeCode?: string | null) {
   return typeOptions.find((option) => option.value === typeCode)?.label ?? typeCode ?? '未知题型';
+}
+
+function paperItemTypeTagType(typeCode?: string | null) {
+  switch (typeCode) {
+    case 'single-choice':
+      return 'primary';
+    case 'multiple-choice':
+      return 'success';
+    case 'fill-in':
+      return 'warning';
+    case 'true-false':
+      return 'info';
+    case 'short-answer':
+      return 'danger';
+    default:
+      return 'info';
+  }
+}
+
+function paperItemTypeTagClass(typeCode?: string | null) {
+  return `paper-item-type-tag--${typeCode ?? 'default'}`;
 }
 
 function normalizeCollectionIds(values: string[]) {
@@ -2636,6 +1803,20 @@ function bindDraftRowDnD() {
   flex-wrap: wrap;
 }
 
+.paper-build-entry-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border-color: #d7e6fb;
+  color: var(--el-color-primary);
+  background: #f7fbff;
+}
+
+.paper-build-entry-btn:hover {
+  border-color: #b8d6fb;
+  background: #eef6ff;
+}
+
 .paper-edit-icon-btn {
   border-color: #e7edf5;
   color: var(--el-text-color-secondary);
@@ -2662,6 +1843,17 @@ function bindDraftRowDnD() {
 
 .ai-form-item-narrow {
   max-width: 100%;
+}
+
+.paper-preview-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.86fr) minmax(0, 1.24fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.paper-preview-grid--single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .info-card,
@@ -2721,6 +1913,96 @@ function bindDraftRowDnD() {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.paper-items-card {
+  border-radius: 18px;
+  border-color: #edf1f6;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.paper-items-card :deep(.el-card__body) {
+  padding-top: 12px;
+}
+
+.paper-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 540px;
+}
+
+.paper-items-list-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px 14px;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.paper-item-row {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #f1f4f8;
+  border-radius: 0;
+  background: #fff;
+  padding: 18px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.paper-item-row:hover {
+  background: #f8fbff;
+}
+
+.paper-item-row.active {
+  background: #f4f8ff;
+  box-shadow: inset 3px 0 0 var(--el-color-primary);
+}
+
+.paper-item-row-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.paper-item-row-title {
+  color: var(--el-text-color-primary);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 500;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paper-item-type-tag {
+  flex: 0 0 auto;
+  min-width: 72px;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.paper-detail-preview-card :deep(.el-card__body) {
+  padding-top: 12px;
+}
+
+.paper-detail-preview-body {
+  min-height: 540px;
+}
+
+.paper-detail-preview-head {
+  margin-bottom: 22px;
 }
 
 .builder-workspace {
@@ -2868,6 +2150,14 @@ function bindDraftRowDnD() {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.mode-section {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .workspace-tabs :deep(.el-tabs__header) {
@@ -3431,6 +2721,34 @@ function bindDraftRowDnD() {
   margin: 0;
 }
 
+.knowledge-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.knowledge-tag-row--compact {
+  margin-top: 12px;
+}
+
+.knowledge-tag-chip {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.knowledge-tag-chip--main {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.knowledge-tag-chip--secondary {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
 .selector-detail-section {
   display: flex;
   flex-direction: column;
@@ -3713,6 +3031,22 @@ function bindDraftRowDnD() {
   .workspace-panel-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .paper-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .paper-items-list-head {
+    padding: 6px 8px 12px;
+  }
+
+  .paper-item-row {
+    padding: 14px 8px;
+  }
+
+  .paper-item-row-title {
+    font-size: 15px;
   }
 
   .selector-workspace {
